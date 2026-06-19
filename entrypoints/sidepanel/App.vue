@@ -2,6 +2,7 @@
 import 'virtual:uno.css';
 import '@/assets/theme.css';
 import '@/assets/provider-icons.css';
+import '@/assets/code-blocks.css';
 import { onMounted, onUnmounted, ref, computed, defineAsyncComponent } from 'vue';
 import { useContentStore } from '@/stores/content';
 import { useComparisonStore } from '@/stores/comparison';

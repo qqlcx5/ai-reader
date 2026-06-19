@@ -2,6 +2,7 @@ export interface ProviderConfig {
   apiKey: string;
   baseUrl: string;
   model: string;
+  maxTokens?: number;
 }
 
 export interface StreamError {

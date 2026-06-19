@@ -35,7 +35,7 @@ export const useConversationsStore = defineStore('conversations', () => {
     providerId: string,
     articleContent: string,
     userMessage: string,
-    maxTokens: number = 4000,
+    maxTokens: number = 20000,
   ): string {
     const history = getHistory(providerId);
 

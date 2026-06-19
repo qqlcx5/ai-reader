@@ -104,4 +104,26 @@ describe('useHistoryStore', () => {
     await store.clear();
     expect(store.entries).toHaveLength(0);
   });
+
+  it('toggleFavorite toggles favorite status', async () => {
+    (browser.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+    (browser.storage.local.set as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    const store = useHistoryStore();
+    await store.load();
+
+    await store.addEntry({
+      title: 'Test', url: 'https://example.com', prompt: 'p', wordCount: 0,
+      responses: makeResponses(),
+    });
+    const id = store.entries[0].id;
+
+    expect(store.entries[0].favorite).toBe(false);
+
+    await store.toggleFavorite(id);
+    expect(store.entries[0].favorite).toBe(true);
+
+    await store.toggleFavorite(id);
+    expect(store.entries[0].favorite).toBe(false);
+  });
 });

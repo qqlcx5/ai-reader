@@ -19,6 +19,7 @@ export const customProvider: LLMProvider = {
           model: config.model,
           messages: [{ role: 'user', content: req.prompt }],
           stream: true,
+          ...(config.maxTokens ? { max_tokens: config.maxTokens } : {}),
         }),
         signal: req.signal,
       });

@@ -14,7 +14,7 @@ export const geminiProvider: LLMProvider = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: req.prompt }] }],
-          generationConfig: { maxOutputTokens: 4096 },
+          generationConfig: { maxOutputTokens: config.maxTokens || 4096 },
         }),
         signal: req.signal,
       });

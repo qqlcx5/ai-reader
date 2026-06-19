@@ -26,6 +26,8 @@ export interface HistoryEntry {
   prompt: string;
   /** Article word count at time of capture. */
   wordCount: number;
+  /** Whether this entry is favorited. */
+  favorite: boolean;
   /** Full per-model responses. */
   responses: ModelResponseSnapshot[];
 }
@@ -75,7 +77,7 @@ export const useHistoryStore = defineStore('history', () => {
     ready.value = true;
   }
 
-  async function addEntry(entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'summary'>) {
+  async function addEntry(entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'summary' | 'favorite'>) {
     const summary = entry.responses.find((r) => r.status === 'done')?.text
       || entry.responses[0]?.text
       || '';
@@ -84,6 +86,7 @@ export const useHistoryStore = defineStore('history', () => {
       summary: summary.slice(0, 280),
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       timestamp: Date.now(),
+      favorite: false,
     };
     entries.value.unshift(newEntry);
     if (entries.value.length > MAX_ENTRIES) {
@@ -117,8 +120,16 @@ export const useHistoryStore = defineStore('history', () => {
     return entries.value.find((e) => e.id === id);
   }
 
+  async function toggleFavorite(id: string) {
+    const entry = entries.value.find((e) => e.id === id);
+    if (entry) {
+      entry.favorite = !entry.favorite;
+      await save();
+    }
+  }
+
   // Load on init
   load();
 
-  return { entries, ready, totalCost, load, addEntry, removeEntry, clear, getEntry };
+  return { entries, ready, totalCost, load, addEntry, removeEntry, clear, getEntry, toggleFavorite };
 });

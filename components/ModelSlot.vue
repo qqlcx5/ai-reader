@@ -141,9 +141,15 @@ function copyToClipboard() {
       </div>
       <div
         v-else-if="slot.status === 'streaming'"
-        class="prose dark:prose-invert prose-sm max-w-none whitespace-pre-wrap text-[var(--font-ui-smaller)] text-[var(--text-normal)]"
+        class="prose dark:prose-invert prose-sm max-w-none text-[var(--font-ui-smaller)] text-[var(--text-normal)]"
       >
-        {{ slot.text || '思考中…' }}<span class="inline-block w-1.5 h-3 ml-0.5 bg-[var(--text-accent)] animate-pulse" />
+        <template v-if="slot.text">
+          <article v-html="renderMarkdown(slot.text)" />
+        </template>
+        <template v-else>
+          <span class="text-[var(--text-faint)]">思考中…</span>
+        </template>
+        <span class="inline-block w-1.5 h-3 ml-0.5 bg-[var(--text-accent)] animate-pulse" />
       </div>
       <article
         v-else

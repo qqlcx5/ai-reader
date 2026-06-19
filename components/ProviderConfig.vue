@@ -1,9 +1,11 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import BaseInput from './base/BaseInput.vue';
 import BaseToggle from './base/BaseToggle.vue';
+import BaseButton from './base/BaseButton.vue';
 import { PROVIDER_META, getProviderIcon } from '@/utils/providers';
+import { RotateCcw, ChevronDown, ChevronUp } from 'lucide-vue-next';
 
 const props = defineProps<{
   providerId: string;
@@ -15,6 +17,18 @@ const config = computed(() => settings.getProviderConfig(props.providerId));
 const isEnabled = computed(() => settings.enabledProviders.includes(props.providerId));
 const meta = computed(() => PROVIDER_META[props.providerId] || PROVIDER_META.custom);
 const iconClass = computed(() => `icon icon-${getProviderIcon(props.providerId)}`);
+const isExpanded = ref(false);
+
+const hasCustomConfig = computed(() => {
+  return config.value.baseUrl !== meta.value.defaultBaseUrl || config.value.model !== meta.value.defaultModel;
+});
+
+function resetToDefaults() {
+  settings.updateProvider(props.providerId, {
+    baseUrl: meta.value.defaultBaseUrl,
+    model: meta.value.defaultModel,
+  });
+}
 </script>
 
 <template>
@@ -35,6 +49,10 @@ const iconClass = computed(() => `icon icon-${getProviderIcon(props.providerId)}
             v-if="!isEnabled"
             class="ml-1.5 pill-neutral !text-[10px] align-middle"
           >未启用</span>
+          <span
+            v-if="isEnabled && hasCustomConfig"
+            class="ml-1.5 pill-warning !text-[10px] align-middle"
+          >自定义</span>
         </div>
         <div class="setting-item-description">
           {{ meta.description }}
@@ -68,7 +86,7 @@ const iconClass = computed(() => `icon icon-${getProviderIcon(props.providerId)}
         v-model="config.baseUrl"
         type="url"
         label="Base URL"
-        description="自定义 API 端点，留空使用默认"
+        :description="`默认: ${meta.defaultBaseUrl}`"
         :aria-label="`${meta.name} Base URL`"
         @update:model-value="(v) => settings.updateProvider(providerId, { baseUrl: v })"
       />
@@ -76,9 +94,16 @@ const iconClass = computed(() => `icon icon-${getProviderIcon(props.providerId)}
         v-model="config.model"
         type="text"
         label="Model"
+        :description="`默认: ${meta.defaultModel}`"
         :aria-label="`${meta.name} Model`"
         @update:model-value="(v) => settings.updateProvider(providerId, { model: v })"
       />
+    </div>
+    <div v-if="hasCustomConfig" class="flex justify-end">
+      <BaseButton variant="ghost" size="sm" @click="resetToDefaults">
+        <RotateCcw class="w-3 h-3" />
+        恢复默认
+      </BaseButton>
     </div>
   </div>
 </template>

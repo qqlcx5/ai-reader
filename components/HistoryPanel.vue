@@ -7,16 +7,21 @@ import { useConversationsStore } from '@/stores/conversations';
 import { useSettingsStore } from '@/stores/settings';
 import { renderMarkdown } from '@/utils/markdown';
 import { formatCost } from '@/utils/cost';
+import { toMarkdown } from '@/utils/export';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   Trash2, ArrowLeft, ExternalLink, Copy, Check,
-  Clock, Coins, AlertCircle, ChevronRight,
+  Clock, Coins, AlertCircle, ChevronRight, Star, StarOff,
+  Search, Heart, RotateCcw,
 } from 'lucide-vue-next';
 import { browser } from 'wxt/browser';
 import BaseState from './base/BaseState.vue';
 import BaseButton from './base/BaseButton.vue';
 import BaseIconButton from './base/BaseIconButton.vue';
 import { getProviderName, getProviderIcon } from '@/utils/providers';
+
+dayjs.extend(relativeTime);
 
 const history = useHistoryStore();
 const content = useContentStore();
@@ -31,14 +36,34 @@ const emit = defineEmits<{
 const viewingEntryId = ref<string | null>(null);
 const activeResponseIdx = ref(0);
 const copied = ref(false);
+const searchQuery = ref('');
+const showFavoritesOnly = ref(false);
 
 const viewingEntry = computed(() =>
   viewingEntryId.value ? history.getEntry(viewingEntryId.value) : null
 );
 
+const filteredEntries = computed(() => {
+  let entries = history.entries;
+  if (showFavoritesOnly.value) {
+    entries = entries.filter(e => e.favorite);
+  }
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase();
+    entries = entries.filter(e =>
+      e.title.toLowerCase().includes(q) ||
+      e.summary.toLowerCase().includes(q) ||
+      e.url.toLowerCase().includes(q)
+    );
+  }
+  return entries;
+});
+
 function formatTime(ts: number): string {
   const now = dayjs();
   const t = dayjs(ts);
+  if (now.diff(t, 'minute') < 1) return '刚刚';
+  if (now.diff(t, 'hour') < 1) return t.fromNow(true);
   if (now.diff(t, 'day') < 1) return t.format('HH:mm');
   if (now.diff(t, 'day') < 7) return t.format('ddd HH:mm');
   return t.format('MMM D');
@@ -69,7 +94,6 @@ async function openEntryUrl(url: string) {
     if (tabs[0]?.id) {
       await browser.tabs.update(tabs[0].id, { url });
     }
-    // Don't close — user might want to compare; let them close manually
   } catch (e) {
     console.error('Failed to navigate:', e);
   }
@@ -81,6 +105,28 @@ async function copyText(text: string) {
     copied.value = true;
     setTimeout(() => { copied.value = false; }, 1500);
   } catch {}
+}
+
+async function copyAllResponses() {
+  if (!viewingEntry.value) return;
+  const md = toMarkdown(
+    viewingEntry.value.title,
+    viewingEntry.value.url,
+    viewingEntry.value.responses.filter(r => r.text).map(r => ({
+      providerId: r.providerId,
+      modelId: r.modelId,
+      text: r.text,
+    }))
+  );
+  try {
+    await navigator.clipboard.writeText(md);
+    copied.value = true;
+    setTimeout(() => { copied.value = false; }, 1500);
+  } catch {}
+}
+
+function toggleFavorite(id: string) {
+  history.toggleFavorite(id);
 }
 
 function deleteEntry(id: string) {
@@ -118,11 +164,29 @@ async function reusePrompt(prompt: string) {
             <BaseIconButton
               size="sm"
               variant="default"
+              aria-label="复制全部回答为 Markdown"
+              title="复制全部回答"
+              @click="copyAllResponses"
+            >
+              <component :is="copied ? Check : Copy" class="w-3.5 h-3.5" />
+            </BaseIconButton>
+            <BaseIconButton
+              size="sm"
+              variant="default"
               aria-label="在浏览器中打开原页面"
               title="在浏览器中打开原页面"
               @click="openEntryUrl(viewingEntry.url)"
             >
               <ExternalLink class="w-3.5 h-3.5" />
+            </BaseIconButton>
+            <BaseIconButton
+              size="sm"
+              :variant="viewingEntry.favorite ? 'accent' : 'default'"
+              :aria-label="viewingEntry.favorite ? '取消收藏' : '收藏'"
+              :title="viewingEntry.favorite ? '取消收藏' : '收藏'"
+              @click="toggleFavorite(viewingEntry.id)"
+            >
+              <component :is="viewingEntry.favorite ? Star : StarOff" class="w-3.5 h-3.5" />
             </BaseIconButton>
             <BaseIconButton
               size="sm"
@@ -140,6 +204,13 @@ async function reusePrompt(prompt: string) {
         <p class="text-[var(--font-ui-smallest)] text-[var(--text-faint)] mt-0.5 truncate">
           {{ viewingEntry.url }}
         </p>
+        <div class="flex items-center gap-2 mt-1.5 text-[10px] text-[var(--text-faint)]">
+          <span v-if="viewingEntry.wordCount">{{ viewingEntry.wordCount.toLocaleString() }} 字</span>
+          <span>{{ viewingEntry.responses.length }} 个模型回答</span>
+          <span v-if="viewingEntry.responses.reduce((s, r) => s + r.estimatedCost, 0) > 0">
+            {{ formatCost(viewingEntry.responses.reduce((s, r) => s + r.estimatedCost, 0)) }}
+          </span>
+        </div>
       </div>
 
       <!-- Prompt that was sent -->
@@ -230,7 +301,7 @@ async function reusePrompt(prompt: string) {
           class="btn-secondary-sm w-full"
           @click="reusePrompt(viewingEntry.prompt)"
         >
-          <ChevronRight class="w-3 h-3" />
+          <RotateCcw class="w-3 h-3" />
           用相同提示词在当前页面重新提问
         </button>
       </div>
@@ -238,9 +309,50 @@ async function reusePrompt(prompt: string) {
 
     <!-- List view -->
     <template v-else>
+      <!-- Search and filter bar -->
+      <div class="px-3 py-2 border-b border-[var(--background-modifier-border)] space-y-2 shrink-0">
+        <div class="relative">
+          <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-faint)]" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="搜索历史记录…"
+            class="input-md pl-8 pr-8 w-full text-[var(--font-ui-smaller)]"
+            aria-label="搜索历史记录"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+            @click="searchQuery = ''"
+            aria-label="清除搜索"
+          >
+            <span class="text-xs">✕</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            :class="[
+              'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] transition-colors',
+              showFavoritesOnly
+                ? 'bg-[var(--color-accent-soft)] text-[var(--text-accent)]'
+                : 'bg-[var(--background-secondary)] text-[var(--text-muted)] hover:bg-[var(--background-modifier-hover)]',
+            ]"
+            @click="showFavoritesOnly = !showFavoritesOnly"
+          >
+            <component :is="showFavoritesOnly ? Star : StarOff" class="w-3 h-3" />
+            {{ showFavoritesOnly ? '仅收藏' : '收藏' }}
+          </button>
+          <span class="text-[10px] text-[var(--text-faint)] ml-auto">
+            {{ filteredEntries.length }} 条记录
+          </span>
+        </div>
+      </div>
+
       <div class="flex-1 overflow-y-auto scrollbar-thin">
         <BaseState
-          v-if="history.entries.length === 0"
+          v-if="filteredEntries.length === 0 && !searchQuery && !showFavoritesOnly"
           variant="empty"
           title="暂无历史记录"
           description="在 Side Panel 提问后会自动保存到这里"
@@ -248,8 +360,17 @@ async function reusePrompt(prompt: string) {
           class="py-12"
         />
 
+        <BaseState
+          v-else-if="filteredEntries.length === 0"
+          variant="empty"
+          title="没有匹配的记录"
+          description="试试其他搜索词或清除筛选条件"
+          size="sm"
+          class="py-12"
+        />
+
         <button
-          v-for="entry in history.entries"
+          v-for="entry in filteredEntries"
           :key="entry.id"
           type="button"
           class="w-full text-left px-4 py-3 border-b border-[var(--background-modifier-border-subtle)] hover:bg-[var(--background-modifier-hover)] transition-colors group focus-visible:outline-none focus-visible:bg-[var(--background-modifier-hover)]"
@@ -257,9 +378,20 @@ async function reusePrompt(prompt: string) {
         >
           <div class="flex items-start gap-2">
             <div class="flex-1 min-w-0">
-              <h4 class="text-[var(--font-ui-smaller)] font-medium text-[var(--text-normal)] line-clamp-1">
-                {{ entry.title }}
-              </h4>
+              <div class="flex items-center gap-1.5">
+                <h4 class="text-[var(--font-ui-smaller)] font-medium text-[var(--text-normal)] line-clamp-1 flex-1 min-w-0">
+                  {{ entry.title }}
+                </h4>
+                <button
+                  v-if="entry.favorite"
+                  type="button"
+                  class="shrink-0 text-[var(--text-accent)]"
+                  @click.stop="toggleFavorite(entry.id)"
+                  aria-label="取消收藏"
+                >
+                  <Star class="w-3 h-3 fill-current" />
+                </button>
+              </div>
               <p class="text-[10px] text-[var(--text-faint)] mt-0.5 truncate">
                 {{ entry.url }}
               </p>
@@ -288,7 +420,10 @@ async function reusePrompt(prompt: string) {
         </button>
       </div>
 
-      <div v-if="history.entries.length > 0" class="flex justify-end px-4 py-2 border-t border-[var(--background-modifier-border)] shrink-0">
+      <div v-if="history.entries.length > 0" class="flex items-center justify-between px-4 py-2 border-t border-[var(--background-modifier-border)] shrink-0">
+        <span class="text-[10px] text-[var(--text-faint)]">
+          累计 {{ history.entries.length }} 条 · {{ formatCost(history.totalCost) }}
+        </span>
         <BaseButton variant="ghost" size="sm" aria-label="清除所有历史" @click="history.clear()">
           <Trash2 class="w-3 h-3" />
           Clear All
