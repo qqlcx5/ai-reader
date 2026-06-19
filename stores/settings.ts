@@ -13,9 +13,9 @@ const DEFAULT_SETTINGS: ProviderSettings = {
       model: 'mimo-v2.5-pro',
     },
     anthropic: {
-      apiKey: '',
-      baseUrl: 'https://api.anthropic.com',
-      model: 'claude-sonnet-4-20250514',
+      apiKey: 'sk-0FeSEKHeEIobWQYM3arOlSmfd8zbbPE1bhx6gofle9deZxkx',
+      baseUrl: 'http://66.154.117.189:3000',
+      model: 'mimo-v2.5',
     },
     gemini: {
       apiKey: '',
