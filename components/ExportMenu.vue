@@ -3,35 +3,48 @@ import { ref } from 'vue';
 import { toMarkdown, toPDF, toObsidianUri, toNotion } from '@/utils/export';
 import { Download, FileText, BookOpen, Clipboard } from 'lucide-vue-next';
 
+interface ModelSummary {
+  providerId: string;
+  modelId: string;
+  text: string;
+}
+
 const props = defineProps<{
   title: string;
-  content: string;
   url: string;
+  summaries: ModelSummary[];
 }>();
 
 const showMenu = ref(false);
 const copied = ref(false);
 
 function copyMarkdown() {
-  const md = toMarkdown(props.title, props.content, props.url);
+  const md = toMarkdown(props.title, props.url, props.summaries);
   navigator.clipboard.writeText(md);
   copied.value = true;
   setTimeout(() => { copied.value = false; showMenu.value = false; }, 1500);
 }
 
 function downloadPDF() {
-  toPDF(props.title, props.content);
+  toPDF(props.title, props.summaries);
   showMenu.value = false;
 }
 
 function openObsidian() {
-  const uri = toObsidianUri(props.title, props.content);
-  window.open(uri, '_blank');
-  showMenu.value = false;
+  const uri = toObsidianUri(props.title, props.summaries);
+  if (uri.startsWith('clipboard:')) {
+    // Content too long for URI, copy to clipboard instead
+    navigator.clipboard.writeText(uri.slice(9));
+    copied.value = true;
+    setTimeout(() => { copied.value = false; showMenu.value = false; }, 1500);
+  } else {
+    window.open(uri, '_blank');
+    showMenu.value = false;
+  }
 }
 
 async function copyNotion() {
-  await toNotion(props.title, props.content);
+  await toNotion(props.title, props.summaries);
   copied.value = true;
   setTimeout(() => { copied.value = false; showMenu.value = false; }, 1500);
 }

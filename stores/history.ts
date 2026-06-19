@@ -15,10 +15,12 @@ const MAX_ENTRIES = 50;
 
 export const useHistoryStore = defineStore('history', () => {
   const entries = ref<HistoryEntry[]>([]);
+  const ready = ref(false);
 
   async function load() {
     const data = await browser.storage.local.get(STORAGE_KEY);
     entries.value = (data[STORAGE_KEY] as HistoryEntry[]) || [];
+    ready.value = true;
   }
 
   async function addEntry(entry: Omit<HistoryEntry, 'id' | 'timestamp'>) {
@@ -51,5 +53,5 @@ export const useHistoryStore = defineStore('history', () => {
   // Load on init
   load();
 
-  return { entries, load, addEntry, removeEntry, clear };
+  return { entries, ready, load, addEntry, removeEntry, clear };
 });

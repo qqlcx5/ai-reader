@@ -15,17 +15,21 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@tailwindcss/typography": "^0.5.20",
+    "dayjs": "^1.11.21",
     "defuddle": "^0.19.0",
+    "jspdf": "^4.2.1",
     "lucide-vue-next": "^0.577.0",
     "markdown-it": "^14.2.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@unocss/preset-typography": "^66.7.2",
     "@wxt-dev/module-vue": "^1.0.3",
-    "tailwindcss": "^4.3.1",
+    "@wxt-dev/unocss": "^1.0.1",
     "typescript": "^5.9.3",
+    "unocss": "^66.7.2",
     "vue-tsc": "^3.2.5",
     "wxt": "^0.20.26"
   }

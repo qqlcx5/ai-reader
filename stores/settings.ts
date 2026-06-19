@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, watch } from 'vue';
+import { ref, watch, toRaw } from 'vue';
 import type { ProviderConfig, ProviderSettings } from '@/utils/llm/types';
 import { browser } from 'wxt/browser';
 
@@ -39,21 +39,39 @@ const DEFAULT_SETTINGS: ProviderSettings = {
 export const useSettingsStore = defineStore('settings', () => {
   const providers = ref<Record<string, ProviderConfig>>({ ...DEFAULT_SETTINGS.providers });
   const enabledProviders = ref<string[]>([...DEFAULT_SETTINGS.enabledProviders]);
+  const ready = ref(false);
 
   async function load() {
     const data = await browser.storage.local.get(STORAGE_KEY);
     const saved = data[STORAGE_KEY] as ProviderSettings | undefined;
     if (saved) {
-      providers.value = { ...DEFAULT_SETTINGS.providers, ...saved.providers };
-      enabledProviders.value = saved.enabledProviders || ['openai'];
+      // Defensive: coerce to plain array (previous versions / bad writes
+      // may have stored enabledProviders as a numeric-keyed object).
+      const rawEnabled = Array.isArray(saved.enabledProviders)
+        ? saved.enabledProviders
+        : (saved.enabledProviders && typeof saved.enabledProviders === 'object'
+            ? Object.values(saved.enabledProviders as Record<string, string>)
+            : null);
+      providers.value = { ...DEFAULT_SETTINGS.providers, ...(saved.providers || {}) };
+      enabledProviders.value = rawEnabled && rawEnabled.length > 0
+        ? rawEnabled
+        : [...DEFAULT_SETTINGS.enabledProviders];
     }
+    ready.value = true;
   }
 
   async function save() {
+    // CRITICAL: Chrome's storage serializer does not recognize Vue's
+    // reactive proxy as an Array and would store `["openai"]` as
+    // `{"0":"openai"}`. Spread to plain values before persisting.
+    const plainProviders: Record<string, ProviderConfig> = {};
+    for (const [id, cfg] of Object.entries(toRaw(providers.value))) {
+      plainProviders[id] = { ...toRaw(cfg) };
+    }
     await browser.storage.local.set({
       [STORAGE_KEY]: {
-        providers: providers.value,
-        enabledProviders: enabledProviders.value,
+        providers: plainProviders,
+        enabledProviders: [...toRaw(enabledProviders.value)],
       } satisfies ProviderSettings,
     });
   }
@@ -75,8 +93,12 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  // Auto-save on changes
-  watch([providers, enabledProviders], save, { deep: true });
+  // Debounced auto-save on changes
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  watch([providers, enabledProviders], () => {
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(save, 500);
+  }, { deep: true });
 
   // Load on init
   load();
@@ -84,6 +106,7 @@ export const useSettingsStore = defineStore('settings', () => {
   return {
     providers,
     enabledProviders,
+    ready,
     load,
     save,
     getProviderConfig,
