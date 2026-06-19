@@ -160,7 +160,7 @@ onUnmounted(() => {
         </button>
       </div>
       <Suspense>
-        <HistoryPanel />
+        <HistoryPanel @close="showHistory = false" />
       </Suspense>
     </div>
 

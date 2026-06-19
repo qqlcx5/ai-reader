@@ -1,12 +1,36 @@
 <script lang="ts" setup>
 import { useHistoryStore } from '@/stores/history';
+import { useContentStore } from '@/stores/content';
+import { useComparisonStore } from '@/stores/comparison';
 import { Trash2 } from 'lucide-vue-next';
+import { browser } from 'wxt/browser';
 import dayjs from 'dayjs';
 
 const history = useHistoryStore();
+const content = useContentStore();
+const comparison = useComparisonStore();
+
+const emit = defineEmits<{
+  close: [];
+}>();
 
 function formatTime(ts: number): string {
   return dayjs(ts).format('MM/DD HH:mm');
+}
+
+async function openEntry(entry: { url: string }) {
+  if (!entry.url) return;
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]?.id) {
+      await browser.tabs.update(tabs[0].id, { url: entry.url });
+    }
+    comparison.clearAll();
+    content.clear();
+    emit('close');
+  } catch (e) {
+    console.error('Failed to navigate:', e);
+  }
 }
 </script>
 
@@ -20,7 +44,8 @@ function formatTime(ts: number): string {
       <div
         v-for="entry in history.entries"
         :key="entry.id"
-        class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+        class="px-4 py-3 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group cursor-pointer"
+        @click="openEntry(entry)"
       >
         <div class="flex items-start justify-between gap-2">
           <div class="flex-1 min-w-0">
@@ -31,7 +56,7 @@ function formatTime(ts: number): string {
           <div class="flex flex-col items-end gap-1 flex-shrink-0">
             <span class="text-xs text-gray-400 dark:text-gray-500">{{ formatTime(entry.timestamp) }}</span>
             <button
-              @click="history.removeEntry(entry.id)"
+              @click.stop="history.removeEntry(entry.id)"
               class="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
               aria-label="删除记录"
             >
