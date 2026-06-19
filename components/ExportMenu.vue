@@ -54,43 +54,47 @@ async function copyNotion() {
   <div class="relative">
     <button
       @click="showMenu = !showMenu"
-      class="p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
-      title="Export"
+      class="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+      aria-label="导出"
     >
       <Download class="w-4 h-4" />
     </button>
 
     <div
       v-if="showMenu"
-      class="absolute right-0 top-8 z-10 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px]"
+      class="absolute right-0 top-8 z-10 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]"
     >
       <button
         @click="copyMarkdown"
-        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        aria-label="复制 Markdown"
       >
         <FileText class="w-4 h-4" />
-        {{ copied ? 'Copied!' : 'Copy Markdown' }}
+        {{ copied ? '已复制!' : '复制 Markdown' }}
       </button>
       <button
         @click="downloadPDF"
-        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        aria-label="下载 PDF"
       >
         <Download class="w-4 h-4" />
-        Download PDF
+        下载 PDF
       </button>
       <button
         @click="openObsidian"
-        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        aria-label="在 Obsidian 中打开"
       >
         <BookOpen class="w-4 h-4" />
-        Open in Obsidian
+        在 Obsidian 中打开
       </button>
       <button
         @click="copyNotion"
-        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors"
+        class="flex items-center gap-2 w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        aria-label="复制为 Notion 格式"
       >
         <Clipboard class="w-4 h-4" />
-        Copy for Notion
+        复制为 Notion 格式
       </button>
     </div>
   </div>
