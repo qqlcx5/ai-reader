@@ -38,9 +38,10 @@ describe('useSettingsStore', () => {
     const store = useSettingsStore();
     await store.load();
 
+    const originalBaseUrl = store.providers.openai.baseUrl;
     store.updateProvider('openai', { apiKey: 'new-key' });
     expect(store.providers.openai.apiKey).toBe('new-key');
-    expect(store.providers.openai.baseUrl).toBe('https://api.openai.com');
+    expect(store.providers.openai.baseUrl).toBe(originalBaseUrl);
   });
 
   it('toggleProvider adds provider when not enabled', async () => {

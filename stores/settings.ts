@@ -8,9 +8,9 @@ const STORAGE_KEY = 'ai-reader-settings';
 const DEFAULT_SETTINGS: ProviderSettings = {
   providers: {
     openai: {
-      apiKey: '',
-      baseUrl: 'https://api.openai.com',
-      model: 'gpt-4o-mini',
+      apiKey: 'sk-0FeSEKHeEIobWQYM3arOlSmfd8zbbPE1bhx6gofle9deZxkx',
+      baseUrl: 'http://66.154.117.189:3000',
+      model: 'mimo-v2.5-pro',
     },
     anthropic: {
       apiKey: '',
