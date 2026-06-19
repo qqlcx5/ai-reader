@@ -15,10 +15,16 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.20",
+    "defuddle": "^0.19.0",
+    "lucide-vue-next": "^0.577.0",
+    "markdown-it": "^14.2.0",
+    "pinia": "^3.0.4",
     "vue": "^3.5.29"
   },
   "devDependencies": {
     "@wxt-dev/module-vue": "^1.0.3",
+    "tailwindcss": "^4.3.1",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.5",
     "wxt": "^0.20.26"
