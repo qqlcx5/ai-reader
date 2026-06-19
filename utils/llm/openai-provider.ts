@@ -1,27 +1,40 @@
 import type { LLMProvider, ProviderConfig, StreamRequest } from './types';
 import { readSSEStream } from './sse';
+import { toStreamError, toNetworkError } from '@/utils/errors';
 
 export const openaiProvider: LLMProvider = {
   id: 'openai',
   name: 'OpenAI',
   async stream(config: ProviderConfig, req: StreamRequest) {
-    const resp = await fetch(`${config.baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [{ role: 'user', content: req.prompt }],
-        stream: true,
-      }),
-      signal: req.signal,
-    });
+    let resp: Response;
+    try {
+      resp = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: 'user', content: req.prompt }],
+          stream: true,
+        }),
+        signal: req.signal,
+      });
+    } catch (e) {
+      if (req.signal.aborted) return;
+      req.onError(toNetworkError(e instanceof Error ? e : new Error(String(e))));
+      return;
+    }
 
     if (!resp.ok) {
-      const err = await resp.text();
-      req.onError(`OpenAI error ${resp.status}: ${err}`);
+      const body = await resp.text();
+      const err = toStreamError(resp.status, body);
+      if (resp.status === 429) {
+        const retryAfter = resp.headers.get('Retry-After');
+        if (retryAfter) err.retryAfter = Number(retryAfter);
+      }
+      req.onError(err);
       return;
     }
 
@@ -34,7 +47,7 @@ export const openaiProvider: LLMProvider = {
       req.onDone();
     } catch (e) {
       if (req.signal.aborted) return;
-      req.onError(e instanceof Error ? e.message : 'Stream error');
+      req.onError(toNetworkError(e instanceof Error ? e : new Error(String(e))));
     }
   },
 };

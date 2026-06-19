@@ -10,6 +10,7 @@ export interface ExtractContentResponse {
   content: string;
   url: string;
   wordCount: number;
+  error?: string;
 }
 
 export interface OpenSidePanelRequest {

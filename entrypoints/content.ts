@@ -1,6 +1,5 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browser } from 'wxt/browser';
-import Defuddle from 'defuddle';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -14,12 +13,30 @@ export default defineContentScript({
   },
 });
 
+async function waitForDocumentReady(timeoutMs = 5000): Promise<void> {
+  if (document.readyState === 'complete') return;
+  return new Promise((resolve) => {
+    const onReady = () => {
+      document.removeEventListener('readystatechange', onReady);
+      resolve();
+    };
+    document.addEventListener('readystatechange', onReady);
+    setTimeout(() => {
+      document.removeEventListener('readystatechange', onReady);
+      resolve();
+    }, timeoutMs);
+  });
+}
+
 async function extractContent() {
+  await waitForDocumentReady();
+
   const url = document.URL;
   const title = document.title || '';
 
   // Tier 1: defuddle async (with 8s timeout)
   try {
+    const Defuddle = (await import('defuddle')).default;
     const defuddle = new Defuddle(document, { url });
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('defuddle timeout')), 8000)
@@ -39,6 +56,7 @@ async function extractContent() {
 
   // Tier 2: defuddle sync fallback
   try {
+    const Defuddle = (await import('defuddle')).default;
     const defuddle = new Defuddle(document, { url });
     const result = defuddle.parse();
     if (result.content && result.content.trim().length > 0) {
@@ -56,10 +74,23 @@ async function extractContent() {
   // Tier 3: raw innerText fallback
   const clone = document.body.cloneNode(true) as HTMLElement;
   clone.querySelectorAll('script, style, noscript').forEach(el => el.remove());
+  const innerText = clone.innerText.trim();
+
+  if (innerText.length === 0) {
+    return {
+      error: 'extraction_failed',
+      message: '无法提取页面内容，页面可能为空或受保护',
+      title,
+      url,
+      content: '',
+      wordCount: 0,
+    };
+  }
+
   return {
     title,
-    content: clone.innerText.trim(),
+    content: innerText,
     url,
-    wordCount: clone.innerText.split(/\s+/).filter(Boolean).length,
+    wordCount: innerText.split(/\s+/).filter(Boolean).length,
   };
 }

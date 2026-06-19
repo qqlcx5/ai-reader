@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
 import ModelSlot from './ModelSlot.vue';
+import SkeletonCard from './SkeletonCard.vue';
 import { useComparisonStore } from '@/stores/comparison';
 import { useConversationsStore } from '@/stores/conversations';
 import { useContentStore } from '@/stores/content';
@@ -45,15 +46,17 @@ function handleRetry(index: number) {
     ]"
     :style="isScrollable ? { minWidth: 0, width: '100%' } : {}"
   >
-    <ModelSlot
-      v-for="(slot, i) in comparison.slots"
-      :key="i"
-      :slot="slot"
-      :index="i"
-      :class="isScrollable ? 'min-w-[320px] flex-shrink-0' : ''"
-      @abort="(idx) => comparison.abortSlot(idx)"
-      @followUp="handleFollowUp"
-      @retry="handleRetry"
-    />
+    <template v-for="(slot, i) in comparison.slots" :key="i">
+      <SkeletonCard v-if="slot.status === 'idle' && !slot.text" :class="isScrollable ? 'min-w-[320px] flex-shrink-0' : ''" />
+      <ModelSlot
+        v-else
+        :slot="slot"
+        :index="i"
+        :class="isScrollable ? 'min-w-[320px] flex-shrink-0' : ''"
+        @abort="(idx) => comparison.abortSlot(idx)"
+        @followUp="handleFollowUp"
+        @retry="handleRetry"
+      />
+    </template>
   </div>
 </template>
