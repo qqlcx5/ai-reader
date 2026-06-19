@@ -20,12 +20,17 @@ const DEFAULT_SETTINGS: ProviderSettings = {
     gemini: {
       apiKey: '',
       baseUrl: 'https://generativelanguage.googleapis.com',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-exp',
+    },
+    deepseek: {
+      apiKey: '',
+      baseUrl: 'https://api.deepseek.com',
+      model: 'deepseek-chat',
     },
     ollama: {
       apiKey: '',
       baseUrl: 'http://localhost:11434',
-      model: 'llama3',
+      model: 'llama3.2',
     },
     custom: {
       apiKey: '',
@@ -33,7 +38,7 @@ const DEFAULT_SETTINGS: ProviderSettings = {
       model: '',
     },
   },
-  enabledProviders: ['openai'],
+  enabledProviders: [],
 };
 
 export const useSettingsStore = defineStore('settings', () => {

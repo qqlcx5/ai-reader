@@ -4,6 +4,7 @@ import { Send } from 'lucide-vue-next';
 
 const props = defineProps<{
   disabled?: boolean;
+  placeholder?: string;
 }>();
 
 const emit = defineEmits<{
@@ -21,22 +22,25 @@ function handleSend() {
 </script>
 
 <template>
-  <div class="flex items-center gap-1 p-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+  <div class="flex items-center gap-1.5 p-2 border-t border-[var(--background-modifier-border)] bg-[var(--background-primary)] shrink-0">
     <input
       v-model="text"
       type="text"
-      placeholder="Ask a follow-up..."
-      class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+      :placeholder="placeholder || '继续提问…'"
+      class="input-md flex-1"
       :disabled="disabled"
+      aria-label="继续提问输入"
       @keyup.enter="handleSend"
     />
     <button
-      @click="handleSend"
+      type="button"
+      class="clickable-icon !w-7 !h-7"
+      :class="(disabled || !text.trim()) ? 'opacity-40 cursor-not-allowed' : 'text-[var(--text-accent)] hover:!bg-[var(--color-accent-soft)]'"
       :disabled="disabled || !text.trim()"
-      class="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       aria-label="发送"
+      @click="handleSend"
     >
-      <Send class="w-4 h-4" />
+      <Send class="w-3.5 h-3.5" />
     </button>
   </div>
 </template>

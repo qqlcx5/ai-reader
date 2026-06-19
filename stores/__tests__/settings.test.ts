@@ -60,7 +60,8 @@ describe('useSettingsStore', () => {
     const store = useSettingsStore();
     await store.load();
 
-    // openai is enabled by default
+    // Enable openai first
+    store.toggleProvider('openai');
     expect(store.enabledProviders).toContain('openai');
     store.toggleProvider('openai');
     expect(store.enabledProviders).not.toContain('openai');

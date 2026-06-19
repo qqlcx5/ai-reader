@@ -4,7 +4,7 @@ import { browser } from 'wxt/browser';
 import type { ProviderConfig, StreamError } from '@/utils/llm/types';
 import { estimateTokens, estimateCost } from '@/utils/cost';
 import { useSettingsStore } from './settings';
-import { useHistoryStore } from './history';
+import { useHistoryStore, type ModelResponseSnapshot } from './history';
 import { useContentStore } from './content';
 
 export interface StreamSlot {
@@ -28,24 +28,30 @@ export const useComparisonStore = defineStore('comparison', () => {
   const isRunning = ref(false);
 
   function initSlots(providerIds: string[]) {
+    // Cancel any in-flight streams first
     abortAll();
 
     const settings = useSettingsStore();
-    slots.value = providerIds.map((id) => ({
-      providerId: id,
-      modelId: settings.getProviderConfig(id).model,
-      status: 'idle' as const,
-      text: '',
-      error: '',
-      port: null,
-      startTime: 0,
-      endTime: 0,
-      tokenCount: 0,
-      lastPrompt: '',
-      inputTokens: 0,
-      outputTokens: 0,
-      estimatedCost: 0,
-    }));
+    const fresh: StreamSlot[] = providerIds.map((id) => {
+      const config = settings.getProviderConfig(id);
+      return {
+        providerId: id,
+        modelId: config.model,
+        status: 'idle' as const,
+        text: '',
+        error: '',
+        port: null,
+        startTime: 0,
+        endTime: 0,
+        tokenCount: 0,
+        lastPrompt: '',
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCost: 0,
+      };
+    });
+    slots.value = fresh;
+    isRunning.value = false;
   }
 
   function connectSlot(slot: StreamSlot, config: ProviderConfig, prompt: string) {
@@ -134,12 +140,13 @@ export const useComparisonStore = defineStore('comparison', () => {
       slot.status = 'done';
       slot.endTime = Date.now();
     }
+    checkAllDone();
   }
 
   function abortAll() {
     for (const slot of slots.value) {
       if (slot.port) {
-        slot.port.disconnect();
+        try { slot.port.disconnect(); } catch {}
         slot.port = null;
       }
     }
@@ -147,20 +154,45 @@ export const useComparisonStore = defineStore('comparison', () => {
   }
 
   function checkAllDone() {
-    if (slots.value.every((s) => s.status !== 'streaming')) {
+    if (slots.value.length === 0) {
       isRunning.value = false;
-      // Save to history if there are completed summaries
-      const completedTexts = slots.value.filter(s => s.text).map(s => s.text);
-      if (completedTexts.length > 0) {
-        const content = useContentStore();
-        const history = useHistoryStore();
-        history.addEntry({
-          title: content.title || 'Untitled',
-          url: content.url || '',
-          summary: completedTexts[0].slice(0, 200),
-        });
-      }
+      return;
     }
+    const stillRunning = slots.value.some((s) => s.status === 'streaming');
+    if (stillRunning) {
+      isRunning.value = true;
+      return;
+    }
+    isRunning.value = false;
+
+    // Save to history when at least one slot finished
+    const completed = slots.value.filter((s) => s.text && (s.status === 'done' || s.status === 'error'));
+    if (completed.length === 0) return;
+
+    const content = useContentStore();
+    const history = useHistoryStore();
+    const responses: ModelResponseSnapshot[] = completed.map((s) => ({
+      providerId: s.providerId,
+      modelId: s.modelId,
+      text: s.text,
+      status: s.status as 'done' | 'error',
+      error: typeof s.error === 'string' ? s.error : (s.error?.message ?? ''),
+      inputTokens: s.inputTokens,
+      outputTokens: s.outputTokens,
+      estimatedCost: s.estimatedCost,
+      elapsedMs: s.endTime > 0 ? s.endTime - s.startTime : 0,
+    }));
+
+    // Persist the first prompt (full slot prompt) — callers pass the same prompt to all
+    const firstPrompt = completed[0]?.lastPrompt ?? '';
+
+    history.addEntry({
+      title: content.title || 'Untitled',
+      url: content.url || '',
+      wordCount: content.wordCount,
+      prompt: firstPrompt,
+      responses,
+    });
   }
 
   function followUpSlot(index: number, prompt: string) {

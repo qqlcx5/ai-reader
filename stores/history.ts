@@ -1,31 +1,87 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { browser } from 'wxt/browser';
+import { compress, decompress } from '@/utils/compress';
+
+export interface ModelResponseSnapshot {
+  providerId: string;
+  modelId: string;
+  text: string;
+  status: 'done' | 'error';
+  error?: string;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCost: number;
+  elapsedMs: number;
+}
 
 export interface HistoryEntry {
   id: string;
   title: string;
   url: string;
   timestamp: number;
+  /** The first model response text — kept at top level for list previews. */
   summary: string;
+  /** The prompt that was sent to all models. */
+  prompt: string;
+  /** Article word count at time of capture. */
+  wordCount: number;
+  /** Full per-model responses. */
+  responses: ModelResponseSnapshot[];
 }
 
 const STORAGE_KEY = 'ai-reader-history';
 const MAX_ENTRIES = 50;
 
+interface PersistedEnvelope {
+  v: 2;
+  /** base64-lz-string-compressed JSON of HistoryEntry[] */
+  data: string;
+}
+
 export const useHistoryStore = defineStore('history', () => {
   const entries = ref<HistoryEntry[]>([]);
   const ready = ref(false);
+  const totalCost = computed(() =>
+    entries.value.reduce((sum, e) => sum + e.responses.reduce((s, r) => s + r.estimatedCost, 0), 0)
+  );
 
   async function load() {
-    const data = await browser.storage.local.get(STORAGE_KEY);
-    entries.value = (data[STORAGE_KEY] as HistoryEntry[]) || [];
+    try {
+      const data = await browser.storage.local.get(STORAGE_KEY);
+      const raw = data[STORAGE_KEY];
+      if (!raw) {
+        entries.value = [];
+      } else if (typeof raw === 'object' && 'v' in raw && (raw as PersistedEnvelope).v === 2) {
+        // New compressed format
+        const envelope = raw as PersistedEnvelope;
+        try {
+          const json = decompress(envelope.data);
+          entries.value = JSON.parse(json) as HistoryEntry[];
+        } catch (e) {
+          console.error('Failed to decompress history:', e);
+          entries.value = [];
+        }
+      } else if (Array.isArray(raw)) {
+        // Legacy plain array
+        entries.value = raw as HistoryEntry[];
+      } else {
+        entries.value = [];
+      }
+    } catch (e) {
+      console.error('Failed to load history:', e);
+      entries.value = [];
+    }
     ready.value = true;
   }
 
-  async function addEntry(entry: Omit<HistoryEntry, 'id' | 'timestamp'>) {
+  async function addEntry(entry: Omit<HistoryEntry, 'id' | 'timestamp' | 'summary'>) {
+    const summary = entry.responses.find((r) => r.status === 'done')?.text
+      || entry.responses[0]?.text
+      || '';
     const newEntry: HistoryEntry = {
       ...entry,
+      summary: summary.slice(0, 280),
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
       timestamp: Date.now(),
     };
@@ -37,7 +93,7 @@ export const useHistoryStore = defineStore('history', () => {
   }
 
   async function removeEntry(id: string) {
-    entries.value = entries.value.filter(e => e.id !== id);
+    entries.value = entries.value.filter((e) => e.id !== id);
     await save();
   }
 
@@ -47,11 +103,22 @@ export const useHistoryStore = defineStore('history', () => {
   }
 
   async function save() {
-    await browser.storage.local.set({ [STORAGE_KEY]: entries.value });
+    try {
+      const json = JSON.stringify(entries.value);
+      const compressed = compress(json);
+      const envelope: PersistedEnvelope = { v: 2, data: compressed };
+      await browser.storage.local.set({ [STORAGE_KEY]: envelope });
+    } catch (e) {
+      console.error('Failed to save history:', e);
+    }
+  }
+
+  function getEntry(id: string): HistoryEntry | undefined {
+    return entries.value.find((e) => e.id === id);
   }
 
   // Load on init
   load();
 
-  return { entries, ready, load, addEntry, removeEntry, clear };
+  return { entries, ready, totalCost, load, addEntry, removeEntry, clear, getEntry };
 });

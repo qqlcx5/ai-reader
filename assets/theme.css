@@ -1,0 +1,361 @@
+/* AI Reader — Design Tokens (Obsidian-style)
+ * Single source of truth. Mirrors obsidian-clipper's color-base-XX system
+ * so we can adopt its visual language (superellipse corners, dense typography,
+ * subtle inset shadows on inputs/CTAs).
+ */
+
+:root {
+  /* === Accent (Obsidian default purple, swappable per brand) === */
+  --accent-h: 258;
+  --accent-s: 88%;
+  --accent-l: 66%;
+
+  /* === Light theme === */
+  --color-base-00: #ffffff;
+  --color-base-05: #fcfcfc;
+  --color-base-10: #fafafa;
+  --color-base-20: #f6f6f6;
+  --color-base-25: #ececec;
+  --color-base-30: #e0e0e0;
+  --color-base-35: #d4d4d4;
+  --color-base-40: #bdbdbd;
+  --color-base-50: #ababab;
+  --color-base-60: #707070;
+  --color-base-70: #5c5c5c;
+  --color-base-100: #222222;
+
+  --color-accent-hsl:
+    var(--accent-h),
+    var(--accent-s),
+    var(--accent-l);
+  --color-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --color-accent-1: hsl(
+    calc(var(--accent-h) - 1),
+    calc(var(--accent-s) * 1.01),
+    calc(var(--accent-l) * 1.075));
+  --color-accent-2: hsl(
+    calc(var(--accent-h) - 3),
+    calc(var(--accent-s) * 1.02),
+    calc(var(--accent-l) * 1.15));
+  --color-accent-soft: hsla(var(--color-accent-hsl), 0.12);
+  --color-accent-soft-hover: hsla(var(--color-accent-hsl), 0.18);
+
+  --color-red-hsl: 353, 81%, 56%;
+  --color-green-hsl: 144, 92%, 38%;
+  --color-orange-rgb: 236, 117, 0;
+  --color-yellow-rgb: 224, 172, 0;
+
+  --color-red: hsl(var(--color-red-hsl));
+  --color-green: hsl(var(--color-green-hsl));
+  --color-yellow: rgb(var(--color-yellow-rgb));
+
+  --mono-rgb-100: 0, 0, 0;
+  --mono-rgb-0: 255, 255, 255;
+
+  /* Semantic aliases */
+  --background-primary: var(--color-base-00);
+  --background-primary-alt: var(--color-base-10);
+  --background-secondary: var(--color-base-20);
+  --background-modifier-border: var(--color-base-25);
+  --background-modifier-border-hover: var(--color-base-35);
+  --background-modifier-border-focus: var(--color-base-40);
+  --background-modifier-hover: rgba(var(--mono-rgb-100), 0.075);
+  --background-modifier-form-field: var(--color-base-00);
+  --background-modifier-cover: rgba(220, 220, 220, 0.4);
+
+  --background-modifier-error: hsla(var(--color-red-hsl), 0.1);
+  --background-modifier-success: hsla(var(--color-green-hsl), 0.1);
+  --background-modifier-warning: rgba(var(--color-orange-rgb), 0.1);
+
+  --text-normal: var(--color-base-100);
+  --text-muted: var(--color-base-70);
+  --text-faint: var(--color-base-50);
+  --text-accent: var(--color-accent);
+  --text-accent-hover: var(--color-accent-2);
+  --text-on-accent: white;
+  --text-error: var(--color-red);
+  --text-success: var(--color-green);
+  --text-warning: rgb(var(--color-orange-rgb));
+
+  --interactive-normal: var(--color-base-00);
+  --interactive-hover: var(--color-base-10);
+  --interactive-accent: var(--color-accent-1);
+  --interactive-accent-hover: var(--color-accent-2);
+
+  --text-selection: hsla(var(--color-accent-hsl), 0.2);
+
+  /* === Geometry === */
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 16px;
+  --corner-shape: superellipse(1.33);
+  --clickable-icon-size: 1.75rem;
+  --input-height: 1.875rem;
+  --icon-size: 1rem;
+
+  /* === Typography === */
+  --font-ui-smallest: 0.75rem;
+  --font-ui-smaller: 0.8125rem;
+  --font-ui-small: 0.875rem;
+  --font-ui-medium: 0.9375rem;
+  --font-ui-large: 1.125rem;
+  --font-default: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Inter, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    sans-serif;
+  --font-monospace-default: ui-monospace, SFMono-Regular, 'Cascadia Mono',
+    'Roboto Mono', 'DejaVu Sans Mono', 'Liberation Mono', Menlo, Monaco,
+    Consolas, 'Source Code Pro', monospace;
+
+  /* === Shadows (light) === */
+  --input-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 2px 3px 0 rgba(0, 0, 0, 0.05),
+    0 1px 1.5px 0 rgba(0, 0, 0, 0.03),
+    0 1px 2px 0 rgba(0, 0, 0, 0.04),
+    0 0 0 0 transparent;
+  --input-shadow-hover:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.17),
+    0 2px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 1.5px 0 rgba(0, 0, 0, 0.03),
+    0 1px 2px 0 rgba(0, 0, 0, 0.04),
+    0 0 0 0 transparent;
+  --input-shadow-focus: 0 0 0 2px var(--background-modifier-border-focus);
+  --shadow-s:
+    0 1px 2px rgba(0, 0, 0, 0.028),
+    0 3.4px 6.7px rgba(0, 0, 0, 0.042),
+    0 15px 30px rgba(0, 0, 0, 0.07);
+  --shadow-l:
+    0 1.8px 7.3px rgba(0, 0, 0, 0.071),
+    0 6.3px 24.7px rgba(0, 0, 0, 0.112),
+    0 30px 90px rgba(0, 0, 0, 0.2);
+
+  /* === Motion === */
+  --duration-fast: 0.15s;
+  --duration-normal: 0.2s;
+  --easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* === Modal === */
+  --modal-background: var(--background-primary);
+  --modal-border-color: var(--background-modifier-border-focus);
+  --modal-radius: var(--radius-l);
+  --modal-padding: 1rem;
+  --modal-width: 560px;
+  --modal-max-width: 80vw;
+
+  /* === Dropdown === */
+  --dropdown-background: transparent;
+  --dropdown-padding: 0 1.75rem 0 0.5rem;
+  --dropdown-background-position: right 0.25rem top 50%, 0 0;
+  --dropdown-background-size: 1rem auto, 100%;
+}
+
+/* === Dark theme === */
+html.dark {
+  --color-base-00: #1e1e1e;
+  --color-base-05: #212121;
+  --color-base-10: #242424;
+  --color-base-20: #262626;
+  --color-base-25: #2a2a2a;
+  --color-base-30: #363636;
+  --color-base-35: #3f3f3f;
+  --color-base-40: #555555;
+  --color-base-50: #666666;
+  --color-base-60: #999999;
+  --color-base-70: #b3b3b3;
+  --color-base-100: #dadada;
+
+  --color-accent-1: hsl(
+    calc(var(--accent-h) - 3),
+    calc(var(--accent-s) * 1.02),
+    calc(var(--accent-l) * 1.15));
+  --color-accent-2: hsl(
+    calc(var(--accent-h) - 5),
+    calc(var(--accent-s) * 1.05),
+    calc(var(--accent-l) * 1.29));
+  --color-accent-soft: hsla(var(--color-accent-hsl), 0.18);
+  --color-accent-soft-hover: hsla(var(--color-accent-hsl), 0.24);
+
+  --color-red-hsl: 358, 96%, 63%;
+  --color-green-hsl: 138, 59%, 54%;
+  --color-orange-rgb: 233, 151, 63;
+
+  --color-red: hsl(var(--color-red-hsl));
+  --color-green: hsl(var(--color-green-hsl));
+
+  --mono-rgb-100: 255, 255, 255;
+  --mono-rgb-0: 0, 0, 0;
+
+  --background-modifier-cover: rgba(10, 10, 10, 0.4);
+  --background-modifier-hover: rgba(var(--mono-rgb-100), 0.15);
+
+  --interactive-normal: var(--color-base-30);
+  --interactive-hover: var(--color-base-35);
+  --interactive-accent: var(--color-accent);
+  --interactive-accent-hover: var(--color-accent-1);
+
+  --text-selection: hsla(var(--color-accent-hsl), 0.3);
+  --text-accent: var(--color-accent-1);
+
+  --input-shadow:
+    inset 0 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.09),
+    0 2px 4px 0 rgba(0, 0, 0, 0.15),
+    0 1px 1.5px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.2),
+    0 0 0 0 transparent;
+  --input-shadow-hover:
+    inset 0 0.5px 1px 0.5px rgba(255, 255, 255, 0.16),
+    0 2px 3px 0 rgba(0, 0, 0, 0.3),
+    0 1px 1.5px 0 rgba(0, 0, 0, 0.2),
+    0 1px 2px 0 rgba(0, 0, 0, 0.4),
+    0 0 0 0 transparent;
+  --shadow-s:
+    0 1px 2px rgba(0, 0, 0, 0.121),
+    0 3.4px 6.7px rgba(0, 0, 0, 0.179),
+    0 15px 30px rgba(0, 0, 0, 0.3);
+  --shadow-l:
+    0 1.8px 7.3px rgba(0, 0, 0, 0.071),
+    0 6.3px 24.7px rgba(0, 0, 0, 0.112),
+    0 30px 90px rgba(0, 0, 0, 0.2);
+}
+
+/* === Base resets === */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light dark;
+}
+
+body {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-family: var(--font-default);
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--background-modifier-border);
+}
+
+::selection {
+  background-color: var(--text-selection);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track-piece {
+  background-color: var(--background-primary);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--background-modifier-border-hover);
+  outline: 2px solid var(--background-primary);
+  outline-offset: -2px;
+  border: 1px solid var(--background-primary);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--background-modifier-border-focus);
+}
+
+a {
+  color: var(--text-accent);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--text-accent-hover);
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+h1 { font-size: 1.5rem; line-height: 1.1; }
+h2 { font-size: 1.25rem; line-height: 1.2; }
+h3 { font-size: 1rem; font-weight: 600; }
+h4 { font-size: var(--font-ui-medium); }
+
+p { margin: 0; }
+
+strong { font-weight: 600; }
+code, pre { font-family: var(--font-monospace-default); font-size: 0.9em; }
+pre { padding: 0.5rem; background: var(--background-secondary); border-radius: var(--radius-s); overflow-x: auto; }
+code { background: var(--background-secondary); padding: 0.1rem 0.3rem; border-radius: 3px; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Theme transition (suppress during toggling for non-jarring switch) */
+html.theme-changing,
+html.theme-changing * {
+  transition: background-color var(--duration-normal) var(--easing),
+              color var(--duration-normal) var(--easing),
+              border-color var(--duration-normal) var(--easing) !important;
+}
+
+/* Focus visibility */
+:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 1px;
+  border-radius: var(--radius-s);
+}
+
+/* Utilities */
+.text-muted { color: var(--text-muted); }
+.text-faint { color: var(--text-faint); }
+.text-error { color: var(--text-error); }
+.text-success { color: var(--text-success); }
+.text-warning { color: var(--text-warning); }
+.text-accent { color: var(--text-accent); }
+
+.is-hidden { display: none !important; }
+
+.scrollbar-thin { scrollbar-width: thin; }
+.select-chevron {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.4rem center;
+  background-size: 1rem;
+}
+html.dark .select-chevron {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23dadada' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+}
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--background-modifier-border-hover);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
