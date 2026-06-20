@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Reader Full Prototype</title>
+<style>
+:root{
+  --bg:#f7f7f3;
+  --card:#fff;
+  --card2:#fbfaf6;
+  --line:#e6e1d8;
+  --line2:#d7d0c4;
+  --text:#2e2d29;
+  --muted:#7b766c;
+  --muted2:#a09a90;
+  --primary:#6d75f6;
+  --primary2:#eef0ff;
+  --green:#2f9e67;
+  --orange:#d18a22;
+  --red:#d9534f;
+  --blue:#3b82f6;
+  --shadow:0 12px 32px rgba(45,42,35,.08);
+  --shadow2:0 5px 15px rgba(45,42,35,.055);
+  --r:16px;
+  --r2:11px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:var(--font);color:var(--text);background:
+radial-gradient(circle at 5% 0%,rgba(109,117,246,.09),transparent 28%),
+radial-gradient(circle at 95% 8%,rgba(47,158,103,.06),transparent 28%),var(--bg);overflow:hidden}
+button,input,textarea,select{font-family:inherit}
+button{cursor:pointer}
+.app{height:100vh;padding:12px;display:grid;grid-template-columns:250px 1fr 355px;gap:12px}
+.panel,.main,.right{background:rgba(255,255,255,.88);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow2);backdrop-filter:blur(14px);overflow:hidden;min-height:0}
+.panel{display:flex;flex-direction:column}
+.brand{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:11px;padding:0 16px}
+.logo{width:35px;height:35px;border-radius:12px;background:linear-gradient(135deg,#6d75f6,#99d7ff);box-shadow:0 8px 18px rgba(109,117,246,.25)}
+.brand b{font-size:16px}.brand small{display:block;color:var(--muted);margin-top:2px}
+.nav{padding:12px;display:flex;flex-direction:column;gap:7px}
+.nav button{border:1px solid transparent;background:transparent;text-align:left;border-radius:13px;padding:10px 11px;font-size:14px;color:var(--text);display:flex;gap:9px;align-items:center}
+.nav button:hover{background:#f4f2ed}
+.nav button.active{background:var(--primary2);border-color:#dce0ff;color:#4148d4;font-weight:700}
+.side-title{font-size:12px;color:var(--muted);font-weight:800;margin:12px 16px 8px;text-transform:uppercase;letter-spacing:.04em}
+.mini{margin:0 12px 10px;padding:12px;background:var(--card2);border:1px solid var(--line);border-radius:var(--r)}
+.mini b{font-size:13px}.mini p{margin:7px 0 0;color:var(--muted);font-size:12px;line-height:1.55}
+.shortcuts{margin-top:auto;border-top:1px solid var(--line);padding:13px 15px;color:var(--muted);font-size:12px;line-height:1.8}
+
+.main{display:flex;flex-direction:column}
+.top{height:66px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 18px;gap:12px;flex-shrink:0}
+.ctx{display:flex;align-items:center;gap:12px;min-width:0}
+.fav{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:#f3f1ea;display:grid;place-items:center;font-size:18px;flex:0 0 auto}
+.ctx small{color:var(--muted);display:block;margin-bottom:3px}
+.ctx b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:560px;font-size:14px}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 11px;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.btn:hover{background:#f8f6f1;border-color:var(--line2)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 8px 18px rgba(109,117,246,.22)}
+.btn.red{background:#fff6f6;border-color:#efcfcc;color:var(--red)}
+.btn.green{background:#eefbf4;border-color:#cfeede;color:#247b50}
+.btn.small{font-size:12px;padding:6px 8px;border-radius:9px}
+.btn.icon{padding:7px 8px}
+
+.subbar{border-bottom:1px solid var(--line);background:rgba(251,250,246,.75);padding:11px 18px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.chip{font-size:12px;padding:6px 9px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted)}
+.chip.on{background:var(--primary2);border-color:#dce0ff;color:#4148d4;font-weight:700}
+.chip.green{background:#eefbf4;border-color:#cfeede;color:#247b50}
+.chip.warn{background:#fff8e9;border-color:#f1ddb7;color:#9a6416}
+.chat{flex:1;overflow:auto;padding:22px 24px;min-height:0;scroll-behavior:smooth}
+.chat::-webkit-scrollbar,.right-body::-webkit-scrollbar{width:9px}.chat::-webkit-scrollbar-thumb,.right-body::-webkit-scrollbar-thumb{background:#ddd7cc;border-radius:99px}
+.msg{margin-bottom:23px}
+.user{max-width:78%;background:#fff;border:1px solid var(--line);border-radius:18px 18px 18px 7px;padding:13px 15px;line-height:1.65;font-size:14px;box-shadow:var(--shadow2)}
+.grid{margin-top:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow2);min-width:0}
+.card-h{padding:11px 13px;border-bottom:1px solid var(--line);background:#fbfaf7;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.model{font-weight:800;font-size:13px;display:flex;align-items:center;gap:7px}
+.dot{width:8px;height:8px;border-radius:99px;background:var(--primary)}
+.status{font-size:12px;color:var(--muted)}
+.card-b{min-height:170px;padding:14px;font-size:14px;line-height:1.72;white-space:pre-wrap}
+.typing:after{content:"▋";color:var(--primary);animation:blink .8s infinite}@keyframes blink{50%{opacity:0}}
+.card-f{border-top:1px solid var(--line);background:#fbfaf7;padding:9px 11px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.metric{font-family:var(--mono)}
+.composer{border-top:1px solid var(--line);padding:13px 18px;background:rgba(255,255,255,.93);flex-shrink:0}
+.models{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.pill{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fff;user-select:none}
+.pill input{accent-color:var(--primary);margin-right:5px}
+.inputrow{display:flex;gap:10px;align-items:flex-end}
+textarea{resize:none;min-height:58px;max-height:130px;flex:1;border:1px solid var(--line);border-radius:15px;padding:12px 13px;outline:none;font-size:14px;line-height:1.55}
+input,select{border:1px solid var(--line);border-radius:11px;padding:9px 10px;background:#fff;outline:none;min-width:0}
+textarea:focus,input:focus,select:focus{border-color:#c0c5ff;box-shadow:0 0 0 3px rgba(109,117,246,.12)}
+
+.right{display:flex;flex-direction:column}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--line);flex-shrink:0}
+.tabs button{border:0;background:transparent;padding:12px 4px;font-size:12px;color:var(--muted);border-bottom:2px solid transparent}
+.tabs button.active{background:#fafaff;color:#4148d4;border-bottom-color:var(--primary);font-weight:800}
+.right-body{overflow:auto;padding:14px;min-height:0;flex:1}
+.view{display:none}.view.active{display:block}
+.section{display:flex;flex-direction:column;gap:11px}
+.box{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;box-shadow:0 4px 12px rgba(45,42,35,.035)}
+.box h3{font-size:14px;margin:0 0 9px}
+.muted{font-size:12px;color:var(--muted);line-height:1.55}
+.item{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;cursor:pointer}
+.item:hover{background:#fbfbff;border-color:#cfd4ff}
+.item b{font-size:13px;line-height:1.45}.meta{margin-top:7px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:8px}
+.search{display:flex;gap:8px;margin-bottom:11px}.search input{flex:1}
+.hl{background:#fff1a8;border-radius:4px;padding:0 2px}
+.unread{border-left:4px solid var(--primary)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.field label{font-size:12px;color:var(--muted);font-weight:700}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.switchrow{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid #f0eee8;padding:9px 0}.switchrow:first-of-type{border-top:0}
+.sw{width:42px;height:24px;background:#ddd7cc;border-radius:999px;position:relative;flex:0 0 auto}
+.sw:after{content:"";position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:99px;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.18);transition:.15s}.sw.on{background:var(--primary)}.sw.on:after{transform:translateX(18px)}
+.progress{height:8px;background:#f0eee8;border-radius:99px;overflow:hidden;margin-top:10px}.bar{height:100%;width:0;background:linear-gradient(90deg,var(--primary),#9ad8ff);transition:.2s}
+.modal-mask{position:fixed;inset:0;background:rgba(30,28,25,.22);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal-mask.show{display:flex}.modal{width:min(620px,96vw);background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.modal-h{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-h b{font-size:15px}
+.modal-b{padding:18px;color:var(--muted);font-size:14px;line-height:1.7;max-height:70vh;overflow:auto}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);opacity:0;background:#272620;color:#fff;padding:10px 14px;border-radius:99px;box-shadow:var(--shadow);font-size:13px;transition:.2s;z-index:30}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.popup{position:fixed;left:22px;top:22px;width:330px;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);z-index:15;display:none;overflow:hidden}
+.popup.show{display:block}.popup-h{padding:15px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.popup-b{padding:15px}
+.extract-log{font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.8;background:#fbfaf6;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:10px}
+pre{white-space:pre-wrap;background:#f7f7f3;border:1px solid var(--line);border-radius:12px;padding:10px;color:#5d584f}
+@media(max-width:1250px){.app{grid-template-columns:220px 1fr}.right{display:none}.grid{grid-template-columns:1fr}}
+@media(max-width:820px){.app{grid-template-columns:1fr;padding:8px}.panel{display:none}.ctx b{max-width:230px}.top{padding:0 12px}.grid{grid-template-columns:1fr}.user{max-width:100%}}
+</style>
+</head>
+<body>
+
+<!-- Popup Prototype -->
+<div class="popup" id="popup">
+  <div class="popup-h">
+    <b>AI Reader Popup</b>
+    <button class="btn small" onclick="togglePopup(false)">关闭</button>
+  </div>
+  <div class="popup-b">
+    <div class="box">
+      <h3>当前网页</h3>
+      <div class="muted">标题：如何构建长期主义的个人知识系统</div>
+      <div class="muted">预估字数：18,420 字</div>
+      <div class="muted">预估上下文：约 32k tokens</div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="row">
+      <button class="btn primary" onclick="runExtract()">快速提取</button>
+      <button class="btn" onclick="togglePopup(false)">打开侧边栏</button>
+      <button class="btn" onclick="tab('settings')">设置</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Left -->
+  <aside class="panel">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <b>AI Reader</b>
+        <small>Local-first AI Reading</small>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <button class="active" onclick="openMainMode('chat',this)">💬 多模型对话</button>
+      <button onclick="tab('history',this)">🔎 历史搜索</button>
+      <button onclick="tab('rss',this)">📰 RSS Inbox</button>
+      <button onclick="tab('workflow',this)">🧠 高级工作流</button>
+      <button onclick="tab('export',this)">📦 导出备份</button>
+      <button onclick="tab('settings',this)">⚙️ Options 设置</button>
+      <button onclick="togglePopup(true)">🧩 查看 Popup</button>
+    </nav>
+
+    <div class="side-title">当前技术策略</div>
+    <div class="mini">
+      <b>三级提取</b>
+      <p>Readability 本地优先 → Defuddle 8 秒异步 Markdown → 清理 script/style 后 innerText。</p>
+    </div>
+    <div class="mini">
+      <b>No Truncation</b>
+      <p>前端不设置最大上下文，适配 Claude 200k、Gemini 1M 等长上下文模型。</p>
+    </div>
+    <div class="mini">
+      <b>海量数据</b>
+      <p>Dexie 主副表分离、虚拟列表、Web Worker 搜索、SSE rAF 节流。</p>
+    </div>
+
+    <div class="shortcuts">
+      <b>快捷键</b><br>
+      Alt/Option + S：提取当前页<br>
+      Alt/Option + P：显隐侧栏<br>
+      Esc：中断全部生成
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="top">
+      <div class="ctx">
+        <div class="fav" id="fav">📘</div>
+        <div>
+          <small>当前上下文已锚定，切换 Tab 不自动改变</small>
+          <b id="ctxTitle">A 网页：如何构建长期主义的个人知识系统</b>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="simulateTab()">模拟切换 Tab</button>
+        <button class="btn primary" onclick="runExtract()">⟳ 提取当前 Tab</button>
+        <button class="btn red" onclick="stopAll()">Esc 停止</button>
+      </div>
+    </header>
+
+    <div class="subbar">
+      <div class="chips">
+        <span class="chip on">Cherry 多模型</span>
+        <span class="chip green">No Truncation</span>
+        <span class="chip warn">Defuddle Timeout 8s</span>
+      </div>
+      <div class="chips">
+        <span class="chip">WXT MV3</span>
+        <span class="chip">Vue 3</span>
+        <span class="chip">Pinia</span>
+        <span class="chip">Dexie</span>
+      </div>
+    </div>
+
+    <section class="chat" id="chat">
+      <div class="msg">
+        <div class="user">请总结这篇文章的核心观点，并指出它对个人知识管理有什么启发。</div>
+        <div class="grid">
+          <article class="card">
+            <div class="card-h">
+              <div class="model"><span class="dot"></span>Claude 3.5 Sonnet</div>
+              <div class="status">完成</div>
+            </div>
+            <div class="card-b">这篇文章的核心观点是：长期主义的知识系统不是资料收藏，而是持续转化、链接、输出和复用的过程。
+
+启发：
+1. 不应只保存内容，而应建立处理流程。
+2. 每条信息都应进入具体问题或项目。
+3. 真正有价值的是可复用的思考结构。</div>
+            <div class="card-f">
+              <span class="metric">耗时 2.8s | TTFT 480ms | 42 tok/s | $0.012</span>
+              <span>
+                <button class="btn small" onclick="branchContinue('Claude 3.5 Sonnet')">以此继续</button>
+                <button class="btn small" onclick="retryCard(this)">重试</button>
+              </span>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-h">
+              <div class="model"><span class="dot" style="background:var(--green)"></span>Gemini 1.5 Pro 1M</div>
+              <div class="status">完成</div>
+            </div>
+            <div class="card-b">文章强调知识系统的价值在于“流动”而不是“囤积”。在 AI Reader 场景中，网页、RSS、对话和模型输出都应成为可进入 Obsidian 的长期资产。</div>
+            <div class="card-f">
+              <span class="metric">耗时 3.4s | TTFT 520ms | 38 tok/s | $0.008</span>
+              <span>
+                <button class="btn small" onclick="branchContinue('Gemini 1.5 Pro 1M')">以此继续</button>
+                <button class="btn small" onclick="retryCard(this)">重试</button>
+              </span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <footer class="composer">
+      <div class="models">
+        <label class="pill"><input type="checkbox" class="mcheck" value="Claude 3.5 Sonnet" checked>Claude</label>
+        <label class="pill"><input type="checkbox" class="mcheck" value="Gemini 1.5 Pro 1M" checked>Gemini 1M</label>
+        <label class="pill"><input type="checkbox" class="mcheck" value="GPT-4.1 1M">GPT-4.1</label>
+        <label class="pill"><input type="checkbox" class="mcheck" value="Ollama Qwen">Ollama</label>
+      </div>
+      <div class="inputrow">
+        <textarea id="input" placeholder="继续追问当前已锚定上下文，例如：请用红队视角批判这篇文章。"></textarea>
+        <button class="btn primary" onclick="send()">发送</button>
+        <button class="btn" onclick="roundtableQuick()">圆桌</button>
+        <button class="btn" onclick="relayQuick()">接力</button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Right -->
+  <aside class="right">
+    <div class="tabs">
+      <button class="active" onclick="tab('history')">历史</button>
+      <button onclick="tab('rss')">RSS</button>
+      <button onclick="tab('workflow')">工作流</button>
+      <button onclick="tab('export')">导出</button>
+      <button onclick="tab('settings')">设置</button>
+      <button onclick="tab('tech')">架构</button>
+    </div>
+
+    <div class="right-body">
+      <!-- History -->
+      <section class="view active" id="history">
+        <div class="search">
+          <input id="q" placeholder="全文搜索：标题 / 聊天 / 网页快照">
+          <button class="btn" onclick="search()">搜索</button>
+        </div>
+        <div class="section" id="historyList">
+          <div class="item" onclick="loadHistory('长期主义知识系统')">
+            <b>如何构建长期主义的个人知识系统</b>
+            <div class="meta"><span>Claude + Gemini</span><span>今天 14:21</span></div>
+          </div>
+          <div class="item">
+            <b>AI Agent 时代的软件形态变化</b>
+            <div class="meta"><span>GPT-4.1</span><span>昨天 22:10</span></div>
+          </div>
+          <div class="item">
+            <b>浏览器插件 MV3 架构实践笔记</b>
+            <div class="meta"><span>Gemini 1M</span><span>周一 09:37</span></div>
+          </div>
+          <div class="item">
+            <b>RSS 信息流自动摘要和 Obsidian 同步方案</b>
+            <div class="meta"><span>Claude</span><span>06-18</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RSS -->
+      <section class="view" id="rss">
+        <div class="section">
+          <div class="box">
+            <h3>RSS 自动流水线</h3>
+            <div class="muted">Service Worker 定时抓取，哈希去重，轻量模型生成 3 句摘要。</div>
+            <div style="height:8px"></div>
+            <button class="btn primary" onclick="rssFetch()">立即抓取 RSS</button>
+          </div>
+
+          <div class="item unread">
+            <b>OpenAI 发布新的长上下文模型能力说明</b>
+            <div class="meta"><span>AI News</span><span>未读</span></div>
+            <p class="muted">AI 摘要：新模型在长文档理解、代码仓库分析和多步推理上提升明显，适合网页深度阅读。</p>
+            <button class="btn small" onclick="useRss('OpenAI 发布新的长上下文模型能力说明')">用这篇 RSS 提问</button>
+          </div>
+
+          <div class="item unread">
+            <b>WebDAV 在个人知识库同步中的最佳实践</b>
+            <div class="meta"><span>PKM Weekly</span><span>未读</span></div>
+            <p class="muted">AI 摘要：文章对比 Obsidian Sync、Remotely Save、自建 WebDAV 的成本、可靠性和隐私边界。</p>
+            <button class="btn small" onclick="useRss('WebDAV 在个人知识库同步中的最佳实践')">用这篇 RSS 提问</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Workflow -->
+      <section class="view" id="workflow">
+        <div class="section">
+          <div class="box">
+            <h3>多角色圆桌讨论 Roundtable</h3>
+            <div class="field">
+              <label>角色配置</label>
+              <textarea id="roles" style="min-height:88px">红方挑刺：找出文章漏洞
+蓝方辩护：为文章核心观点辩护
+产品经理：提炼可落地功能</textarea>
+            </div>
+            <button class="btn primary" onclick="runRoundtable()">启动圆桌讨论</button>
+          </div>
+
+          <div class="box">
+            <h3>模型接力链 Relay Chain</h3>
+            <div class="field">
+              <label>流水线</label>
+              <select id="relay">
+                <option>Claude 总结 → Gemini 批判 → GPT 生成行动清单</option>
+                <option>Gemini 提纲 → Claude 润色 → Ollama 本地归档</option>
+              </select>
+            </div>
+            <button class="btn primary" onclick="runRelay()">启动接力链</button>
+          </div>
+
+          <div class="box">
+            <h3>Prompt 模板</h3>
+            <div class="row">
+              <button class="btn small" onclick="insertPrompt('总结核心观点，并输出 Markdown 大纲。')">总结</button>
+              <button class="btn small" onclick="insertPrompt('用红队视角批判这篇文章。')">红队</button>
+              <button class="btn small" onclick="insertPrompt('提取可执行行动清单。')">行动清单</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Export -->
+      <section class="view" id="export">
+        <div class="section">
+          <div class="box">
+            <h3>Markdown 导出</h3>
+            <p class="muted">导出带 YAML Frontmatter 的 Markdown 文件。</p>
+            <button class="btn primary" onclick="toast('已导出 Markdown')">导出 .md</button>
+          </div>
+
+          <div class="box">
+            <h3>Obsidian URI 直写</h3>
+            <div class="field"><label>Vault</label><input value="MyVault"></div>
+            <button class="btn" onclick="obsidian()">打开 Obsidian 新笔记</button>
+          </div>
+
+          <div class="box">
+            <h3>WebDAV / S3 同步</h3>
+            <div class="field"><label>WebDAV URL</label><input value="https://dav.example.com/ai-reader/"></div>
+            <div class="field"><label>S3 Bucket</label><input value="s3://my-bucket/ai-reader"></div>
+            <button class="btn" onclick="toast('连接测试成功')">测试连接</button>
+          </div>
+
+          <div class="box">
+            <h3>Zip 全量备份</h3>
+            <p class="muted">Web Worker 内通过 jszip 打包 Dexie / IndexedDB 数据。</p>
+            <button class="btn primary" onclick="backup()">一键导出 Zip</button>
+            <div class="progress"><div class="bar" id="bar"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="view" id="settings">
+        <div class="section">
+          <div class="box">
+            <h3>Provider Keys</h3>
+            <div class="field"><label>OpenAI</label><input type="password" value="sk-••••••••"></div>
+            <div class="field"><label>Anthropic</label><input type="password" value="sk-ant-••••••"></div>
+            <div class="field"><label>Gemini</label><input type="password" value="AIza-••••••"></div>
+            <div class="field"><label>Ollama Base URL</label><input value="http://localhost:11434"></div>
+          </div>
+
+          <div class="box">
+            <h3>模型上下文策略</h3>
+            <div class="switchrow">
+              <div><b>不限制最大上下文</b><div class="muted">前端不截断，由模型 API 自行处理。</div></div>
+              <div class="sw on" onclick="toggleSw(this)"></div>
+            </div>
+            <div class="switchrow">
+              <div><b>显示 Token 预估</b><div class="muted">只提示，不强制截断。</div></div>
+              <div class="sw on" onclick="toggleSw(this)"></div>
+            </div>
+          </div>
+
+          <div class="box">
+            <h3>正文提取策略</h3>
+            <div class="switchrow">
+              <div><b>@mozilla/readability</b><div class="muted">本地优先，极速去噪。</div></div>
+              <div class="sw on" onclick="toggleSw(this)"></div>
+            </div>
+            <div class="switchrow">
+              <div><b>Defuddle 异步 Markdown</b><div class="muted">8 秒超时限制。</div></div>
+              <div class="sw on" onclick="toggleSw(this)"></div>
+            </div>
+            <div class="switchrow">
+              <div><b>innerText 兜底</b><div class="muted">清理 script/style 后提取。</div></div>
+              <div class="sw on" onclick="toggleSw(this)"></div>
+            </div>
+          </div>
+
+          <div class="box">
+            <h3>RSS 源</h3>
+            <div class="field"><label>订阅地址</label><textarea style="min-height:70px">https://example.com/feed.xml
+https://news.example.com/rss</textarea></div>
+            <button class="btn" onclick="toast('RSS 源已保存')">保存 RSS</button>
+          </div>
+
+          <div class="box">
+            <h3>自动备份</h3>
+            <div class="switchrow">
+              <div><b>每 7 天 WebDAV 自动备份</b><div class="muted">chrome.alarms 夜间静默执行。</div></div>
+              <div class="sw" onclick="toggleSw(this);toast(this.classList.contains('on')?'已开启自动备份':'已关闭自动备份')"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tech -->
+      <section class="view" id="tech">
+        <div class="section">
+          <div class="box">
+            <h3>架构关键点</h3>
+            <p class="muted">
+              1. WXT + MV3 + Side Panel / Popup / Options / Service Worker。<br>
+              2. eventsource-parser 处理 SSE，避免中文 chunk 截断乱码。<br>
+              3. Dexie 主副表分离：Conversations 存元数据，Messages 懒加载长文本。<br>
+              4. vue-virtual-scroller 渲染历史列表。<br>
+              5. Web Worker 执行全文检索和 Zip 备份。<br>
+              6. markdown-it + DOMPurify 渲染并净化模型输出。
+            </p>
+          </div>
+          <div class="box">
+            <h3>提取链路日志示例</h3>
+            <div class="extract-log">
+              [1] @mozilla/readability parse... ok<br>
+              [2] turndown convert HTML → Markdown... ok<br>
+              [3] context length: 18420 chars<br>
+              [4] no truncation applied
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </aside>
+</div>
+
+<!-- Modal -->
+<div class="modal-mask" id="modal">
+  <div class="modal">
+    <div class="modal-h">
+      <b id="mt">提示</b>
+      <button class="btn small" onclick="closeModal()">关闭</button>
+    </div>
+    <div class="modal-b" id="mb"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast">完成</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+let currentTab='A';
+let currentContext='A 网页：如何构建长期主义的个人知识系统';
+let timers=[];
+
+function toast(t){
+  const el=$('#toast');el.textContent=t;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1800);
+}
+function modal(t,b){$('#mt').textContent=t;$('#mb').innerHTML=b;$('#modal').classList.add('show')}
+function closeModal(){$('#modal').classList.remove('show')}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()})
+function togglePopup(v){$('#popup').classList.toggle('show',v)}
+function toggleSw(el){el.classList.toggle('on')}
+
+function tab(id){
+  $$('.tabs button').forEach(b=>b.classList.remove('active'));
+  const btn=[...$$('.tabs button')].find(b=>b.textContent.includes({history:'历史',rss:'RSS',workflow:'工作流',export:'导出',settings:'设置',tech:'架构'}[id]||''));
+  if(btn)btn.classList.add('active');
+  $$('.view').forEach(v=>v.classList.remove('active'));
+  $('#'+id).classList.add('active');
+}
+function openMainMode(){toast('已进入多模型对话')}
+
+function simulateTab(){
+  currentTab=currentTab==='A'?'B':'A';
+  modal('上下文静默锚定',`
+    <p>浏览器当前 Tab 已切换到 <b>${currentTab} 网页</b>。</p>
+    <p>但当前 AI 对话上下文仍然保持：</p>
+    <pre>${currentContext}</pre>
+    <p>只有点击「提取当前 Tab」后，才会替换上下文。</p>
+  `)
+}
+
+function runExtract(){
+  let target=currentTab==='A'
+    ?'A 网页：如何构建长期主义的个人知识系统'
+    :'B 网页：AI Agent 时代的软件形态变化';
+  modal('智能正文提取中',`
+    <p>正在执行三级提取策略：</p>
+    <div class="extract-log" id="elog">
+      [1] @mozilla/readability 本地解析中...
+    </div>
+  `);
+  const log=()=>$('#elog');
+  setTimeout(()=>{if(log())log().innerHTML+=' <span style="color:#2f9e67">ok</span><br>[2] turndown HTML → Markdown...'},600);
+  setTimeout(()=>{if(log())log().innerHTML+=' <span style="color:#2f9e67">ok</span><br>[3] Defuddle 未触发，跳过<br>[4] No Truncation applied';},1200);
+  setTimeout(()=>{
+    currentContext=target;
+    $('#ctxTitle').textContent=currentContext;
+    $('#fav').textContent=currentTab==='A'?'📘':'🤖';
+    toast('已提取并锚定当前 Tab');
+  },1500);
+}
+
+function selectedModels(){
+  return $$('.mcheck').filter(x=>x.checked).map(x=>x.value).slice(0,4);
+}
+
+function send(customText){
+  const text=(customText||$('#input').value.trim());
+  if(!text){toast('请输入问题');return}
+  const models=selectedModels();
+  if(!models.length){toast('请至少选择一个模型');return}
+  appendMsg(text,models);
+  $('#input').value='';
+}
+
+function appendMsg(text,models){
+  const msg=document.createElement('div');msg.className='msg';
+  const u=document.createElement('div');u.className='user';u.textContent=text;
+  const grid=document.createElement('div');grid.className='grid';
+  msg.appendChild(u);msg.appendChild(grid);$('#chat').appendChild(msg);
+  models.forEach((m,i)=>{
+    const card=createCard(m);
+    grid.appendChild(card);
+    stream(card,m,text,i);
+  });
+  $('#chat').scrollTop=$('#chat').scrollHeight;
+}
+
+function createCard(m){
+  const color=m.includes('Gemini')?'var(--green)':m.includes('GPT')?'var(--blue)':m.includes('Ollama')?'var(--orange)':'var(--primary)';
+  const c=document.createElement('article');c.className='card';
+  c.innerHTML=`
+    <div class="card-h">
+      <div class="model"><span class="dot" style="background:${color}"></span>${m}</div>
+      <div class="status">连接中</div>
+    </div>
+    <div class="card-b typing"></div>
+    <div class="card-f">
+      <span class="metric">耗时 -- | TTFT -- | -- tok/s | $--</span>
+      <span>
+        <button class="btn small" onclick="branchContinue('${m}')">以此继续</button>
+        <button class="btn small" onclick="stopCard(this)">中止</button>
+        <button class="btn small" onclick="retryCard(this)">重试</button>
+      </span>
+    </div>`;
+  return c;
+}
+
+function answer(m,p){
+  if(p.includes('红队')||p.includes('批判'))return `${m} 红队视角：
+
+1. 文章强调长期主义，但可能低估普通用户维护系统的成本。
+2. 它默认知识能够稳定复用，但很多信息会快速过时。
+3. 它可能把“整理”误认为“理解”，让知识管理成为拖延。
+
+改进建议：将每条知识绑定到具体项目、决策或输出任务，而不是追求结构优雅。`;
+
+  if(p.includes('圆桌'))return `${m} 参与圆桌讨论：
+
+我会从指定角色出发，围绕当前上下文「${currentContext}」提出观点、质疑和落地建议。重点是让不同模型/角色形成交锋，而不是单一总结。`;
+
+  if(p.includes('接力'))return `${m} 接力链步骤输出：
+
+当前步骤将上游模型结果作为输入，并继续完成下一阶段任务。例如：先总结，再批判，最后转化为行动清单和 Obsidian 笔记。`;
+
+  return `${m} 基于当前锚定上下文「${currentContext}」分析：
+
+这篇内容的核心价值在于，它把阅读、摘录、总结、链接和输出连接成完整闭环。
+
+可执行建议：
+1. 每篇文章提取 3 个核心观点。
+2. 每个观点绑定一个真实问题。
+3. 使用 AI 生成反驳、应用场景和行动清单。
+4. 最后同步到 Obsidian，形成长期可检索资产。
+
+注意：当前系统不进行前端上下文截断，将完整内容直通模型 API。`;
+}
+
+function stream(card,m,p,i){
+  const body=card.querySelector('.card-b'),st=card.querySelector('.status'),metric=card.querySelector('.metric');
+  const text=answer(m,p);let n=0;const start=performance.now();const ttft=320+i*150;
+  const t=setTimeout(()=>{
+    st.textContent='生成中';
+    const iv=setInterval(()=>{
+      n+=Math.floor(Math.random()*5)+2;
+      body.textContent=text.slice(0,n);
+      $('#chat').scrollTop=$('#chat').scrollHeight;
+      if(n>=text.length){
+        clearInterval(iv);
+        body.classList.remove('typing');
+        st.textContent='完成';
+        const s=((performance.now()-start)/1000).toFixed(1);
+        metric.textContent=`耗时 ${s}s | TTFT ${ttft}ms | ${Math.floor(text.length/s/2)} tok/s | $${(Math.random()/100).toFixed(4)}`;
+      }
+    },35+i*12);
+    timers.push(iv);
+  },ttft);
+  timers.push(t);
+}
+
+function stopAll(){
+  timers.forEach(x=>{clearTimeout(x);clearInterval(x)});
+  timers=[];
+  $$('.typing').forEach(x=>x.classList.remove('typing'));
+  $$('.status').forEach(x=>{if(['连接中','生成中'].includes(x.textContent))x.textContent='已中断'});
+  toast('已中断全部生成');
+}
+function stopCard(btn){
+  const card=btn.closest('.card');
+  card.querySelector('.card-b').classList.remove('typing');
+  card.querySelector('.status').textContent='已中断';
+  toast('已中断该模型');
+}
+function retryCard(btn){
+  const card=btn.closest('.card');
+  const m=card.querySelector('.model').textContent.trim();
+  card.querySelector('.card-b').textContent='';
+  card.querySelector('.card-b').classList.add('typing');
+  card.querySelector('.status').textContent='重试中';
+  stream(card,m,'重试当前问题',0);
+}
+function branchContinue(m){
+  $('#input').value=`基于 ${m} 的上一条回答继续追问：请进一步展开并给出可执行方案。`;
+  toast('已进入单分支追问');
+}
+
+function roundtableQuick(){send('启动圆桌讨论：红方挑刺、蓝方辩护、产品经理落地。')}
+function relayQuick(){send('启动模型接力链：Claude 总结 → Gemini 批判 → GPT 生成行动清单。')}
+function runRoundtable(){send('圆桌讨论：'+$('#roles').value)}
+function runRelay(){send('接力链：'+$('#relay').value)}
+function insertPrompt(t){$('#input').value=t;toast('已插入 Prompt 模板')}
+
+function search(){
+  const q=$('#q').value.trim();if(!q){toast('请输入搜索词');return}
+  $('#historyList').innerHTML=`<div class="box"><p class="muted">Web Worker 正在检索 Conversations / Messages / Snapshots...</p></div>`;
+  setTimeout(()=>{
+    $('#historyList').innerHTML=`
+      <div class="item"><b>如何构建长期主义的个人<span class="hl">${esc(q)}</span>系统</b><div class="meta"><span>命中标题</span><span>今天</span></div></div>
+      <div class="item"><b>RSS 信息流自动摘要和 Obsidian 同步方案</b><div class="meta"><span>命中 Messages 表：包含「<span class="hl">${esc(q)}</span>」</span><span>06-18</span></div></div>
+      <div class="item"><b>IndexedDB 大数据存储性能优化</b><div class="meta"><span>命中网页快照</span><span>06-16</span></div></div>`;
+    toast('全文检索完成');
+  },750)
+}
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function loadHistory(t){toast('已懒加载 Messages 副表：'+t)}
+function rssFetch(){toast('RSS 抓取完成：新增 2 条未读')}
+function useRss(t){currentContext='RSS：'+t;$('#ctxTitle').textContent=currentContext;$('#fav').textContent='📰';toast('已将 RSS 作为当前上下文')}
+
+function obsidian(){
+  modal('Obsidian URI 直写',`
+    <p>实际产品中会调用：</p>
+    <pre>obsidian://new?vault=MyVault&file=AI Reader Summary&content=...</pre>
+    <p>当前原型仅展示交互。</p>`)
+}
+function backup(){
+  const bar=$('#bar');bar.style.width='0%';let n=0;
+  const iv=setInterval(()=>{
+    n+=12+Math.random()*16;if(n>=100){n=100;clearInterval(iv);toast('Zip 全量备份已生成')}
+    bar.style.width=n+'%';
+  },220)
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')stopAll();
+  if(e.altKey&&e.key.toLowerCase()==='s')runExtract();
+  if(e.altKey&&e.key.toLowerCase()==='p')togglePopup(true);
+});
+</script>
+</body>
+</html>
