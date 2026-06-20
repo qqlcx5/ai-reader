@@ -12,5 +12,6 @@
       "Bash(pnpm list *)",
       "Read(//Users/another/Library/pnpm/**)"
     ]
-  }
+  },
+  "outputStyle": "Proactive"
 }
