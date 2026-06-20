@@ -23,8 +23,9 @@
 
 ## 模块完成 Checklist
 
-- [ ] **M7 存储与数据层**（`doc/tasks/storage-data.md`）
+- [x] **M7 存储与数据层**（`doc/tasks/storage-data.md`）
   - Dexie 数据库、主副表、Pinia 同步、虚拟滚动、Worker 检索、分片缓存、明文 API Key 存储
+  - **状态：核心代码已完成，待性能测试验证**
 
 - [ ] **M2 上下文提取**（`doc/tasks/context-extraction.md`）
   - Readability / Defuddle / innerText 三级降级、分片传输、上下文锚定
