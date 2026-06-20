@@ -21,9 +21,11 @@ import {
   Download,
   Upload,
   Sliders,
+  Rss,
 } from 'lucide-vue-next';
 import ProviderConfig from '@/components/ProviderConfig.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import RSSConfig from '@/components/RSSConfig.vue';
 import BaseCard from '@/components/base/BaseCard.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseTextarea from '@/components/base/BaseTextarea.vue';
@@ -36,7 +38,7 @@ const settings = useSettingsStore();
 const templates = useTemplatesStore();
 const history = useHistoryStore();
 
-type Section = 'general' | 'providers' | 'templates' | 'data';
+type Section = 'general' | 'providers' | 'templates' | 'data' | 'rss';
 const activeSection = ref<Section>('providers');
 
 const providerIds = computed(() => Object.keys(PROVIDER_META));
@@ -121,6 +123,7 @@ const navItems: { id: Section; label: string; icon: any }[] = [
   { id: 'general', label: 'General', icon: Sliders },
   { id: 'providers', label: 'Providers', icon: Plug },
   { id: 'templates', label: 'Templates', icon: FileText },
+  { id: 'rss', label: 'RSS', icon: Rss },
   { id: 'data', label: 'Data', icon: Database },
 ];
 
@@ -139,7 +142,7 @@ onMounted(() => {
 <template>
   <div class="min-h-screen bg-[var(--background-primary)] text-[var(--text-normal)]">
     <!-- Top bar -->
-    <header class="sticky top-0 z-20 flex items-center justify-between px-6 h-12 border-b border-[var(--background-modifier-border)] bg-[var(--background-primary)]">
+    <header class="sticky top-0 z-20 flex items-center justify-between px-6 h-12 border-b border-[var(--background-modifier-border)] bg-[var(--background-primary)] shadow-sm">
       <div class="flex items-center gap-2.5">
         <SettingsIcon class="w-4 h-4 text-[var(--text-muted)]" />
         <h1 class="text-[var(--font-ui-medium)] font-semibold text-[var(--text-normal)]">AI Reader Settings</h1>
@@ -157,7 +160,7 @@ onMounted(() => {
           <li v-for="item in navItems" :key="item.id">
             <button
               type="button"
-              :class="activeSection === item.id ? 'nav-item-active' : 'nav-item'"
+              :class="activeSection === item.id ? 'nav-item-active !text-[var(--text-accent)] !bg-[var(--color-accent-soft)]' : 'nav-item'"
               @click="activeSection = item.id"
             >
               <component :is="item.icon" class="w-4 h-4" />
@@ -168,7 +171,7 @@ onMounted(() => {
       </nav>
 
       <!-- Content -->
-      <main class="flex-1 px-8 py-6 max-w-3xl">
+      <main class="flex-1 px-8 py-6 max-w-3xl scrollbar-thin">
         <!-- GENERAL -->
         <section v-show="activeSection === 'general'" class="space-y-6">
           <header class="section-header">
@@ -330,6 +333,11 @@ onMounted(() => {
               </div>
             </div>
           </div>
+        </section>
+
+        <!-- RSS -->
+        <section v-show="activeSection === 'rss'">
+          <RSSConfig />
         </section>
 
         <!-- DATA -->

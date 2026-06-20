@@ -33,7 +33,7 @@ onMounted(loadTheme);
 
 <template>
   <div
-    class="inline-flex items-center bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] p-0.5"
+    class="inline-flex items-center bg-[var(--background-secondary)] rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)] p-0.5"
     role="radiogroup"
     aria-label="Theme"
   >

@@ -230,7 +230,7 @@ async function reusePrompt(prompt: string) {
           :key="idx"
           type="button"
           :class="[
-            'flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smallest)] whitespace-nowrap transition-colors',
+            'flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smallest)] whitespace-nowrap transition-colors',
             activeResponseIdx === idx
               ? 'bg-[var(--color-accent-soft)] text-[var(--text-accent)]'
               : 'text-[var(--text-muted)] hover:bg-[var(--background-modifier-hover)]',
@@ -278,7 +278,7 @@ async function reusePrompt(prompt: string) {
 
           <div
             v-if="viewingEntry.responses[activeResponseIdx].status === 'error'"
-            class="p-4 m-4 bg-[var(--background-modifier-error)] border border-[var(--text-error)] border-opacity-20 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smaller)] text-[var(--text-error)]"
+            class="p-4 m-4 bg-[var(--background-modifier-error)] border border-[var(--text-error)] border-opacity-20 rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smaller)] text-[var(--text-error)]"
           >
             <div class="flex items-center gap-1.5 font-semibold mb-1">
               <AlertCircle class="w-3.5 h-3.5" />
@@ -317,7 +317,7 @@ async function reusePrompt(prompt: string) {
             v-model="searchQuery"
             type="text"
             placeholder="搜索历史记录…"
-            class="input-md pl-8 pr-8 w-full text-[var(--font-ui-smaller)]"
+            class="input-md pl-8 pr-8 w-full text-[var(--font-ui-smaller)] rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)] rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)]"
             aria-label="搜索历史记录"
           />
           <button
@@ -373,13 +373,13 @@ async function reusePrompt(prompt: string) {
           v-for="entry in filteredEntries"
           :key="entry.id"
           type="button"
-          class="w-full text-left px-4 py-3 border-b border-[var(--background-modifier-border-subtle)] hover:bg-[var(--background-modifier-hover)] transition-colors group focus-visible:outline-none focus-visible:bg-[var(--background-modifier-hover)]"
+          class="w-full text-left p-4 border-b border-[var(--background-modifier-border-subtle)] hover:bg-[var(--background-modifier-hover)] transition-all group focus-visible:outline-none focus-visible:bg-[var(--background-modifier-hover)]"
           @click="openDetail(entry.id)"
         >
           <div class="flex items-start gap-2">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5">
-                <h4 class="text-[var(--font-ui-smaller)] font-medium text-[var(--text-normal)] line-clamp-1 flex-1 min-w-0">
+                <h4 class="text-[var(--font-ui-smaller)] font-bold text-[var(--text-normal)] line-clamp-1 flex-1 min-w-0 group-hover:text-[var(--text-accent)] transition-colors">
                   {{ entry.title }}
                 </h4>
                 <button
@@ -395,8 +395,8 @@ async function reusePrompt(prompt: string) {
               <p class="text-[10px] text-[var(--text-faint)] mt-0.5 truncate">
                 {{ entry.url }}
               </p>
-              <p class="text-[var(--font-ui-smallest)] text-[var(--text-muted)] mt-1 line-clamp-2 leading-snug">
-                {{ entry.summary }}
+              <p class="text-[var(--font-ui-smallest)] text-[var(--text-muted)] mt-1 line-clamp-2 italic leading-snug">
+                "{{ entry.summary }}"
               </p>
               <div class="flex items-center gap-1.5 mt-1.5">
                 <span
@@ -410,7 +410,7 @@ async function reusePrompt(prompt: string) {
                 <span v-if="entry.responses.length > 4" class="text-[9px] text-[var(--text-faint)]">
                   +{{ entry.responses.length - 4 }}
                 </span>
-                <span class="text-[9px] text-[var(--text-faint)] ml-auto">
+                <span class="text-[9px] text-[var(--text-faint)] ml-auto font-mono">
                   {{ formatTime(entry.timestamp) }}
                 </span>
               </div>

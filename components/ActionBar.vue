@@ -4,16 +4,22 @@ import { useContentStore } from '@/stores/content';
 import { useSettingsStore } from '@/stores/settings';
 import { useComparisonStore } from '@/stores/comparison';
 import { useTemplatesStore } from '@/stores/templates';
+import { useWorkflowStore } from '@/stores/workflow';
 import { estimateTokens, estimateCost, formatCost } from '@/utils/cost';
-import { Play, Square, Send, Plus, ChevronDown, FileText } from 'lucide-vue-next';
+import { toMarkdown, toPDF, toObsidianUri, toNotion } from '@/utils/export';
+import { Play, Square, Send, RefreshCw, ChevronDown, FileText, Download, BookOpen, Clipboard, Check } from 'lucide-vue-next';
 import BaseDialog from './base/BaseDialog.vue';
 import BaseButton from './base/BaseButton.vue';
 import BaseIconButton from './base/BaseIconButton.vue';
+import ModeSwitcher from './ModeSwitcher.vue';
+import RoundtableConfig from './RoundtableConfig.vue';
+import ChainConfig from './ChainConfig.vue';
 
 const content = useContentStore();
 const settings = useSettingsStore();
 const comparison = useComparisonStore();
 const templates = useTemplatesStore();
+const workflow = useWorkflowStore();
 
 const customPrompt = ref('');
 const showCostDialog = ref(false);
@@ -21,19 +27,6 @@ const pendingCost = ref(0);
 const pendingModels = ref<{ name: string; cost: number }[]>([]);
 const pendingTokens = ref(0);
 const pendingPrompt = ref('');
-
-const showTemplateMenu = ref(false);
-const menuRef = ref<HTMLElement | null>(null);
-
-function closeMenu(e?: MouseEvent) {
-  if (!e) { showTemplateMenu.value = false; return; }
-  if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
-    showTemplateMenu.value = false;
-  }
-}
-
-onMounted(() => document.addEventListener('click', closeMenu));
-onUnmounted(() => document.removeEventListener('click', closeMenu));
 
 function calculateCostEstimate(prompt: string) {
   const fullPrompt = `${prompt}\n\n${content.rawContent || ''}`;
@@ -49,7 +42,6 @@ function calculateCostEstimate(prompt: string) {
 
 function startWithPrompt(prompt: string) {
   if (!content.rawContent) return;
-  showTemplateMenu.value = false;
 
   const skipConfirm = sessionStorage.getItem('ai-reader-skip-cost-confirm');
   if (skipConfirm === 'true') {
@@ -102,100 +94,172 @@ function abortAll() {
   comparison.abortAll();
 }
 
+function handleExtract() {
+  content.fetchContent();
+}
+
 const canRun = computed(() => !!content.rawContent && !comparison.isRunning);
+const isRunning = computed(() => comparison.isRunning);
+const hasCompletedSummaries = computed(() => comparison.slots.some(s => s.text));
+
+const completedSummaries = computed(() =>
+  comparison.slots.filter(s => s.text).map(s => ({
+    providerId: s.providerId,
+    modelId: s.modelId,
+    text: s.text,
+  }))
+);
+
+// Export actions (1.html style inline buttons)
+const exportCopied = ref(false);
+function exportMarkdown() {
+  const md = toMarkdown(content.title, content.url, completedSummaries.value);
+  navigator.clipboard.writeText(md);
+  flashCopied();
+}
+function exportPDF() {
+  toPDF(content.title, content.url, completedSummaries.value);
+}
+function exportObsidian() {
+  const uri = toObsidianUri(content.title, completedSummaries.value);
+  if (uri.startsWith('clipboard:')) {
+    navigator.clipboard.writeText(uri.slice(9));
+  } else {
+    window.open(uri, '_blank');
+  }
+  flashCopied();
+}
+function exportNotion() {
+  toNotion(content.title, completedSummaries.value);
+  flashCopied();
+}
+function flashCopied() {
+  exportCopied.value = true;
+  setTimeout(() => { exportCopied.value = false; }, 1500);
+}
 </script>
 
 <template>
-  <div class="border-b border-[var(--background-modifier-border)] bg-[var(--background-primary)]">
-    <!-- Template bar -->
-    <div class="flex items-center gap-1.5 px-3 py-2 overflow-x-auto scrollbar-thin">
-      <div ref="menuRef" class="relative shrink-0">
+  <!-- 1.html-style Command Console layout -->
+  <div class="flex flex-col gap-2">
+    <!-- Row 1: Mode switcher + Template dropdown + Extract -->
+    <div class="flex items-center justify-between gap-2">
+      <!-- Mode segment control -->
+      <ModeSwitcher />
+
+      <div class="flex items-center gap-1.5">
+        <!-- Template dropdown (1.html style) -->
+        <select
+          v-if="workflow.workMode === 'parallel'"
+          class="text-[11px] font-medium text-[var(--text-muted)] bg-[var(--background-canvas)] border border-[var(--background-modifier-border)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] py-1 px-2.5 outline-none hover:bg-[var(--background-modifier-hover)] transition-all cursor-pointer"
+          @change="(e) => {
+            const target = e.target as HTMLSelectElement;
+            if (target.value) startWithPrompt(target.value);
+            target.selectedIndex = 0;
+          }"
+        >
+          <option value="" disabled selected>⚡ 快速模板</option>
+          <option
+            v-for="t in templates.templates"
+            :key="t.id"
+            :value="t.prompt"
+          >
+            {{ t.name }}
+          </option>
+        </select>
+
+        <!-- Extract button (moved from header into console) -->
         <button
+          v-if="!content.rawContent"
           type="button"
-          class="btn-secondary-sm"
-          :disabled="!canRun"
-          @click.stop="showTemplateMenu = !showTemplateMenu"
+          class="btn-primary-sm"
+          :class="content.loading && 'opacity-70 cursor-wait'"
+          :disabled="content.loading"
+          aria-label="提取页面内容"
+          @click="handleExtract"
         >
-          <Plus class="w-3 h-3" />
-          Templates
-          <ChevronDown class="w-3 h-3" />
-        </button>
-        <Transition
-          enter-active-class="transition duration-100 ease-out"
-          enter-from-class="opacity-0 -translate-y-1"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition duration-75 ease-in"
-          leave-to-class="opacity-0"
-        >
-          <div v-if="showTemplateMenu" class="menu top-9 left-0" role="menu">
-            <button
-              v-for="t in templates.templates"
-              :key="t.id"
-              type="button"
-              class="menu-item"
-              role="menuitem"
-              @click="startWithPrompt(t.prompt)"
-            >
-              <FileText class="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              <div class="flex-1 min-w-0 text-left">
-                <div class="font-medium">{{ t.name }}</div>
-                <div class="text-[10px] text-[var(--text-faint)] line-clamp-1">{{ t.prompt }}</div>
-              </div>
-            </button>
-          </div>
-        </Transition>
-      </div>
-
-      <div class="h-4 w-px bg-[var(--background-modifier-border)] shrink-0 mx-0.5" />
-
-      <button
-        v-for="t in templates.templates.slice(0, 4)"
-        :key="t.id"
-        type="button"
-        class="btn-secondary-sm shrink-0"
-        :disabled="!canRun"
-        @click="startWithPrompt(t.prompt)"
-      >
-        <Play class="w-3 h-3" />
-        {{ t.name }}
-      </button>
-
-      <div class="ml-auto shrink-0">
-        <button
-          v-if="comparison.isRunning"
-          type="button"
-          class="btn-danger-sm"
-          aria-label="停止全部"
-          @click="abortAll"
-        >
-          <Square class="w-3 h-3" />
-          Stop
+          <RefreshCw v-if="!content.loading" class="w-3 h-3" />
+          <span v-else class="w-3 h-3 inline-block border-2 border-current border-t-transparent rounded-full animate-spin" />
+          Extract
         </button>
       </div>
     </div>
 
-    <!-- Custom prompt row -->
-    <div class="flex items-center gap-1.5 px-3 pb-2">
-      <div class="flex-1 relative">
-        <input
-          v-model="customPrompt"
-          type="text"
-          placeholder="自定义提示词…"
-          class="input-md pr-2"
-          :disabled="!canRun"
-          aria-label="自定义提示词输入"
-          @keyup.enter="startCustom"
-        />
-      </div>
+    <!-- Roundtable / Chain config (when not in parallel mode) -->
+    <RoundtableConfig v-if="workflow.workMode === 'roundtable'" />
+    <ChainConfig v-else-if="workflow.workMode === 'chain'" />
+
+    <!-- Row 2: Input + Run/Stop button (1.html style: rounded-xl container, indigo focus ring) -->
+    <div
+      class="flex items-end gap-2 bg-[var(--background-canvas)] border border-[var(--background-modifier-border)] rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-[var(--color-accent)]/10 focus-within:border-[var(--color-accent)] transition-all"
+    >
+      <textarea
+        v-model="customPrompt"
+        class="flex-1 text-[13px] text-[var(--text-normal)] bg-transparent border-none outline-none resize-none py-1.5 px-2 max-h-[100px] no-scrollbar placeholder:text-[var(--text-faint)]"
+        rows="1"
+        placeholder="说点什么或按 Enter 总结当前页..."
+        :disabled="!canRun"
+        aria-label="自定义提示词输入"
+        @keydown.enter.exact.prevent="startCustom"
+      />
       <button
+        v-if="!isRunning"
         type="button"
-        class="btn-primary-sm"
+        class="w-8 h-8 rounded-lg bg-[var(--interactive-accent)] hover:bg-[var(--interactive-accent-hover)] text-white flex items-center justify-center shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        :class="isRunning ? 'bg-[var(--text-error)] hover:brightness-110 shadow-rose-200' : 'shadow-indigo-100'"
         :disabled="!canRun || !customPrompt.trim()"
         aria-label="发送"
         @click="startCustom"
       >
-        <Send class="w-3 h-3" />
-        发送
+        <Send class="w-3.5 h-3.5" />
+      </button>
+      <button
+        v-else
+        type="button"
+        class="w-8 h-8 rounded-lg bg-[var(--text-error)] hover:brightness-110 text-white flex items-center justify-center shadow-lg shadow-rose-200 transition-all animate-pulse"
+        aria-label="停止全部"
+        @click="abortAll"
+      >
+        <Square class="w-3.5 h-3.5" />
+      </button>
+    </div>
+
+    <!-- Row 3: Export buttons (1.html style bottom action row) -->
+    <div
+      v-if="hasCompletedSummaries"
+      class="flex justify-between gap-1 pt-1 border-t border-[var(--color-base-10)]"
+    >
+      <button
+        type="button"
+        class="flex-1 py-1 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-normal)] hover:bg-[var(--background-canvas)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-colors flex items-center justify-center gap-1"
+        @click="exportMarkdown"
+      >
+        <FileText class="w-3 h-3" />
+        MD
+      </button>
+      <button
+        type="button"
+        class="flex-1 py-1 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-normal)] hover:bg-[var(--background-canvas)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-colors flex items-center justify-center gap-1"
+        @click="exportPDF"
+      >
+        <Download class="w-3 h-3 text-[var(--text-error)]" />
+        PDF
+      </button>
+      <button
+        type="button"
+        class="flex-1 py-1 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-normal)] hover:bg-[var(--background-canvas)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-colors flex items-center justify-center gap-1"
+        @click="exportObsidian"
+      >
+        <BookOpen class="w-3 h-3 text-[var(--text-accent)]" />
+        Obsidian
+      </button>
+      <button
+        type="button"
+        class="flex-1 py-1 text-[11px] font-bold text-[var(--text-muted)] hover:text-[var(--text-normal)] hover:bg-[var(--background-canvas)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-colors flex items-center justify-center gap-1"
+        @click="exportNotion"
+      >
+        <component :is="exportCopied ? Check : Clipboard" class="w-3 h-3" />
+        {{ exportCopied ? '已复制' : 'Notion' }}
       </button>
     </div>
 

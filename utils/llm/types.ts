@@ -30,3 +30,22 @@ export interface ProviderSettings {
   providers: Record<string, ProviderConfig>;
   enabledProviders: string[];
 }
+
+// === Advanced workflow types ===
+
+export type WorkMode = 'parallel' | 'roundtable' | 'chain';
+
+export interface RoleConfig {
+  id: string;
+  name: string;       // e.g., "红队挑刺专家"
+  prompt: string;     // The role system prompt
+  color: string;      // Left border color, e.g., '#ef4444'
+  providerId: string; // Which provider to use
+}
+
+export interface ChainStepConfig {
+  id: string;
+  providerId: string;
+  modelId: string;
+  prompt: string;     // Task instruction for this step
+}

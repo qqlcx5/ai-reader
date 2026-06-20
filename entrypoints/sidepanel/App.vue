@@ -7,10 +7,10 @@ import { onMounted, onUnmounted, ref, computed, defineAsyncComponent } from 'vue
 import { useContentStore } from '@/stores/content';
 import { useComparisonStore } from '@/stores/comparison';
 import { useSettingsStore } from '@/stores/settings';
+import { useRSSStore } from '@/stores/rss';
 import { useNetworkStatus } from '@/utils/network';
-import { getProviderName, getProviderIcon } from '@/utils/providers';
 import { renderMarkdown } from '@/utils/markdown';
-import { FileText, AlertCircle, History, X, ChevronDown, WifiOff, RefreshCw, ListCollapse, Sparkles } from 'lucide-vue-next';
+import { FileText, AlertTriangle, ChevronDown, WifiOff, RefreshCw, ListCollapse, Rss, Timer, Terminal, Sliders } from 'lucide-vue-next';
 import { browser } from 'wxt/browser';
 import ActionBar from '@/components/ActionBar.vue';
 import ComparisonGrid from '@/components/ComparisonGrid.vue';
@@ -18,19 +18,22 @@ import ErrorBoundary from '@/components/ErrorBoundary.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import BaseState from '@/components/base/BaseState.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
-import BaseIconButton from '@/components/base/BaseIconButton.vue';
 
-const ExportMenu = defineAsyncComponent(() => import('@/components/ExportMenu.vue'));
 const HistoryPanel = defineAsyncComponent(() => import('@/components/HistoryPanel.vue'));
+const RSSDigestView = defineAsyncComponent(() => import('@/components/RSSDigestView.vue'));
 
 const content = useContentStore();
 const comparison = useComparisonStore();
 const settings = useSettingsStore();
+const rss = useRSSStore();
 const { isOnline } = useNetworkStatus();
 
-const showHistory = ref(false);
 const showPageContent = ref(false);
 const theme = ref<'light' | 'dark' | 'auto'>('auto');
+
+// 1.html-style tab navigation: 工作站 / RSS 晨报 / 历史
+type TabId = 'workspace' | 'rss' | 'history';
+const activeTab = ref<TabId>('workspace');
 
 const hasSlots = computed(() => comparison.slots.length > 0);
 const completedSummaries = computed(() =>
@@ -58,8 +61,6 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
     if (comparison.isRunning) {
       comparison.abortAll();
-    } else if (showHistory.value) {
-      showHistory.value = false;
     }
   }
 }
@@ -85,9 +86,18 @@ function handleThemeChange() {
   if (theme.value === 'auto') applyTheme('auto');
 }
 
+// Listen for RSS digest updates
+function handleRSSUpdate(message: { action: string }) {
+  if (message.action === 'rss-digest-updated') {
+    rss.load();
+  }
+}
+
 onMounted(() => {
   content.fetchContent();
+  rss.load();
   browser.runtime.onMessage.addListener(handleShortcut);
+  browser.runtime.onMessage.addListener(handleRSSUpdate);
   window.addEventListener('keydown', handleKeydown);
   mediaQuery.addEventListener('change', handleThemeChange);
   loadTheme();
@@ -95,6 +105,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   browser.runtime.onMessage.removeListener(handleShortcut);
+  browser.runtime.onMessage.removeListener(handleRSSUpdate);
   window.removeEventListener('keydown', handleKeydown);
   mediaQuery.removeEventListener('change', handleThemeChange);
   comparison.abortAll();
@@ -102,122 +113,121 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-[var(--background-primary)] text-[var(--text-normal)]">
-    <!-- Offline banner -->
+  <div class="flex flex-col h-screen bg-[var(--background-canvas)] text-[var(--text-normal)]">
+    <!-- Offline banner (full-width, above header) -->
     <div
       v-if="!isOnline"
-      class="flex items-center gap-2 px-4 py-1.5 bg-[var(--background-modifier-warning)] border-b border-[var(--background-modifier-border)] text-[var(--text-warning)] text-[var(--font-ui-smaller)]"
+      class="flex items-center gap-2 px-4 py-1.5 bg-[var(--text-error)] text-white text-[var(--font-ui-smaller)] font-medium shrink-0 animate-slide-down"
       role="alert"
     >
       <WifiOff class="w-3.5 h-3.5 shrink-0" />
-      <span>网络已断开，部分功能不可用</span>
+      <span class="flex-1">网络断开：当前处于离线模式</span>
     </div>
 
-    <!-- Header -->
-    <header class="flex items-center gap-2 px-3 h-11 border-b border-[var(--background-modifier-border)] bg-[var(--background-primary)] shrink-0">
-      <div class="flex items-center gap-2 min-w-0 flex-1">
-        <div class="w-6 h-6 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] bg-[var(--color-accent-soft)] flex items-center justify-center shrink-0">
-          <FileText class="w-3.5 h-3.5 text-[var(--text-accent)]" />
-        </div>
-        <div class="min-w-0">
-          <h1 class="text-[var(--font-ui-medium)] font-semibold truncate leading-tight">
-            {{ content.title || 'AI Reader' }}
-          </h1>
-        </div>
-        <span
-          v-if="comparison.isRunning"
-          class="pill-accent !text-[10px] !py-0 shrink-0"
-          aria-live="polite"
-        >
-          <Sparkles class="w-2.5 h-2.5 animate-pulse" />
-          {{ comparison.slots.filter(s => s.status === 'streaming').length }} /
-          {{ comparison.slots.length }}
-        </span>
-      </div>
-      <div class="flex items-center gap-0.5 shrink-0">
-        <ThemeToggle @change="applyTheme" />
-        <Suspense>
-          <ExportMenu
-            v-if="completedSummaries.length > 0"
-            :title="content.title"
-            :url="content.url"
-            :summaries="completedSummaries"
-          />
-        </Suspense>
+    <!-- Header: Tab segmented control + action buttons (1.html inspired) -->
+    <header class="bg-[var(--background-primary)] border-b border-[var(--background-modifier-border)] px-4 py-2.5 flex items-center justify-between shrink-0">
+      <!-- Tab segmented control -->
+      <div class="flex bg-[var(--background-primary-alt)] p-0.5 rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)]">
         <button
           type="button"
-          :class="['clickable-icon', showHistory && 'clickable-icon-active']"
-          aria-label="历史记录"
-          title="历史记录"
-          @click="showHistory = !showHistory"
+          :class="[
+            'px-3 py-1.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smallest)] font-medium transition-all duration-150 flex items-center gap-1',
+            activeTab === 'workspace'
+              ? 'bg-[var(--background-primary)] text-[var(--text-normal)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-normal)]',
+          ]"
+          @click="activeTab = 'workspace'"
         >
-          <History class="w-4 h-4" />
+          <Terminal class="w-3 h-3" />
+          工作站
         </button>
         <button
           type="button"
-          class="btn-primary-sm"
-          :class="content.loading && 'opacity-70 cursor-wait'"
-          :disabled="content.loading || !isOnline"
-          aria-label="提取页面内容"
-          @click="content.fetchContent()"
+          :class="[
+            'px-3 py-1.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smallest)] font-medium transition-all duration-150 flex items-center gap-1 relative',
+            activeTab === 'rss'
+              ? 'bg-[var(--background-primary)] text-[var(--text-normal)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-normal)]',
+          ]"
+          @click="activeTab = 'rss'"
         >
-          <RefreshCw v-if="!content.loading" class="w-3 h-3" />
-          <span v-else class="w-3 h-3 inline-block border-2 border-current border-t-transparent rounded-full animate-spin" />
-          Extract
+          <Rss class="w-3 h-3" />
+          RSS 晨报
+          <span
+            v-if="rss.unreadCount > 0"
+            class="absolute -top-1 -right-1 min-w-[14px] h-[14px] flex items-center justify-center text-[8px] font-bold text-white bg-[var(--text-error)] rounded-full px-0.5 border-2 border-[var(--background-primary)]"
+          >
+            {{ rss.unreadCount > 99 ? '99+' : rss.unreadCount }}
+          </span>
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] text-[var(--font-ui-smallest)] font-medium transition-all duration-150 flex items-center gap-1',
+            activeTab === 'history'
+              ? 'bg-[var(--background-primary)] text-[var(--text-normal)] shadow-sm'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-normal)]',
+          ]"
+          @click="activeTab = 'history'"
+        >
+          <Timer class="w-3 h-3" />
+          历史
+        </button>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex items-center gap-0.5">
+        <ThemeToggle @change="applyTheme" />
+        <button
+          type="button"
+          class="text-[var(--text-muted)] hover:text-[var(--text-normal)] p-1.5 hover:bg-[var(--background-modifier-hover)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-colors"
+          aria-label="设置"
+          title="设置"
+          @click="browser.runtime.openOptionsPage()"
+        >
+          <Sliders class="w-4 h-4" />
         </button>
       </div>
     </header>
 
-    <!-- History panel overlay -->
-    <Transition
-      enter-active-class="transition duration-150 ease-out"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-100 ease-in"
-      leave-to-class="opacity-0 -translate-y-1"
+    <!-- Stale content banner (workspace only) — 1.html amber warning style -->
+    <div
+      v-if="activeTab === 'workspace' && content.rawContent && content.isStale && !content.loading && !comparison.isRunning"
+      class="flex items-center justify-between gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200/80 dark:border-amber-700/40 animate-slide-down shrink-0"
+      role="status"
     >
-      <div
-        v-if="showHistory"
-        class="absolute inset-x-0 top-11 bottom-0 z-20 bg-[var(--background-primary)] shadow-[var(--shadow-l)] border-t border-[var(--background-modifier-border)] flex flex-col"
-      >
-        <div class="flex items-center justify-between px-4 h-10 border-b border-[var(--background-modifier-border)] shrink-0">
-          <h2 class="text-[var(--font-ui-medium)] font-semibold">历史记录</h2>
-          <button
-            type="button"
-            class="clickable-icon !w-7 !h-7"
-            aria-label="关闭历史记录"
-            @click="showHistory = false"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-        <div class="flex-1 overflow-hidden">
-          <Suspense>
-            <HistoryPanel @close="showHistory = false" />
-          </Suspense>
-        </div>
+      <div class="flex items-center gap-1.5 text-[11px] text-amber-800 dark:text-amber-300 min-w-0">
+        <AlertTriangle class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <span class="truncate">
+          正文缓存于 {{ content.extractedAgo || '较久' }}前，可能已陈旧
+        </span>
       </div>
-    </Transition>
+      <button
+        type="button"
+        class="text-[11px] font-semibold text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-800/40 hover:bg-amber-200 dark:hover:bg-amber-700/40 px-2 py-0.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-all shrink-0"
+        :disabled="content.loading || !isOnline"
+        aria-label="重新抓取页面内容"
+        @click="content.fetchContent()"
+      >
+        重新抓取
+      </button>
+    </div>
 
-    <!-- Action bar -->
-    <ErrorBoundary>
-      <ActionBar v-if="content.rawContent && !hasSlots" class="shrink-0" />
-    </ErrorBoundary>
+    <!-- ═══════════ TAB: 工作站 (workspace) ═══════════ -->
+    <div v-if="activeTab === 'workspace'" class="flex-1 flex flex-col overflow-hidden min-h-0 relative">
 
-    <!-- Main content area -->
-    <div class="flex-1 flex flex-col overflow-hidden min-h-0">
       <!-- Loading skeleton -->
-      <div v-if="content.loading" class="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-thin">
+      <div v-if="content.loading" class="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-thin pb-[180px]">
         <div class="space-y-2">
-          <div class="h-5 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-3/4"></div>
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-1/2"></div>
+          <div class="h-5 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-3/4"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-1/2"></div>
         </div>
         <div class="space-y-2 mt-4">
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse"></div>
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-5/6"></div>
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-4/6"></div>
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-5/6"></div>
-          <div class="h-3 bg-[var(--background-secondary)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] animate-pulse w-3/4"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)]"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-5/6"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-4/6"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-5/6"></div>
+          <div class="h-3 skeleton-loading rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] w-3/4"></div>
         </div>
       </div>
 
@@ -248,20 +258,17 @@ onUnmounted(() => {
         </BaseButton>
       </BaseState>
 
-      <!-- Comparison (running or done) -->
+      <!-- Comparison (running or done) — scrollable area with bottom padding for floating console -->
       <div v-else-if="hasSlots" class="flex-1 flex flex-col overflow-hidden min-h-0">
         <ErrorBoundary>
-          <div class="flex-1 overflow-y-auto min-h-0">
+          <div class="flex-1 overflow-y-auto min-h-0 pb-[180px]">
             <ComparisonGrid />
           </div>
         </ErrorBoundary>
-
-        <!-- Inline action bar (always visible while comparison exists) -->
-        <ActionBar class="shrink-0" />
       </div>
 
-      <!-- Content only (extracted but not started) -->
-      <div v-else-if="content.rawContent" class="flex-1 flex flex-col overflow-hidden min-h-0">
+      <!-- Content extracted but not started — show page content preview -->
+      <div v-else-if="content.rawContent" class="flex-1 flex flex-col overflow-hidden min-h-0 pb-[180px]">
         <button
           type="button"
           class="flex items-center justify-between w-full px-4 h-9 text-[var(--font-ui-smaller)] text-[var(--text-muted)] hover:bg-[var(--background-modifier-hover)] border-b border-[var(--background-modifier-border)] transition-colors focus-visible:outline-none focus-visible:bg-[var(--background-modifier-hover)]"
@@ -293,15 +300,36 @@ onUnmounted(() => {
         v-else
         variant="empty"
         title="AI Reader"
-        description="点击右上角 Extract 提取当前页面内容，然后选择模板提问"
+        description="点击下方 Extract 提取当前页面内容，然后选择模板提问"
         :icon="FileText"
         size="md"
+      />
+
+      <!-- Floating Command Console (1.html inspired: bottom-anchored, glass effect) -->
+      <div
+        v-if="content.rawContent || !content.loading"
+        class="absolute bottom-3 left-3 right-3 z-30"
       >
-        <BaseButton variant="primary" size="md" :disabled="!isOnline" @click="content.fetchContent()">
-          <RefreshCw class="w-3.5 h-3.5" />
-          Extract
-        </BaseButton>
-      </BaseState>
+        <div class="console-panel card-rounded shadow-[var(--shadow-panel)] border border-[var(--background-modifier-border)]/80 p-3 flex flex-col gap-2">
+          <ErrorBoundary>
+            <ActionBar />
+          </ErrorBoundary>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ TAB: RSS 晨报 ═══════════ -->
+    <div v-else-if="activeTab === 'rss'" class="flex-1 flex flex-col overflow-hidden min-h-0">
+      <Suspense>
+        <RSSDigestView />
+      </Suspense>
+    </div>
+
+    <!-- ═══════════ TAB: 历史归档 ═══════════ -->
+    <div v-else-if="activeTab === 'history'" class="flex-1 flex flex-col overflow-hidden min-h-0">
+      <Suspense>
+        <HistoryPanel @close="activeTab = 'workspace'" />
+      </Suspense>
     </div>
   </div>
 </template>

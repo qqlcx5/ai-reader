@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue';
-import { Loader2, StopCircle, CheckCircle2, AlertCircle, Copy, RotateCcw, Clock, Coins } from 'lucide-vue-next';
+import { StopCircle, CheckCircle2, AlertCircle, Copy, RotateCcw, Clock, Coins } from 'lucide-vue-next';
 import type { StreamSlot } from '@/stores/comparison';
 import { useConversationsStore } from '@/stores/conversations';
 import { renderMarkdown } from '@/utils/markdown';
@@ -74,40 +74,73 @@ function copyToClipboard() {
 </script>
 
 <template>
-  <div class="flex flex-col bg-[var(--background-primary)] border border-[var(--background-modifier-border)] rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)] overflow-hidden h-full min-h-0">
+  <div
+    class="flex flex-col bg-[var(--background-primary)] border border-[var(--background-modifier-border)]/80 card-rounded shadow-[var(--shadow-card)] overflow-hidden h-full min-h-0 relative transition-all group hover-lift"
+    :class="slot.status === 'streaming' ? 'stream-glow' : slot.status === 'done' ? 'done-tint' : ''"
+    :style="slot.roleColor ? `border-left: 3px solid ${slot.roleColor}` : ''"
+  >
     <!-- Header -->
-    <div class="flex items-center gap-2 px-3 py-2 border-b border-[var(--background-modifier-border)] shrink-0">
+    <div class="flex items-center gap-2 px-3.5 py-2.5 border-b border-[var(--background-modifier-border)]/60 shrink-0">
+      <!-- Role badge -->
+      <span
+        v-if="slot.roleName"
+        class="pill text-[10px] !py-0 shrink-0"
+        :style="{ backgroundColor: slot.roleColor + '20', color: slot.roleColor }"
+      >
+        {{ slot.roleName }}
+      </span>
+      <!-- Chain step badge -->
+      <span
+        v-if="slot.chainStepIndex !== undefined"
+        class="pill-accent !text-[10px] !py-0 shrink-0"
+      >
+        Step {{ slot.chainStepIndex + 1 }}
+      </span>
       <span
         :class="['icon', `icon-${getProviderIcon(slot.providerId)}`]"
-        style="font-size: 0.875rem; color: var(--text-muted);"
+        style="font-size: 1rem; color: var(--text-muted);"
       />
-      <span class="text-[var(--font-ui-smaller)] font-semibold text-[var(--text-normal)] truncate">
+      <span class="text-[var(--font-ui-smaller)] font-bold text-[var(--text-normal)] truncate">
         {{ getProviderName(slot.providerId) }}
       </span>
       <span class="text-[10px] text-[var(--text-faint)] truncate" :title="slot.modelId">
         {{ slot.modelId }}
       </span>
-      <span :class="statusPillClass" class="ml-auto shrink-0 !text-[10px]">
-        <template v-if="slot.status === 'streaming'">
-          <Loader2 class="w-2.5 h-2.5 animate-spin" />
-        </template>
-        <template v-else-if="slot.status === 'done'">
+      <!-- Status + Actions (1.html style: hover reveals) -->
+      <div class="ml-auto flex items-center gap-1.5 shrink-0">
+        <span v-if="slot.status === 'streaming'" class="text-[10px] text-[var(--text-accent)] bg-[var(--color-accent-soft)] px-1.5 py-0.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] font-medium animate-pulse">
+          Streaming
+        </span>
+        <span v-else-if="slot.status === 'done'" :class="statusPillClass" class="!text-[10px]">
           <CheckCircle2 class="w-2.5 h-2.5" />
-        </template>
-        <template v-else-if="slot.status === 'error'">
+          {{ statusLabel }}
+        </span>
+        <span v-else-if="slot.status === 'error'" :class="statusPillClass" class="!text-[10px]">
           <AlertCircle class="w-2.5 h-2.5" />
-        </template>
-        {{ statusLabel }}
-      </span>
-      <BaseIconButton
-        v-if="slot.status === 'streaming'"
-        size="sm"
-        variant="danger"
-        aria-label="停止生成"
-        @click="emit('abort', index)"
-      >
-        <StopCircle class="w-3.5 h-3.5" />
-      </BaseIconButton>
+          {{ statusLabel }}
+        </span>
+        <!-- Hover-revealed action buttons (1.html style: opacity-0 → 100 on group hover) -->
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+          <BaseIconButton
+            v-if="slot.status === 'streaming'"
+            size="sm"
+            variant="danger"
+            aria-label="停止生成"
+            @click="emit('abort', index)"
+          >
+            <StopCircle class="w-3.5 h-3.5" />
+          </BaseIconButton>
+          <BaseIconButton
+            v-if="slot.status === 'error' && slot.lastPrompt"
+            size="sm"
+            variant="primary"
+            aria-label="重试"
+            @click="emit('retry', index)"
+          >
+            <RotateCcw class="w-3.5 h-3.5" />
+          </BaseIconButton>
+        </div>
+      </div>
     </div>
 
     <!-- Chat history -->
@@ -125,19 +158,28 @@ function copyToClipboard() {
 
     <!-- Content area -->
     <div class="flex-1 p-3 overflow-y-auto scrollbar-thin min-h-0" aria-live="polite">
-      <div v-if="slot.status === 'idle'" class="text-[var(--text-faint)] text-[var(--font-ui-smaller)] text-center py-6">
-        等待中…
+      <div v-if="slot.status === 'idle'" class="text-[var(--text-faint)] text-[var(--font-ui-smaller)] text-center py-6 italic font-light">
+        等待执行，就绪…
       </div>
       <div
         v-else-if="slot.status === 'error'"
-        class="text-[var(--text-error)] text-[var(--font-ui-smaller)] p-3 bg-[var(--background-modifier-error)] rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] border border-[var(--text-error)] border-opacity-20"
+        class="p-4 bg-[var(--background-modifier-error)] border border-[var(--text-error)] border-opacity-20 rounded-[var(--radius-m)] [corner-shape:var(--corner-shape)]"
         role="alert"
       >
-        <div class="flex items-center gap-1.5 font-semibold mb-1">
+        <div class="flex items-center gap-1.5 text-[var(--font-ui-smaller)] text-[var(--text-error)] font-semibold mb-1">
           <AlertCircle class="w-3.5 h-3.5" />
-          请求失败
+          API 请求失败
         </div>
-        <div class="text-[var(--font-ui-smallest)]">{{ errorMessage }}</div>
+        <div class="text-[var(--font-ui-smallest)] text-[var(--text-error)] opacity-80">{{ errorMessage }}</div>
+        <button
+          v-if="slot.lastPrompt"
+          type="button"
+          class="mt-2 w-fit bg-[var(--background-modifier-error)] hover:brightness-95 text-[var(--text-error)] font-semibold text-[11px] px-2.5 py-1 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] transition-all"
+          @click="emit('retry', index)"
+        >
+          <RotateCcw class="w-3 h-3 inline-block mr-1" />
+          立即重试
+        </button>
       </div>
       <div
         v-else-if="slot.status === 'streaming'"
@@ -149,7 +191,7 @@ function copyToClipboard() {
         <template v-else>
           <span class="text-[var(--text-faint)]">思考中…</span>
         </template>
-        <span class="inline-block w-1.5 h-3 ml-0.5 bg-[var(--text-accent)] animate-pulse" />
+        <span class="cursor-smooth" />
       </div>
       <article
         v-else
@@ -158,20 +200,20 @@ function copyToClipboard() {
       />
     </div>
 
-    <!-- Stats bar -->
+    <!-- Stats bar (1.html style: high-density metadata with mono font cost badge) -->
     <div
       v-if="slot.startTime > 0"
-      class="flex items-center gap-3 px-3 py-1.5 border-t border-[var(--background-modifier-border-subtle)] bg-[var(--background-primary)] text-[10px] text-[var(--text-muted)] shrink-0"
+      class="flex items-center gap-3 px-3.5 py-2 border-t border-[var(--background-modifier-border)]/60 bg-[var(--background-canvas)] text-[11px] text-[var(--text-muted)] shrink-0"
     >
-      <span class="flex items-center gap-1">
+      <span class="flex items-center gap-0.5 font-medium">
         <Clock class="w-3 h-3" />
         {{ elapsed }}
       </span>
-      <span class="flex items-center gap-1">
+      <span class="flex items-center gap-0.5 font-medium">
         <Coins class="w-3 h-3" />
         ~{{ slot.inputTokens }} in / ~{{ slot.outputTokens }} out
       </span>
-      <span v-if="slot.estimatedCost > 0" class="pill-success !text-[9px] !py-0">
+      <span v-if="slot.estimatedCost > 0" class="font-mono text-[var(--text-normal)] bg-[var(--background-secondary)] px-1.5 py-0.5 rounded-[var(--radius-s)] [corner-shape:var(--corner-shape)] font-bold">
         {{ formatCost(slot.estimatedCost) }}
       </span>
       <div class="ml-auto flex items-center gap-1">
@@ -184,15 +226,6 @@ function copyToClipboard() {
           <Copy class="w-3 h-3" />
           {{ copied ? '已复制' : '复制' }}
         </button>
-        <BaseIconButton
-          v-if="slot.status === 'error' && slot.lastPrompt"
-          size="sm"
-          variant="primary"
-          aria-label="重试"
-          @click="emit('retry', index)"
-        >
-          <RotateCcw class="w-3.5 h-3.5" />
-        </BaseIconButton>
       </div>
     </div>
 
@@ -201,6 +234,12 @@ function copyToClipboard() {
       v-if="slot.text || slot.status === 'done'"
       :disabled="slot.status === 'streaming'"
       @send="handleFollowUp"
+    />
+
+    <!-- Chain completed overlay -->
+    <div
+      v-if="slot.chainStepIndex !== undefined && slot.status === 'done'"
+      class="absolute inset-0 bg-[var(--background-primary)] opacity-30 pointer-events-none z-10"
     />
   </div>
 </template>

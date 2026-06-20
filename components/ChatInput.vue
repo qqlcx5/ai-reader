@@ -22,7 +22,7 @@ function handleSend() {
 </script>
 
 <template>
-  <div class="flex items-center gap-1.5 p-2 border-t border-[var(--background-modifier-border)] bg-[var(--background-primary)] shrink-0">
+  <div class="flex items-center gap-1.5 p-2 border-t border-[var(--background-modifier-border)] bg-[var(--background-primary)] rounded-b-[var(--radius-l)] [corner-shape:var(--corner-shape)] shrink-0">
     <input
       v-model="text"
       type="text"

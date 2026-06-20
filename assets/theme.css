@@ -5,24 +5,24 @@
  */
 
 :root {
-  /* === Accent (Obsidian default purple, swappable per brand) === */
-  --accent-h: 258;
-  --accent-s: 88%;
-  --accent-l: 66%;
+  /* === Accent (1.html Indigo 600 brand color) === */
+  --accent-h: 239;
+  --accent-s: 84%;
+  --accent-l: 67%;
 
-  /* === Light theme === */
+  /* === Light theme (Slate-tinted off-white, 1.html style) === */
   --color-base-00: #ffffff;
-  --color-base-05: #fcfcfc;
-  --color-base-10: #fafafa;
-  --color-base-20: #f6f6f6;
-  --color-base-25: #ececec;
-  --color-base-30: #e0e0e0;
-  --color-base-35: #d4d4d4;
-  --color-base-40: #bdbdbd;
-  --color-base-50: #ababab;
-  --color-base-60: #707070;
-  --color-base-70: #5c5c5c;
-  --color-base-100: #222222;
+  --color-base-05: #f8fafc;
+  --color-base-10: #f1f5f9;
+  --color-base-20: #e2e8f0;
+  --color-base-25: #cbd5e1;
+  --color-base-30: #94a3b8;
+  --color-base-35: #7c8da3;
+  --color-base-40: #64748b;
+  --color-base-50: #475569;
+  --color-base-60: #334155;
+  --color-base-70: #1e293b;
+  --color-base-100: #0f172a;
 
   --color-accent-hsl:
     var(--accent-h),
@@ -56,7 +56,10 @@
   --background-primary: var(--color-base-00);
   --background-primary-alt: var(--color-base-10);
   --background-secondary: var(--color-base-20);
+  --background-canvas: var(--color-base-05);
+  --surface: var(--color-base-00);
   --background-modifier-border: var(--color-base-25);
+  --background-modifier-border-subtle: var(--color-base-20);
   --background-modifier-border-hover: var(--color-base-35);
   --background-modifier-border-focus: var(--color-base-40);
   --background-modifier-hover: rgba(var(--mono-rgb-100), 0.075);
@@ -128,6 +131,10 @@
     0 1.8px 7.3px rgba(0, 0, 0, 0.071),
     0 6.3px 24.7px rgba(0, 0, 0, 0.112),
     0 30px 90px rgba(0, 0, 0, 0.2);
+  /* 1.html-inspired: tactile card shadow, subtle and professional */
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.03), 0 1px 2px rgba(15, 23, 42, 0.06);
+  /* 1.html-inspired: floating panel with depth */
+  --shadow-panel: 0 10px 30px -5px rgba(15, 23, 42, 0.08);
 
   /* === Motion === */
   --duration-fast: 0.15s;
@@ -151,18 +158,18 @@
 
 /* === Dark theme === */
 html.dark {
-  --color-base-00: #1e1e1e;
-  --color-base-05: #212121;
-  --color-base-10: #242424;
-  --color-base-20: #262626;
-  --color-base-25: #2a2a2a;
-  --color-base-30: #363636;
-  --color-base-35: #3f3f3f;
-  --color-base-40: #555555;
-  --color-base-50: #666666;
-  --color-base-60: #999999;
-  --color-base-70: #b3b3b3;
-  --color-base-100: #dadada;
+  --color-base-00: #0f172a;
+  --color-base-05: #1e293b;
+  --color-base-10: #1e293b;
+  --color-base-20: #334155;
+  --color-base-25: #3b4b63;
+  --color-base-30: #475569;
+  --color-base-35: #556880;
+  --color-base-40: #64748b;
+  --color-base-50: #94a3b8;
+  --color-base-60: #cbd5e1;
+  --color-base-70: #e2e8f0;
+  --color-base-100: #f1f5f9;
 
   --color-accent-1: hsl(
     calc(var(--accent-h) - 3),
@@ -216,6 +223,8 @@ html.dark {
     0 1.8px 7.3px rgba(0, 0, 0, 0.071),
     0 6.3px 24.7px rgba(0, 0, 0, 0.112),
     0 30px 90px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-panel: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
 }
 
 /* === Base resets === */
@@ -290,6 +299,25 @@ code, pre { font-family: var(--font-monospace-default); font-size: 0.9em; }
 pre { padding: 0.5rem; background: var(--background-secondary); border-radius: var(--radius-s); overflow-x: auto; }
 code { background: var(--background-secondary); padding: 0.1rem 0.3rem; border-radius: 3px; }
 
+/* Flow wire (chain mode connector) */
+.flow-wire {
+  position: relative;
+  width: 2px;
+  background: var(--background-modifier-border);
+}
+.flow-wire::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 30px;
+  background: linear-gradient(to bottom, transparent, var(--color-accent), transparent);
+  animation: stream-flow 2s linear infinite;
+}
+@keyframes stream-flow {
+  0% { top: -30px; }
+  100% { top: 100%; }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -358,4 +386,203 @@ html.dark .select-chevron {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* RSS Digest timeline */
+.rss-timeline {
+  position: relative;
+}
+.rss-timeline-item {
+  position: relative;
+  padding-left: 1.25rem;
+}
+.rss-timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--text-success);
+  box-shadow: 0 0 0 2px var(--background-primary);
+}
+.rss-timeline-item.is-read::before {
+  background: var(--background-modifier-border);
+}
+.rss-timeline-item::after {
+  content: '';
+  position: absolute;
+  left: 0.2rem;
+  top: 1.5rem;
+  bottom: 0;
+  width: 0;
+  border-left: 2px dashed var(--background-modifier-border);
+}
+.rss-timeline-item:last-child::after {
+  display: none;
+}
+
+/* RSS Summary box */
+.rss-summary-box {
+  background: var(--color-accent-soft);
+  border-left: 2px solid var(--color-accent);
+  border-radius: var(--radius-s);
+  corner-shape: var(--corner-shape);
+  padding: 0.625rem;
+}
+.rss-summary-box-error {
+  background: var(--background-modifier-error);
+  border-left-color: var(--text-error);
+}
+
+/* === Smooth streaming cursor (1.html inspired) ===
+ * Replaces the plain animate-pulse block with a brand-colored,
+ * gently-pulsing caret appended to streaming text. */
+.cursor-smooth {
+  display: inline-block;
+  width: 6px;
+  height: 0.95em;
+  background-color: var(--text-accent);
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  border-radius: 1px;
+  animation: cursor-smooth-pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes cursor-smooth-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+
+/* === Streaming card glow (1.html inspired) ===
+ * Subtle indigo border glow pulsing on actively streaming model cards,
+ * matching 1.html's animate-pulse blue halo effect. */
+.stream-glow {
+  border-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.3);
+  box-shadow: var(--shadow-card), 0 0 0 2px hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.1);
+}
+html.dark .stream-glow {
+  border-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.4);
+  box-shadow: var(--shadow-card), 0 0 0 2px hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.15), 0 0 12px hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.08);
+}
+
+/* === Done card subtle green tint (1.html inspired) === */
+.done-tint {
+  background-color: hsla(var(--color-green-hsl), 0.03);
+}
+
+/* === Skeleton shimmer (1.html inspired) ===
+ * Soft left-to-right sheen instead of a flat opacity pulse. */
+.skeleton-loading {
+  background: linear-gradient(
+    90deg,
+    var(--background-secondary) 25%,
+    var(--background-modifier-border-hover) 37%,
+    var(--background-secondary) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* === Model relay chain: animated flow wire (1.html inspired) ===
+ * A 2px vertical conduit with a luminous pulse travelling downward,
+ * signalling context being passed from one step to the next. */
+.flow-wire {
+  position: relative;
+  width: 2px;
+  background: var(--background-modifier-border);
+}
+.flow-wire::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--interactive-accent),
+    transparent
+  );
+  animation: flow-stream 2s linear infinite;
+}
+@keyframes flow-stream {
+  0% { top: -30px; }
+  100% { top: 100%; }
+}
+
+/* === Slide-down entrance for transient banners (offline / stale) === */
+.animate-slide-down {
+  animation: slide-down var(--duration-normal) var(--easing);
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === Zoom-in entrance for modals (1.html inspired) === */
+.animate-zoom-in {
+  animation: zoom-in var(--duration-normal) var(--easing);
+}
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* === Surface card (1.html inspired)
+ * White card with tactile shadow and rounded corners === */
+.surface-card {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l);
+  corner-shape: var(--corner-shape);
+  box-shadow: var(--shadow-card);
+}
+
+/* === Console panel (1.html inspired)
+ * Semi-transparent glass panel for floating command console.
+ * Uses backdrop-blur for the frosted glass effect, matching
+ * 1.html's `bg-white/95 backdrop-blur-md rounded-2xl shadow-panel`. === */
+.console-panel {
+  background: rgba(var(--mono-rgb-0), 0.92);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+/* === No-scrollbar utility (1.html inspired) === */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* === 1.html-style card radius presets === */
+/* Model cards, RSS cards, History cards use the larger 1rem radius
+ * for a softer, more modern feel matching 1.html's rounded-2xl. */
+.card-rounded {
+  border-radius: 1rem;
+  corner-shape: var(--corner-shape);
+}
+
+/* === 1.html-style hover lift for interactive cards === */
+.hover-lift {
+  transition: border-color var(--duration-fast) var(--easing),
+              box-shadow var(--duration-fast) var(--easing),
+              transform var(--duration-fast) var(--easing);
+}
+.hover-lift:hover {
+  border-color: hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.35);
+  box-shadow: var(--shadow-card), 0 2px 8px hsla(var(--accent-h), var(--accent-s), var(--accent-l), 0.08);
+  transform: translateY(-1px);
+}
+
+/* === 1.html-style indigo focus ring for inputs === */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 0;
+  border-color: var(--color-accent);
 }
