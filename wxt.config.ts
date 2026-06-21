@@ -35,6 +35,11 @@ export default defineConfig({
       open_in_tab: true,
     },
   },
+  webExt: {
+    // 持久化 profile 到项目目录下，避免每次创建临时 profile
+    // 需要清除缓存时，删除 .wxt/chrome-data 目录即可
+    chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
+  },
   vite: () => ({
     css: {
       preprocessorOptions: {},
