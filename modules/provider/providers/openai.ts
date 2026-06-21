@@ -83,9 +83,33 @@ export class OpenAIProvider extends BaseProvider {
       { ...DEFAULT_RETRY_POLICY, signal: request.signal }
     );
 
+    const contentType = response.headers.get('content-type') || '';
+
+    // If the response is JSON (non-streaming), parse directly
+    if (contentType.includes('application/json') || contentType.includes('text/plain')) {
+      const text = await response.text();
+      const data = JSON.parse(text);
+      const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+      if (content) {
+        onEvent({ type: 'delta', content });
+        updateMetricsOnEvent(metrics, { type: 'delta', content });
+      }
+      onEvent({ type: 'done', finishReason: data.choices?.[0]?.finish_reason || 'stop' });
+      updateMetricsOnEvent(metrics, { type: 'done', finishReason: data.choices?.[0]?.finish_reason || 'stop' });
+      if (!metrics.endTime) {
+        metrics.endTime = Date.now();
+        metrics.totalLatency = metrics.endTime - metrics.startTime;
+      }
+      return metrics;
+    }
+
+    // SSE streaming path
+    let hasSseEvents = false;
+
     const parser = createParser({
       onEvent: (event: ParsedEvent) => {
         if (event.event || event.data) {
+          hasSseEvents = true;
           if (event.data === '[DONE]') {
             onEvent({ type: 'done', finishReason: 'stop' });
             updateMetricsOnEvent(metrics, { type: 'done', finishReason: 'stop' });
@@ -103,6 +127,7 @@ export class OpenAIProvider extends BaseProvider {
 
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
+    const chunks: string[] = [];
 
     try {
       while (true) {
@@ -111,13 +136,32 @@ export class OpenAIProvider extends BaseProvider {
         }
         const { done, value } = await reader.read();
         if (done) break;
-        parser.feed(decoder.decode(value, { stream: true }));
+        const decoded = decoder.decode(value, { stream: true });
+        chunks.push(decoded);
+        parser.feed(decoded);
       }
     } finally {
       reader.releaseLock();
       if (!metrics.endTime) {
         metrics.endTime = Date.now();
         metrics.totalLatency = metrics.endTime - metrics.startTime;
+      }
+    }
+
+    // Fallback: if no SSE events were parsed, try JSON (non-streaming response without proper Content-Type)
+    if (!hasSseEvents && chunks.length > 0) {
+      const fullText = chunks.join('');
+      try {
+        const data = JSON.parse(fullText);
+        const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+        if (content) {
+          onEvent({ type: 'delta', content });
+        }
+        if (data.choices?.[0]?.finish_reason) {
+          onEvent({ type: 'done', finishReason: data.choices[0].finish_reason });
+        }
+      } catch {
+        // Not valid JSON either, nothing we can do
       }
     }
 

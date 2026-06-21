@@ -20,15 +20,15 @@ export class ConversationRepository {
     seed?: Partial<ConversationRecord>,
   ): Promise<ConversationRecord> {
     const now = Date.now();
-    const item: ConversationRecord = {
-      ...record,
+    const item = {
+      ...JSON.parse(JSON.stringify(record)),
       id: crypto.randomUUID(),
       createdAt: now,
       updatedAt: now,
       messageCount: 0,
       preview: '',
-      ...seed,
-    };
+    } as ConversationRecord;
+    if (seed) Object.assign(item, JSON.parse(JSON.stringify(seed)));
     await this.table.add(item);
     return item;
   }
@@ -41,7 +41,7 @@ export class ConversationRepository {
     id: string,
     patch: Partial<Omit<ConversationRecord, 'id' | 'createdAt'>>,
   ): Promise<number> {
-    return this.table.update(id, { ...patch, updatedAt: Date.now() });
+    return this.table.update(id, { ...JSON.parse(JSON.stringify(patch)), updatedAt: Date.now() });
   }
 
   async delete(id: string): Promise<void> {

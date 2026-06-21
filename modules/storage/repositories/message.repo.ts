@@ -20,12 +20,12 @@ export class MessageRepository {
     seed?: Partial<MessageRecord>,
   ): Promise<MessageRecord> {
     const now = Date.now();
-    const item: MessageRecord = {
-      ...record,
+    const item = {
+      ...JSON.parse(JSON.stringify(record)),
       id: crypto.randomUUID(),
       createdAt: now,
-      ...seed,
-    };
+    } as MessageRecord;
+    if (seed) Object.assign(item, JSON.parse(JSON.stringify(seed)));
     await this.table.add(item);
     return item;
   }
@@ -35,7 +35,7 @@ export class MessageRepository {
   }
 
   async update(id: string, patch: Partial<Omit<MessageRecord, 'id' | 'createdAt'>>): Promise<number> {
-    return this.table.update(id, patch);
+    return this.table.update(id, JSON.parse(JSON.stringify(patch)));
   }
 
   async delete(id: string): Promise<void> {
@@ -78,9 +78,10 @@ export class MessageRepository {
   async addModelResponse(messageId: string, response: ModelResponse): Promise<number> {
     const message = await this.getById(messageId);
     if (!message) return 0;
-    response.createdAt = response.createdAt || Date.now();
+    const safeResponse = JSON.parse(JSON.stringify(response));
+    safeResponse.createdAt = safeResponse.createdAt || Date.now();
     return this.table.update(messageId, {
-      modelResponses: [...message.modelResponses, response],
+      modelResponses: [...message.modelResponses, safeResponse],
     });
   }
 

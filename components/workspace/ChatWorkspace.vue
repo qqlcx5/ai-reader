@@ -50,6 +50,7 @@ const selectedProviderIds = ref<string[]>([]);
 const messages = ref<Message[]>([]);
 const isStreaming = ref(false);
 const ignoreContext = ref(false);
+const sendError = ref<string | null>(null);
 const branchPromptData = ref<{ providerId: string; providerName: string; contextSnippet: string } | null>(null);
 let unsubAbort: (() => void) | null = null;
 
@@ -102,100 +103,107 @@ async function handleSend(payload: { text: string }) {
   const text = payload.text.trim();
   if (!text) return;
 
-  // 1. 创建或重用会话
-  let conv = conversation.currentConversationId;
-  if (!conv) {
-    const created = await conversation.createConversation({
-      title: text.slice(0, 60),
-      mode: 'chat',
+  sendError.value = null;
+
+  try {
+    // 1. 创建或重用会话
+    let conv = conversation.currentConversationId;
+    if (!conv) {
+      const created = await conversation.createConversation({
+        title: text.slice(0, 60),
+        mode: 'chat',
+        activeProviderIds: [...selectedProviderIds.value],
+      });
+      conv = created.id;
+    }
+
+    // 2. 写用户消息到 store
+    const userMessage = await conversation.addUserMessage(conv, text);
+
+    // 3. 同步到本地 messages
+    const localUserMsg: Message = {
+      id: userMessage.id,
+      conversationId: userMessage.conversationId,
+      parentId: userMessage.parentId || null,
+      role: 'user',
+      content: text,
+      modelResponses: [],
+      createdAt: userMessage.createdAt,
+    };
+    messages.value.push(localUserMsg);
+
+    // 4. 构造 assistant 消息占位（每个 provider 一个 modelResponse）
+    const assistantMsg: Message = {
+      id: `assistant-${userMessage.id}`,
+      conversationId: conv,
+      parentId: userMessage.id,
+      role: 'assistant',
+      modelResponses: selectedProviderIds.value.map((pid) => ({
+        providerId: pid,
+        status: 'pending',
+        content: '',
+        metrics: null,
+      })),
+      createdAt: Date.now(),
+    };
+    messages.value.push(assistantMsg);
+
+    isStreaming.value = true;
+
+    // 5. 触发多模型调度
+    const providers = enabledProviders.value.filter((p) => selectedProviderIds.value.includes(p.id));
+    const convRecord: Conversation = {
+      id: conv,
+      title: '当前会话',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
       activeProviderIds: selectedProviderIds.value,
+      mode: 'chat',
+    };
+
+    await runMultiModelChat({
+      conversation: convRecord,
+      userMessage: localUserMsg,
+      providers,
+      context: extContext.value,
+      callbacks: {
+        onDelta: (pid, delta) => {
+          const resp = findResponse(assistantMsg.id, pid);
+          if (resp) {
+            resp.content += delta;
+            // 触发响应式：直接替换引用
+            replaceResponse(assistantMsg.id, pid, { ...resp });
+          }
+        },
+        onStatus: (pid, status) => {
+          const resp = findResponse(assistantMsg.id, pid);
+          if (resp) {
+            resp.status = status;
+            replaceResponse(assistantMsg.id, pid, { ...resp });
+          }
+        },
+        onMetrics: (pid, metrics) => {
+          const resp = findResponse(assistantMsg.id, pid);
+          if (resp) {
+            resp.metrics = metrics;
+            replaceResponse(assistantMsg.id, pid, { ...resp });
+          }
+        },
+        onError: (pid, err) => {
+          const resp = findResponse(assistantMsg.id, pid);
+          if (resp) {
+            resp.error = err;
+            replaceResponse(assistantMsg.id, pid, { ...resp });
+          }
+        },
+      },
     });
-    conv = created.id;
+  } catch (err) {
+    console.error('[handleSend] Failed:', err);
+    sendError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    isStreaming.value = false;
   }
-
-  // 2. 写用户消息到 store
-  const userMessage = await conversation.addUserMessage(conv, text);
-
-  // 3. 同步到本地 messages
-  const localUserMsg: Message = {
-    id: userMessage.id,
-    conversationId: userMessage.conversationId,
-    parentId: userMessage.parentId || null,
-    role: 'user',
-    content: text,
-    modelResponses: [],
-    createdAt: userMessage.createdAt,
-  };
-  messages.value.push(localUserMsg);
-
-  // 4. 构造 assistant 消息占位（每个 provider 一个 modelResponse）
-  const assistantMsg: Message = {
-    id: `assistant-${userMessage.id}`,
-    conversationId: conv,
-    parentId: userMessage.id,
-    role: 'assistant',
-    modelResponses: selectedProviderIds.value.map((pid) => ({
-      providerId: pid,
-      status: 'pending',
-      content: '',
-      metrics: null,
-    })),
-    createdAt: Date.now(),
-  };
-  messages.value.push(assistantMsg);
-
-  isStreaming.value = true;
-
-  // 5. 触发多模型调度
-  const providers = enabledProviders.value.filter((p) => selectedProviderIds.value.includes(p.id));
-  const convRecord: Conversation = {
-    id: conv,
-    title: '当前会话',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    activeProviderIds: selectedProviderIds.value,
-    mode: 'chat',
-  };
-
-  await runMultiModelChat({
-    conversation: convRecord,
-    userMessage: localUserMsg,
-    providers,
-    context: extContext.value,
-    callbacks: {
-      onDelta: (pid, delta) => {
-        const resp = findResponse(assistantMsg.id, pid);
-        if (resp) {
-          resp.content += delta;
-          // 触发响应式：直接替换引用
-          replaceResponse(assistantMsg.id, pid, { ...resp });
-        }
-      },
-      onStatus: (pid, status) => {
-        const resp = findResponse(assistantMsg.id, pid);
-        if (resp) {
-          resp.status = status;
-          replaceResponse(assistantMsg.id, pid, { ...resp });
-        }
-      },
-      onMetrics: (pid, metrics) => {
-        const resp = findResponse(assistantMsg.id, pid);
-        if (resp) {
-          resp.metrics = metrics;
-          replaceResponse(assistantMsg.id, pid, { ...resp });
-        }
-      },
-      onError: (pid, err) => {
-        const resp = findResponse(assistantMsg.id, pid);
-        if (resp) {
-          resp.error = err;
-          replaceResponse(assistantMsg.id, pid, { ...resp });
-        }
-      },
-    },
-  });
-
-  isStreaming.value = false;
 }
 
 function findResponse(messageId: string, providerId: string): ModelResponseStatus | undefined {
@@ -346,6 +354,13 @@ watch(
         </button>
       </div>
     </header>
+    <div
+      v-if="sendError"
+      class="chat-workspace__error"
+      @click="sendError = null"
+    >
+      {{ sendError }}
+    </div>
     <MessageList
       :messages="messages"
       :providers="enabledProviders"
@@ -443,5 +458,16 @@ watch(
   background: var(--primary-soft);
   color: var(--primary);
   border-color: #d2d6ff;
+}
+
+.chat-workspace__error {
+  padding: 8px 14px;
+  margin: 0 4px;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: var(--fs-11);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  word-break: break-word;
 }
 </style>

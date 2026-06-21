@@ -254,7 +254,26 @@ export interface PersistedStoreWrapper<T> {
 }
 
 export const defaultSettings: Settings = {
-  providers: [],
+  providers: [
+    {
+      id: 'custom-default',
+      name: 'c1',
+      type: 'custom',
+      apiKey: 'sk-0FeSEKHeEIobWQYM3arOlSmfd8zbbPE1bhx6gofle9deZxkx',
+      baseUrl: 'http://66.154.117.189:3000',
+      defaultModel: 'mimo-v2.5-pro',
+      enabled: true,
+    },
+    {
+      id: 'custom-default',
+      name: 'c2',
+      type: 'custom',
+      apiKey: 'sk-0FeSEKHeEIobWQYM3arOlSmfd8zbbPE1bhx6gofle9deZxkx',
+      baseUrl: 'http://66.154.117.189:3000',
+      defaultModel: 'mimo-v2.5',
+      enabled: true,
+    },
+  ],
   prompts: [
     {
       id: 'default-summary',
