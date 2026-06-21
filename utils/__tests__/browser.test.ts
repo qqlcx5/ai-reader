@@ -105,19 +105,11 @@ describe('utils/browser', () => {
     );
   });
 
-  it('openSidePanelAndExtract opens then dispatches EXTRACT_PAGE', async () => {
-    vi.useFakeTimers();
-    const { openSidePanelAndExtract } = await import('../browser');
+  it('openSidePanel opens the side panel', async () => {
+    const { openSidePanel } = await import('../browser');
     const open = vi.fn().mockResolvedValue(undefined);
-    const sendMessage = vi.fn().mockResolvedValue(undefined);
-    installBrowser({ sidePanel: { open }, runtime: { sendMessage } });
-    const p = openSidePanelAndExtract({ tabId: 3 });
-    await vi.advanceTimersByTimeAsync(100);
-    await p;
+    installBrowser({ sidePanel: { open } });
+    await openSidePanel({ tabId: 3 });
     expect(open).toHaveBeenCalledWith({ tabId: 3 });
-    // openSidePanelAndExtract no longer sends EXTRACT_PAGE directly;
-    // extraction is handled by background.ts via tabs.sendMessage.
-    expect(sendMessage).not.toHaveBeenCalled();
-    vi.useRealTimers();
   });
 });

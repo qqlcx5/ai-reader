@@ -25,7 +25,7 @@ export default defineContentScript({
   excludeMatches: [
     '*://chrome.google.com/*',
     '*://chromewebstore.google.com/*',
-    '*://chrome-extension://*',
+    'chrome-extension://*/*',
   ],
   async main() {
     console.log('[AI Reader] Content script loaded on', location.href);

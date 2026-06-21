@@ -1,9 +1,8 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { STORE_KEYS, type ConversationRecord, type MessageRecord } from '@/modules/storage/types';
+import type { ConversationRecord, MessageRecord } from '@/modules/storage/types';
 import { conversationRepo } from '@/modules/storage/repositories/conversation.repo';
 import { messageRepo } from '@/modules/storage/repositories/message.repo';
-import { chromeStorageLocal } from './chrome-storage';
 
 export const useConversationStore = defineStore(
   'conversation',
@@ -81,7 +80,7 @@ export const useConversationStore = defineStore(
   },
   {
     persist: {
-      storage: chromeStorageLocal(STORE_KEYS.conversation) as unknown as Storage,
+      key: (id: string) => `pinia-${id}`,
       pick: ['currentConversationId'],
     },
   },

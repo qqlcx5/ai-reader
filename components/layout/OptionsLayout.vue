@@ -88,6 +88,8 @@ function onTabChange(id: string) {
 <style scoped>
 .options {
   min-height: 100vh;
+  width: 600px;
+  height: 600px;
   background: var(--bg);
   padding: 16px;
   display: flex;

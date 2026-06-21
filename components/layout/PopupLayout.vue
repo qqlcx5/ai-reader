@@ -5,49 +5,37 @@ import ContextSummary from './ContextSummary.vue';
 import ActionBar from './ActionBar.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
-import { openSidePanelAndExtract, isChromeSidePanelAvailable } from '@/utils/browser';
+import { openSidePanel, isChromeSidePanelAvailable } from '@/utils/browser';
 
 const ui = useUiStore();
 const ctx = useContextStore();
 const busy = ref(false);
 
-// On mount, check if there's already an extraction result in storage
-async function checkExtractionResult() {
-  try {
-    const result = await chrome.storage.local.get('_extraction_result');
-    const data = result._extraction_result as Record<string, string> | undefined;
-    if (data && data.fullText) {
-      ctx.setContext({
-        title: data.title || '',
-        url: data.url || '',
-        excerpt: data.excerpt || data.fullText.slice(0, 600),
-        fullText: data.fullText || '',
-        rawText: data.rawText || '',
-        mode: 'full',
-      });
-    }
-  } catch { /* best-effort */ }
+function loadFromStorage(data: Record<string, string>) {
+  ctx.setContext({
+    title: data.title || '',
+    url: data.url || '',
+    excerpt: data.excerpt || (data.fullText || '').slice(0, 600),
+    fullText: data.fullText || '',
+    rawText: data.rawText || '',
+    mode: 'full',
+  });
 }
 
-// Listen for new extraction results
+async function checkExtractionResult() {
+  try {
+    const r = await chrome.storage.local.get('_extraction_result');
+    const data = r._extraction_result as Record<string, string> | undefined;
+    if (data?.fullText) loadFromStorage(data);
+  } catch {}
+}
+
 function listenForExtraction() {
   if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
-    const d = changes._extraction_result?.newValue;
-    if (d && typeof d === 'object') {
-      const data = d as Record<string, string>;
-      if (data.fullText) {
-        ctx.setContext({
-          title: data.title || '',
-          url: data.url || '',
-          excerpt: data.excerpt || data.fullText.slice(0, 600),
-          fullText: data.fullText || '',
-          rawText: data.rawText || '',
-          mode: 'full',
-        });
-      }
-    }
+    const d = changes._extraction_result?.newValue as Record<string, string> | undefined;
+    if (d?.fullText) loadFromStorage(d);
   });
 }
 
@@ -59,7 +47,7 @@ onMounted(() => {
 async function onOpenSidePanel() {
   busy.value = true;
   try {
-    await openSidePanelAndExtract();
+    await openSidePanel();
   } finally {
     busy.value = false;
   }
@@ -68,7 +56,18 @@ async function onOpenSidePanel() {
 async function onExtract() {
   busy.value = true;
   try {
-    await openSidePanelAndExtract();
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const tabId = tabs[0]?.id;
+    if (tabId) {
+      try {
+        const resp = await browser.runtime.sendMessage({ type: 'TRIGGER_EXTRACTION' }) as
+          { ok: boolean; title?: string; url?: string; fullText?: string };
+        if (resp?.ok && resp.fullText) {
+          loadFromStorage({ title: resp.title || '', url: resp.url || '', fullText: resp.fullText });
+        }
+      } catch {}
+    }
+    await openSidePanel();
   } finally {
     busy.value = false;
   }
@@ -77,9 +76,7 @@ async function onExtract() {
 function onOpenSettings() {
   try {
     (browser as any).runtime?.openOptionsPage?.();
-  } catch {
-    /* best-effort */
-  }
+  } catch {}
 }
 </script>
 

@@ -1,7 +1,9 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { STORE_KEYS, type ProviderConfig, type Settings, defaultSettings } from '@/modules/storage/types';
-import { chromeStorageLocal } from './chrome-storage';
+import type { ProviderConfig, Settings } from '@/modules/storage/types';
+import { defaultSettings } from '@/modules/storage/types';
+
+const PERSIST_KEY_PREFIX = 'pinia-';
 
 export const useSettingsStore = defineStore(
   'settings',
@@ -55,7 +57,7 @@ export const useSettingsStore = defineStore(
   },
   {
     persist: {
-      storage: chromeStorageLocal(STORE_KEYS.settings) as unknown as Storage,
+      key: (id: string) => `${PERSIST_KEY_PREFIX}${id}`,
       pick: ['settings'],
     },
   },

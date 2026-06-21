@@ -61,12 +61,8 @@ function openEdit(p: ProviderConfig) {
 
 function onTypeChange() {
   const t = form.value.type;
-  if (!form.value.baseUrl || form.value.baseUrl === defaultUrls[editingId.value ? store.settings.providers.find(p => p.id === editingId.value)?.type || '' : ''] || !editingId.value) {
-    form.value.baseUrl = defaultUrls[t] || '';
-  }
-  if (!form.value.defaultModel) {
-    form.value.defaultModel = defaultModels[t] || '';
-  }
+  form.value.baseUrl = defaultUrls[t] || '';
+  form.value.defaultModel = defaultModels[t] || '';
 }
 
 function save() {
@@ -77,10 +73,12 @@ function save() {
     store.addProvider({ ...form.value });
   }
   showForm.value = false;
+  ;(store as any).$persist?.();
 }
 
 function remove(id: string) {
   store.removeProvider(id);
+  ;(store as any).$persist?.();
 }
 
 function cancel() {

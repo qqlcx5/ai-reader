@@ -13,7 +13,7 @@ const emit = defineEmits<{
   (e: 'open-history'): void;
 }>();
 
-const title = computed(() => ctx.currentContext.title || '未提取页面');
+const title = computed(() => ctx.currentContext.title || '未提取页面1');
 const wordCount = computed(() => {
   const text = ctx.currentContext.fullText || ctx.currentContext.excerpt || '';
   // CJK-aware rough word count

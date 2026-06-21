@@ -12,6 +12,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import MessageList from './MessageList.vue';
 import InputComposer from './InputComposer.vue';
+import BranchPrompt from './BranchPrompt.vue';
 import { useSettingsStore } from '@/stores/settings.store';
 import { useContextStore } from '@/stores/context.store';
 import { useConversationStore } from '@/stores/conversation.store';
@@ -48,6 +49,8 @@ const props = defineProps<{
 const selectedProviderIds = ref<string[]>([]);
 const messages = ref<Message[]>([]);
 const isStreaming = ref(false);
+const ignoreContext = ref(false);
+const branchPromptData = ref<{ providerId: string; providerName: string; contextSnippet: string } | null>(null);
 let unsubAbort: (() => void) | null = null;
 
 const enabledProviders = computed(() =>
@@ -55,6 +58,7 @@ const enabledProviders = computed(() =>
 );
 
 const extContext = computed<ExtractedContext | null>(() => {
+  if (ignoreContext.value) return null;
   if (props.context !== undefined) return props.context;
   const c = ctx.currentContext;
   if (!c.url) return null;
@@ -222,13 +226,22 @@ function handleAbort() {
 }
 
 function handleContinueFromCard(payload: { providerId: string }) {
-  // 简化：发送一条「继续」指令到当前最后一条 assistant
   const lastAssistant = [...messages.value].reverse().find((m) => m.role === 'assistant');
   if (!lastAssistant) return;
   const resp = lastAssistant.modelResponses.find((r) => r.providerId === payload.providerId);
   if (!resp) return;
-  const text = `请基于你此前的回答继续：\n\n${resp.content.slice(-2000)}`;
-  handleSend({ text });
+  const provider = enabledProviders.value.find((p) => p.id === payload.providerId);
+  branchPromptData.value = {
+    providerId: payload.providerId,
+    providerName: provider?.name ?? payload.providerId,
+    contextSnippet: resp.content.slice(0, 500),
+  };
+}
+
+function handleBranchSubmit(payload: { providerId: string; text: string }) {
+  branchPromptData.value = null;
+  selectedProviderIds.value = [payload.providerId];
+  handleSend({ text: payload.text });
 }
 
 function handleRetry(payload: { providerId: string }) {
@@ -300,9 +313,11 @@ onUnmounted(() => {
 watch(
   () => enabledProviders.value.length,
   (next) => {
-    // 当 provider 列表变化时，自动剔除已不存在的选中
     const validIds = new Set(enabledProviders.value.map((p) => p.id));
     selectedProviderIds.value = selectedProviderIds.value.filter((id) => validIds.has(id));
+    if (selectedProviderIds.value.length === 0 && next > 0) {
+      selectedProviderIds.value = Array.from(validIds).slice(0, 4);
+    }
   },
 );
 </script>
@@ -317,6 +332,10 @@ watch(
         </span>
       </div>
       <div class="chat-workspace__head-actions">
+        <label class="chat-workspace__ctx-toggle" title="忽略已提取的页面上下文">
+          <input type="checkbox" v-model="ignoreContext" />
+          <span>忽略上下文</span>
+        </label>
         <button
           v-if="enabledProviders.length > 0"
           type="button"
@@ -343,6 +362,14 @@ watch(
       @send="handleSend"
       @abort="handleAbort"
       @shortcut="handleShortcut"
+    />
+    <BranchPrompt
+      v-if="branchPromptData"
+      :provider-id="branchPromptData.providerId"
+      :provider-name="branchPromptData.providerName"
+      :context-snippet="branchPromptData.contextSnippet"
+      @submit="handleBranchSubmit"
+      @cancel="branchPromptData = null"
     />
   </div>
 </template>
@@ -386,6 +413,19 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
+}
+
+.chat-workspace__ctx-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-11);
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.chat-workspace__ctx-toggle input {
+  accent-color: var(--primary);
 }
 
 .chat-workspace__select-all {

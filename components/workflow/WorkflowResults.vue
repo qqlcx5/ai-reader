@@ -1,11 +1,16 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useWorkflowStore } from '@/stores/workflow.store';
+import { useSettingsStore } from '@/stores/settings.store';
+import { conversationRepo, messageRepo } from '@/modules/storage';
 import StreamingText from '@/components/workspace/StreamingText.vue';
 
 const wf = useWorkflowStore();
+const settings = useSettingsStore();
 
 const session = computed(() => wf.activeSession);
+const saving = ref(false);
+const savedId = ref<string | null>(null);
 
 function statusLabel(status: string): string {
   return {
@@ -19,6 +24,50 @@ function statusLabel(status: string): string {
 
 function statusClass(status: string): string {
   return `wf-results__status--${status}`;
+}
+
+async function saveToHistory() {
+  if (!session.value) return;
+  const successNodes = session.value.nodes.filter((n) => n.status === 'done');
+  if (successNodes.length === 0) return;
+  saving.value = true;
+  try {
+    const conv = await conversationRepo.create({
+      title: `${session.value.title}`,
+      mode: session.value.type,
+      activeProviderIds: successNodes.map((n) => n.providerId),
+    });
+    const userMsg = await messageRepo.create({
+      conversationId: conv.id,
+      role: 'user',
+      content: `[${session.value.type === 'roundtable' ? '圆桌' : '接力链'} 工作流] ${session.value.title}`,
+      parentId: undefined,
+      modelResponses: [],
+    });
+    const modelResponses = successNodes.map((n) => ({
+      providerId: n.providerId,
+      modelId: '',
+      content: n.output,
+      metrics: undefined,
+      createdAt: Date.now(),
+    }));
+    await messageRepo.create({
+      conversationId: conv.id,
+      role: 'assistant',
+      parentId: userMsg.id,
+      content: null,
+      modelResponses,
+    });
+    await conversationRepo.update(conv.id, {
+      messageCount: 2,
+      preview: (session.value.title).slice(0, 100),
+    });
+    savedId.value = conv.id;
+  } catch {
+    /* best-effort */
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -36,7 +85,19 @@ function statusClass(status: string): string {
           </span>
         </div>
       </div>
-      <button class="wf-results__close" type="button" @click="wf.clearSession()">关闭</button>
+      <div class="wf-results__head-actions">
+        <button
+          v-if="session.status === 'done' && !savedId"
+          class="wf-results__save"
+          type="button"
+          :disabled="saving"
+          @click="saveToHistory"
+        >
+          {{ saving ? '保存中…' : '保存到历史' }}
+        </button>
+        <span v-else-if="savedId" class="wf-results__saved muted">已保存</span>
+        <button class="wf-results__close" type="button" @click="wf.clearSession()">关闭</button>
+      </div>
     </div>
 
     <div class="wf-results__nodes">
@@ -87,6 +148,34 @@ function statusClass(status: string): string {
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+.wf-results__head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.wf-results__save {
+  font-size: var(--fs-11);
+  background: var(--primary);
+  color: #fff;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wf-results__save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wf-results__saved {
+  font-size: var(--fs-11);
+  white-space: nowrap;
 }
 
 .wf-results__title {

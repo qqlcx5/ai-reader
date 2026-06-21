@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useWorkflowStore } from '@/stores/workflow.store';
 import { useSettingsStore } from '@/stores/settings.store';
 import { useContextStore } from '@/stores/context.store';
+import { conversationRepo, messageRepo } from '@/modules/storage';
 import {
   runRoundtable,
   runRelayChain,
@@ -239,6 +240,8 @@ async function run(): Promise<void> {
         signal: controller.signal,
       });
     }
+    // Persist workflow results as a Conversation
+    await saveWorkflowResults();
   } catch (err) {
     if (err instanceof TemplateValidationError) {
       errorMessage.value = err.message;
@@ -249,6 +252,53 @@ async function run(): Promise<void> {
     }
   } finally {
     emit('run-finished');
+  }
+
+  async function saveWorkflowResults() {
+    const session = wf.activeSession;
+    if (!session || !draft.value) return;
+    const successNodes = session.nodes.filter((n) => n.status === 'done');
+    if (successNodes.length === 0) return;
+
+    try {
+      const conv = await conversationRepo.create({
+        title: `${draft.value.name} · ${session.type === 'roundtable' ? '圆桌' : '接力链'}`,
+        mode: session.type,
+        activeProviderIds: successNodes.map((n) => n.providerId),
+      });
+
+      const userMsgContent = question.value;
+      const userMsg = await messageRepo.create({
+        conversationId: conv.id,
+        role: 'user',
+        content: userMsgContent,
+        parentId: undefined,
+        modelResponses: [],
+      });
+
+      const modelResponses = successNodes.map((n) => ({
+        providerId: n.providerId,
+        modelId: '',
+        content: n.output,
+        metrics: undefined,
+        createdAt: Date.now(),
+      }));
+
+      await messageRepo.create({
+        conversationId: conv.id,
+        role: 'assistant',
+        parentId: userMsg.id,
+        content: null,
+        modelResponses,
+      });
+
+      await conversationRepo.update(conv.id, {
+        messageCount: 2,
+        preview: userMsgContent.slice(0, 100),
+      });
+    } catch {
+      /* best-effort */
+    }
   }
 }
 </script>

@@ -8,53 +8,55 @@
 
 ## 1. 数据模型与模板
 
-- [ ] 定义 `WorkflowSession`、`WorkflowNode`、`WorkflowTemplate` 类型
-- [ ] 在 M7 中增加 `workflowSessions` 与 `workflowTemplates` 表（或复用现有表）
-- [ ] 实现模板保存/读取/删除接口
-- [ ] 创建 2 个默认模板：Roundtable 辩论、Relay Chain 审校
-- [ ] 验证模板持久化
+- [x] 定义 `WorkflowNodeSpec`、`WorkflowRuntimeNode`、`WorkflowSession`、`WorkflowTemplate` 类型（`lib/workflow/types.ts`）
+- [x] `WorkflowNode` 与 `WorkflowTemplateRecord` 也定义在 `modules/storage/types.ts`
+- [x] 在 M7 中增加 `workflowTemplates` 表（`modules/storage/db.ts`）；`workflowSessions` 复用 `conversations` 表（`mode = 'roundtable' | 'relay'`）
+- [x] 实现模板保存/读取/删除接口（`lib/workflow/template.repo.ts`）
+- [x] 创建 2 个默认模板：Roundtable 辩论、Relay Chain 审校（硬编码在 `lib/workflow/defaults.ts`）
+- [x] 验证模板持久化
 
 ---
 
 ## 2. Roundtable 圆桌讨论
 
-- [ ] 实现 `modules/workflow/roundtable.ts`
-- [ ] 对每个节点注入不同 `systemPrompt` 角色
-- [ ] 并发调用多个 Provider（复用 M3）
-- [ ] 将同一问题的多角色结果存入 `WorkflowSession.nodes[].output`
-- [ ] 实现结果按角色并排展示 UI
-- [ ] 用 mock Provider 测试 3 角色并发
+- [x] 实现 `lib/workflow/roundtable.ts`
+- [x] 对每个节点注入不同 `systemPrompt` 角色
+- [x] 并发调用多个 Provider（复用 M3 `chatStream`）
+- [x] 将同一问题的多角色结果存入 `runtimeNode.output`
+- [x] 实现结果按角色并排展示 UI（`WorkflowResults.vue` / `RoundtableView.vue`）
+- [x] 用 mock Provider 测试 3 角色并发（`lib/workflow/__tests__/`）
 
 ---
 
 ## 3. Relay Chain 接力链
 
-- [ ] 实现 `modules/workflow/relay.ts`
-- [ ] 实现节点拓扑排序 `topologicalSort()`
-- [ ] 检测循环依赖并抛出错误
-- [ ] 串行执行节点，上游输出拼接为下游输入
-- [ ] 支持一个节点依赖多个上游输出
-- [ ] 用 mock Provider 测试 3 节点串行链路
+- [x] 实现 `lib/workflow/relay.ts`
+- [x] 实现节点拓扑排序 `topologicalSort()`
+- [x] 检测循环依赖并抛出错误
+- [x] 串行执行节点，上游输出拼接为下游输入
+- [x] 支持一个节点依赖多个上游输出
+- [x] 用 mock Provider 测试 3 节点串行链路
 
 ---
 
 ## 4. 节点编辑器
 
-- [ ] 实现 `components/workflow/NodeEditor.vue`
-- [ ] 选择 Provider、填写模型、编写角色 prompt
-- [ ] Relay Chain 中可选择上游节点
-- [ ] 表单校验：Provider 非空、prompt 非空、无循环依赖
-- [ ] 验证保存后模板可重新加载编辑
+- [x] 实现 `components/workflow/NodeEditor.vue`
+- [x] 选择 Provider、填写模型、编写角色 prompt
+- [x] Relay Chain 中可选择上游节点
+- [x] 表单校验：Provider 非空、prompt 非空、无循环依赖
+- [x] 验证保存后模板可重新加载编辑
 
 ---
 
 ## 5. 工作流启动器与执行器
 
-- [ ] 实现 `components/workflow/WorkflowLauncher.vue`
-- [ ] 实现 `components/workflow/WorkflowRunner.vue`
-- [ ] 选择模板 → 输入初始问题 → 执行
-- [ ] 实时显示每个节点的 `status` 与输出
-- [ ] 支持中止整个工作流
+- [x] 实现 `components/workflow/WorkflowTemplateList.vue`（替代 WorkflowLauncher.vue）
+- [x] 实现 `components/workflow/WorkflowTemplateEditor.vue`（新建/编辑模板）
+- [x] 实现 `components/workflow/WorkflowResults.vue`（替代 WorkflowRunner.vue）
+- [x] 选择模板 → 输入初始问题 → 执行（`WorkflowResults.vue` 中触发）
+- [x] 实时显示每个节点的 `status` 与输出
+- [x] 支持中止整个工作流
 
 ---
 

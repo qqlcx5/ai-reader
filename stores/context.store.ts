@@ -1,7 +1,6 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
-import { STORE_KEYS, type CurrentContext, type ContextMode } from '@/modules/storage/types';
-import { chromeStorageLocal } from './chrome-storage';
+import type { CurrentContext, ContextMode } from '@/modules/storage/types';
 
 export const useContextStore = defineStore(
   'context',
@@ -45,7 +44,7 @@ export const useContextStore = defineStore(
   },
   {
     persist: {
-      storage: chromeStorageLocal(STORE_KEYS.context) as unknown as Storage,
+      key: (id: string) => `pinia-${id}`,
       pick: ['currentContext'],
     },
   },

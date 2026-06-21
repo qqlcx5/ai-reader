@@ -1,7 +1,5 @@
 import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
-import { STORE_KEYS } from '@/modules/storage/types';
-import { chromeStorageLocal } from './chrome-storage';
 
 export type Panel = 'chat' | 'history' | 'rss' | 'settings';
 
@@ -116,7 +114,7 @@ export const useUiStore = defineStore(
   },
   {
     persist: {
-      storage: chromeStorageLocal(STORE_KEYS.ui) as unknown as Storage,
+      key: (id: string) => `pinia-${id}`,
       pick: [
         'activePanel',
         'activeRoute',

@@ -87,22 +87,7 @@ export async function getActiveTabId(): Promise<number | null> {
   }
 }
 
-export interface OpenAndExtractOptions {
-  tabId?: number;
-  windowId?: number;
-}
-
-/**
- * Open the side panel. Extraction is now handled by background.ts's
- * triggerExtraction which uses tabs.sendMessage directly.
- */
-export async function openSidePanelAndExtract(options: OpenAndExtractOptions = {}): Promise<boolean> {
-  return openSidePanel(options);
-}
-
 export async function toggleSidePanel(): Promise<void> {
-  // Chrome does not expose close() for side panels. Toggling relies on
-  // user clicking the toolbar icon; we simply re-open.
   await openSidePanel();
 }
 

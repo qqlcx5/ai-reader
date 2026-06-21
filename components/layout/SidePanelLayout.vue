@@ -1,85 +1,92 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ThemeProvider from './ThemeProvider.vue';
 import ContextStatusBar from './ContextStatusBar.vue';
 import ChatWorkspace from '@/components/workspace/ChatWorkspace.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
-import { bindRuntimeListener, on, send, type CommandMessage } from '@/utils/command-bus';
 import LoadingDots from '@/components/shared/LoadingDots.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
-import type { ExtractResponse, TransferMetaMessage, ChunkResponse } from '@/modules/extraction';
 
 const ui = useUiStore();
 const ctx = useContextStore();
 
-const emit = defineEmits<{
-  (e: 'open-settings'): void;
-}>();
-
 const loading = ref(false);
-let unsubRuntime: (() => void) | null = null;
-let unsubAbort: (() => void) | null = null;
 
-async function getActiveTabId(): Promise<number | undefined> {
-  try {
-    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    return tabs[0]?.id;
-  } catch {
-    return undefined;
-  }
-}
-
-function setContextFromExtraction(c: { title?: string; url?: string; fullText?: string; rawText?: string; excerpt?: string }) {
+function setContextFromExtraction(c: { title?: string; url?: string; fullText?: string }) {
+  const fullText = c.fullText || '';
   ctx.setContext({
     title: c.title || '',
     url: c.url || '',
-    excerpt: c.excerpt || (c.fullText || '').slice(0, 600),
-    fullText: c.fullText || '',
-    rawText: c.rawText || '',
+    excerpt: fullText.slice(0, 600),
+    fullText,
+    rawText: fullText,
     mode: 'full',
   });
+}
+
+function extractFromStorage(): Promise<boolean> {
+  return chrome.storage.local.get('_extraction_result').then((r) => {
+    const data = r._extraction_result as Record<string, string> | undefined;
+    if (data?.fullText) { setContextFromExtraction(data); return true; }
+    return false;
+  });
+}
+
+async function extractViaBackground(): Promise<boolean> {
+  try {
+    const resp = await browser.runtime.sendMessage({ type: 'TRIGGER_EXTRACTION' }) as
+      { ok: boolean; title?: string; url?: string; fullText?: string } | undefined;
+    if (resp?.ok && resp.fullText) {
+      setContextFromExtraction({ title: resp.title, url: resp.url, fullText: resp.fullText });
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+async function extractViaScripting(tabId: number): Promise<boolean> {
+  try {
+    const scripting = (chrome as any).scripting;
+    if (!scripting?.executeScript) return false;
+    const [result] = await scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const text = document.body?.innerText || document.body?.textContent || '';
+        return {
+          title: document.title,
+          url: location.href,
+          content: text.replace(/\n{3,}/g, '\n\n').trim().slice(0, 50000),
+        };
+      },
+    });
+    const data = result?.result;
+    if (data?.content && data.content.length >= 50) {
+      setContextFromExtraction({ title: data.title, url: data.url, fullText: data.content });
+      await chrome.storage.local.set({ _extraction_result: data, mode: 'full' }).catch(() => {});
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 async function refresh() {
   loading.value = true;
   try {
-    const tabId = await getActiveTabId();
-    if (!tabId) return;
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    const tabId = tabs[0]?.id;
+    console.log('[sidepanel] refresh tabId:', tabId);
 
-    const response = await browser.tabs.sendMessage(tabId, {
-      type: 'EXTRACT_PAGE',
-      force: false,
-      preferredFormat: 'markdown',
-    }) as ExtractResponse | TransferMetaMessage;
-
-    if (response.type === 'EXTRACT_RESULT') {
-      if (response.success && response.context) {
-        setContextFromExtraction({
-          title: response.context.title,
-          url: response.context.url,
-          fullText: response.context.content,
-        });
-      }
-    } else if (response.type === 'TRANSFER_META') {
-      const chunks: string[] = [];
-      for (let i = 0; i < response.totalChunks; i++) {
-        try {
-          const chunkResp = await browser.tabs.sendMessage(tabId, {
-            type: 'REQUEST_CHUNK',
-            transferId: response.transferId,
-            chunkIndex: i,
-          }) as ChunkResponse | null;
-          if (chunkResp?.type === 'CHUNK_DATA' && chunkResp.chunkData) {
-            chunks.push(chunkResp.chunkData);
-          }
-        } catch { /* skip failed chunk */ }
-      }
-      const fullContent = chunks.join('');
-      setContextFromExtraction({ fullText: fullContent });
+    if (tabId) {
+      if (await extractViaScripting(tabId).catch(() => false)) return;
     }
+
+    if (await extractViaBackground()) return;
+
+    await extractFromStorage();
   } catch (err) {
-    console.warn('[sidepanel] extraction via tabs failed', err);
+    console.warn('[sidepanel] refresh error:', err);
+    await extractFromStorage().catch(() => {});
   } finally {
     loading.value = false;
   }
@@ -89,41 +96,29 @@ function openHistory() {
   ui.setPanel('history');
 }
 
-// Listen for extraction results written to storage by background.ts
 function listenForExtraction() {
   if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     const data = changes._extraction_result?.newValue;
-    if (data && typeof data === 'object') {
+    if (data && typeof data === 'object' && (data as Record<string, string>).fullText) {
       setContextFromExtraction(data as Record<string, string>);
     }
   });
 }
 
-// On mount, check if there's already an extraction result in storage
 async function loadExistingExtraction() {
   try {
-    const result = await chrome.storage.local.get('_extraction_result');
-    const data = result._extraction_result as Record<string, string> | undefined;
-    if (data && data.fullText) {
-      setContextFromExtraction(data);
-    }
-  } catch { /* best-effort */ }
+    const r = await chrome.storage.local.get('_extraction_result');
+    const data = r._extraction_result as Record<string, string> | undefined;
+    if (data?.fullText) setContextFromExtraction(data);
+  } catch {}
 }
 
 onMounted(() => {
-  unsubRuntime = bindRuntimeListener();
-  unsubAbort = on('ABORT_ALL_REQUESTS', () => {
-    console.log('[sidepanel] ABORT_ALL_REQUESTS received');
-  });
   loadExistingExtraction();
   listenForExtraction();
-});
-
-onUnmounted(() => {
-  unsubRuntime?.();
-  unsubAbort?.();
+  setTimeout(refresh, 300);
 });
 </script>
 

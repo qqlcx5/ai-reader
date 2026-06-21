@@ -1,38 +1,63 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings.store';
+import { getDb } from '@/modules/storage/db';
+import type { RssFeedRecord } from '@/modules/storage/types';
 
 const store = useSettingsStore();
 
 const feedUrl = ref('');
 const addingFeed = ref(false);
+const feeds = ref<RssFeedRecord[]>([]);
+const loadingFeeds = ref(false);
 
-function addFeed() {
-  if (!feedUrl.value.trim()) return;
-  const feeds = store.settings.rssConfig as any;
-  if (!feeds.feeds) {
-    feeds.feeds = [];
+const db = getDb();
+
+async function loadFeeds() {
+  loadingFeeds.value = true;
+  try {
+    feeds.value = await db.rssFeeds.toArray();
+  } catch {
+    /* best-effort */
+  } finally {
+    loadingFeeds.value = false;
   }
-  feeds.feeds.push({
+}
+
+async function addFeed() {
+  if (!feedUrl.value.trim()) return;
+  const record: RssFeedRecord = {
     id: crypto.randomUUID(),
     url: feedUrl.value.trim(),
     enabled: true,
     lastFetchedAt: 0,
-  });
-  store.setSettings({ rssConfig: feeds });
+  };
+  try {
+    await db.rssFeeds.add(record);
+    feeds.value.push(record);
+  } catch {
+    /* best-effort */
+  }
   feedUrl.value = '';
   addingFeed.value = false;
 }
 
-function removeFeed(id: string) {
-  const feeds = (store.settings.rssConfig as any).feeds || [];
-  (store.settings.rssConfig as any).feeds = feeds.filter((f: any) => f.id !== id);
-  store.setSettings({ rssConfig: { ...store.settings.rssConfig } });
+async function removeFeed(id: string) {
+  try {
+    await db.rssFeeds.delete(id);
+    feeds.value = feeds.value.filter((f) => f.id !== id);
+  } catch {
+    /* best-effort */
+  }
 }
 
 function saveConfig() {
   store.setSettings({ rssConfig: { ...store.settings.rssConfig } });
 }
+
+onMounted(() => {
+  loadFeeds();
+});
 </script>
 
 <template>
@@ -63,11 +88,12 @@ function saveConfig() {
 
     <h4 class="rss-subtitle">订阅源</h4>
 
-    <div v-if="!((store.settings.rssConfig as any).feeds?.length)" class="rss-empty muted">
+    <div v-if="loadingFeeds" class="rss-empty muted">加载中…</div>
+    <div v-else-if="!feeds.length" class="rss-empty muted">
       还没有订阅源。
     </div>
 
-    <div v-for="feed in (store.settings.rssConfig as any).feeds || []" :key="feed.id" class="rss-feed-card">
+    <div v-for="feed in feeds" :key="feed.id" class="rss-feed-card">
       <div class="rss-feed-info">
         <span class="rss-feed-url mono">{{ feed.url }}</span>
         <span v-if="feed.lastError" class="rss-feed-error">{{ feed.lastError.message }}</span>
