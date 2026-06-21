@@ -1,17 +1,35 @@
-# M1 入口与布局（Entry & Layout）详细设计
+# M1 系统入口与布局（Entry & Layout）详细设计
 
-> **版本**：v1.0
-> **对应 PRD**：第一章「系统入口与布局职责」
-> **设计原则**：入口层只负责 UI 壳与全局事件分发，不直接包含业务逻辑；所有业务状态通过 M7（Storage & Data）注入。
+> **版本**：v1.1
+> **对应 PRD**：v3.2 第一章「系统入口与布局职责」
+> **设计原则**：入口层负责 UI 容器与消息路由，不承载业务逻辑；所有 Provider/工作流/存储细节委托给对应模块。
+
+---
+
+## Coverage Status
+
+> 基于 `/reference/nextai-translator` 与 `/reference/obsidian-clipper` 源码分析。
+
+| 需求项 | 覆盖状态 | 参考实现 | 备注 |
+|--------|---------|---------|------|
+| Popup 小窗入口 | **已覆盖** | nextai-translator | 点击图标弹出 380x500 浮层，`popup/index.html`，`browser.action.onClicked` |
+| Side Panel 固定侧边栏 | **已覆盖** | nextai-translator | `side_panel` 权限 + `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` |
+| Options 管理页 | **已覆盖** | nextai-translator | 独立 HTML 页面，Provider 管理、模板编辑、RSS 订阅 |
+| 全局快捷键（Alt+S / Alt+P / Escape） | **已覆盖** | nextai-translator | `commands._execute_action` 切换 Side Panel；无 Escape 快捷关窗 |
+| 状态栏（当前 Tab 标题 + 上下文状态） | **未覆盖** | obsidian-clipper | Side Panel 顶部 Status Bar 设计可参考 |
+
+**综合评估**：入口布局是相对固定的结构，nextai-translator 的 Popup/Side Panel 组织方式可直接迁移。状态栏和快捷键需小幅扩展。
+
+**优先级建议**：P0 — 项目的物理骨架，需第一个搭建。
 
 ---
 
 ## 1. 设计目标
 
-- 提供三个标准浏览器扩展入口：Popup、Side Panel、Options，并保持视觉与状态一致。
-- 实现 PRD 要求的全局快捷键（`Alt/Option+S`、`Alt/Option+P`、`Escape`）。
-- Side Panel 作为核心主界面，承载「当前上下文状态栏」与 Cherry 风格对话视图。
-- 模块对外暴露统一的 UI 事件总线，供 M2/M4/M5/M6 订阅或调用。
+- 提供三种入口方式：Popup 浮层、Side Panel 侧边栏、Options 管理页。
+- 实现全局快捷键：`Alt + S`（打开/关闭 Side Panel）、`Alt + P`（打开 Popup）、`Escape`（关闭当前浮层）。
+- 顶部状态栏显示当前激活 Tab 标题与上下文提取状态（是否已提取 / 提取中 / 提取时间 / 字数）。
+- 所有模块的 UI 根容器在此定义，消息路由到 M4 Chat Workspace。
 
 ---
 
@@ -19,235 +37,274 @@
 
 | 职责 | 属于本模块 | 不属于本模块 |
 |---|---|---|
-| Popup / Side Panel / Options 页面结构 | ✅ |  |
-| 全局快捷键注册与路由 | ✅ |  |
-| 入口间状态同步（Pinia + chrome.storage） | ✅ |  |
-| 主题 / 布局组件 | ✅ |  |
-| 正文提取算法 |  | M2 |
-| LLM 请求与流式渲染 |  | M3 / M4 |
-| 数据持久化实现 |  | M7 |
-| RSS 后台逻辑 |  | M8 |
+| Popup / Side Panel / Options 页面骨架 | ✅ |  |
+| 快捷键注册与响应 | ✅ |  |
+| 入口间切换 | ✅ |  |
+| 状态栏 UI | ✅ |  |
+| 对话框/确认弹窗 | ✅ |  |
+| 消息实际渲染 |  | M4 |
+| LLM 调用 |  | M3 |
+| 数据持久化 |  | M7 |
 
 ---
 
-## 3. 核心数据结构
+## 3. 核心设计
 
-### 3.1 入口路由表
+### 3.1 三种入口
 
-```ts
-// entrypoints/shared/routes.ts
-export enum AppRoute {
-  Home = 'home',           // Side Panel 主对话页
-  History = 'history',     // 历史记录列表
-  Settings = 'settings',   // Options / 设置
-  Workflows = 'workflows', // 高阶工作流入口
-}
+#### 3.1.1 Popup 浮层
 
-export interface RouteMeta {
-  route: AppRoute;
-  params?: Record<string, string>;
-}
-```
+- 触发：用户点击浏览器工具栏扩展图标。
+- 尺寸：380x500 像素，Google 推荐尺寸。
+- 定位：工具栏下方弹出，点击外部自动关闭。
+- 特点：轻量级、即用即走，适合短对话。
+- 清单配置：
 
-### 3.2 全局 UI 状态（Pinia，跨入口同步）
-
-```ts
-// stores/ui.store.ts
-export interface UIState {
-  activeRoute: AppRoute;
-  sidePanelOpen: boolean;
-  currentContext: {
-    tabId: number | null;
-    url: string;
-    title: string;
-    wordCount: number;
-    extractedAt: number;
-    status: 'idle' | 'extracting' | 'ready' | 'error';
-  } | null;
-  shortcutEnabled: boolean;
-  theme: 'light' | 'dark';
+```json
+// manifest.json
+{
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "AI Reader"
+  }
 }
 ```
 
----
+#### 3.1.2 Side Panel 侧边栏
 
-## 4. 入口实现
+- 触发：`Alt + S` 快捷键 / 浏览器侧边栏按钮。
+- 尺寸：自适应宽度（默认 400px，用户可拖拽调整）。
+- 特点：始终可见，适合长期对话、工作流编排、结果对比。
+- 清单配置：
 
-### 4.1 Popup（轻量控制器）
+```json
+{
+  "side_panel": {
+    "default_path": "sidepanel/index.html"
+  },
+  "permissions": ["sidePanel"]
+}
+```
 
-- **WXT entrypoint**：`entrypoints/popup/`
-- **功能**：
-  - 显示当前页面预估字数与上下文状态。
-  - 提供「打开 Side Panel」和「立即提取」按钮。
-  - 提供「进入设置」快捷入口。
-- **限制**：不渲染长文本、不发起 LLM 请求。
+- Behavior 设置（nextai-translator 方案）：
 
 ```ts
-// entrypoints/popup/App.vue 伪结构
-<PopupLayout>
-  <ContextSummary />
-  <ActionBar>
-    <OpenSidePanelBtn />
-    <ExtractNowBtn />
-    <OpenSettingsBtn />
-  </ActionBar>
-</PopupLayout>
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
 ```
 
-### 4.2 Side Panel（核心主界面）
+#### 3.1.3 Options 管理页
 
-- **WXT entrypoint**：`entrypoints/sidepanel/`
-- **实现策略**：使用 Chrome 原生 Side Panel API（`sidepanel` entrypoint）。
-- **布局结构**：
-  - **顶部**：上下文状态栏（当前标题、字数、提取状态、刷新按钮）。
-  - **中部**：对话视图（M4 负责具体渲染）。
-  - **底部**：输入区 + 模型选择器（M4 组件）。
-- **生命周期**：
-  - `onMounted`：从 M7 恢复当前上下文与会话状态。
-  - Tab 切换事件：不自动刷新上下文，仅展示「刷新提取当前 Tab」按钮。
+- 触发：右键扩展图标 → 「选项」/ `chrome://extensions` → 详情 → 扩展程序选项。
+- 页面：独立 HTML，包含 Provider 管理、提示词模板编辑、RSS 订阅源管理、缓存管理等。
+- 清单配置：
 
-```vue
-<!-- entrypoints/sidepanel/App.vue 伪结构 -->
-<SidePanelLayout>
-  <ContextStatusBar />
-  <ChatWorkspace />
-  <InputComposer />
-</SidePanelLayout>
+```json
+{
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  }
+}
 ```
 
-### 4.3 Options（设置页）
-
-- **WXT entrypoint**：`entrypoints/options/`
-- **Tab 布局**：
-  - Provider：密钥、自定义 base URL、模型名。
-  - Prompts：提示词模板管理。
-  - Sync：WebDAV/S3 凭据、自动备份开关。
-  - RSS：订阅源管理。
-  - Advanced：快捷键、主题、实验功能。
-
----
-
-## 5. 全局快捷键
-
-### 5.1 Manifest 声明（MV3）
+### 3.2 全局快捷键
 
 ```json
 {
   "commands": {
-    "open-side-panel": {
-      "suggested_key": { "default": "Alt+S" },
-      "description": "Open side panel and extract current page"
-    },
     "toggle-side-panel": {
-      "suggested_key": { "default": "Alt+P" },
-      "description": "Toggle side panel visibility"
+      "suggested_key": { "default": "Alt+S" },
+      "description": "打开/关闭 Side Panel"
     },
-    "abort-all-generations": {
-      "suggested_key": { "default": "Esc" },
-      "description": "Abort all running LLM requests"
+    "open-popup": {
+      "suggested_key": { "default": "Alt+P" },
+      "description": "打开 Popup 浮层"
+    },
+    "_execute_action": {
+      "suggested_key": { "default": "" }
     }
   }
 }
 ```
 
-### 5.2 Background 路由
+- `Escape`：在 Popup / Side Panel 内监听 `keydown` 事件，按下 Escape 关闭当前浮层或中止正在进行的请求。
 
-```ts
-// entrypoints/background.ts
-browser.commands.onCommand.addListener(async (command) => {
-  switch (command) {
-    case 'open-side-panel':
-      await openSidePanelAndExtract();
-      break;
-    case 'toggle-side-panel':
-      await toggleSidePanel();
-      break;
-    case 'abort-all-generations':
-      await broadcastAbort();
-      break;
-  }
-});
+### 3.3 状态栏
+
+Side Panel 顶部固定显示：
+
+```
+┌──────────────────────────────────────────┐
+│ ◀ 返回  │ 当前 Tab 标题          │ 13:45 │
+│         │ ✅ 已提取 · 3250 字    │       │
+└──────────────────────────────────────────┘
 ```
 
-### 5.3 事件说明
-
-- `open-side-panel`：唤起 Side Panel，并静默触发 M2 对当前 Tab 提取正文。
-- `toggle-side-panel`：在 Chrome 中通过 `chrome.sidePanel.open()` / 关闭 API 切换显隐。
-- `abort-all-generations`：通过 runtime message 广播到所有运行中的 M3 请求，触发 AbortController。
+- 当前 Tab 标题：来自 `chrome.tabs.query({ active: true, currentWindow: true })`。
+- 上下文状态：从 M7 读取 `currentContext`。
+  - 未提取：显示「未提取」+ 「⟳ 提取当前页」按钮。
+  - 提取中：显示加载动画。
+  - 已提取：显示提取时间 + 字数。
+- 无权限页面（如 `chrome://extensions/`）：显示「当前页面不支持提取」。
 
 ---
 
-## 6. 组件拆分
+## 4. 布局组件
+
+### 4.1 Popup 布局
+
+```
+┌───────────────────────┐
+│  Header (Logo + 标题) │
+├───────────────────────┤
+│                       │
+│  Chat Workspace       │
+│  (紧凑模式)            │
+│                       │
+├───────────────────────┤
+│  Input Composer       │
+└───────────────────────┘
+```
+
+### 4.2 Side Panel 布局
+
+```
+┌───────────────────────────────────────────┐
+│  Status Bar                                 │
+├───────────────────────────────────────────┤
+│                                             │
+│  Chat Workspace                             │
+│  (完整模式，含模型网格)                       │
+│                                             │
+├───────────────────────────────────────────┤
+│  Input Composer + Model Selector            │
+├───────────────────────────────────────────┤
+│  Footer: 多模型性能底栏                      │
+└───────────────────────────────────────────┘
+```
+
+---
+
+## 5. 消息路由
+
+- Background Service Worker 是消息中枢。
+- 消息类型枚举：
+
+```ts
+// modules/shared/messages.ts
+export type MessageType =
+  | 'EXTRACT_PAGE'
+  | 'CHAT_REQUEST'
+  | 'ABORT_ALL_REQUESTS'
+  | 'UPDATE_BADGE'
+  | 'TAB_ACTIVATED'
+  | 'CONTEXT_STATUS_CHANGED'
+  | 'SHORTCUT_EVENT';
+```
+
+- 路由规则：Background 收到对应 MessageType，分发给各模块处理。
+
+---
+
+## 6. Side Panel 与 Popup 切换
+
+- 用户可通过快捷键在两种入口间无缝切换。
+- Popup 关闭时对话**不**丢失：对话状态已持久化在 M7。
+- Side Panel 重新打开时自动恢复上次会话。
+
+**注意**：Popup 宽度限制（380px），不适合多模型并排对比显示。多模型模式下 Popup 仅显示第一个模型的流式输出，通过滚动查看其余模型，并在头部提示「建议切换到 Side Panel 查看完整对比」。
+
+---
+
+## 7. 组件拆分
 
 ```
 components/layout/
-├── SidePanelLayout.vue      # Side Panel 根布局
-├── PopupLayout.vue          # Popup 根布局
-├── OptionsLayout.vue        # Options 根布局 + Tab 导航
-├── ContextStatusBar.vue     # 上下文状态栏
-├── ActionBar.vue            # Popup 底部操作栏
-└── ThemeProvider.vue        # 主题/暗黑模式
-
-components/shared/
-├── NavTabs.vue              # Tab 切换（Options 用）
-├── IconButton.vue           # 图标按钮
-├── LoadingDots.vue          # 加载动画
-└── EmptyState.vue           # 空状态
+├── PopupApp.vue          # Popup 入口
+├── SidePanelApp.vue      # Side Panel 入口
+├── OptionsApp.vue        # Options 入口
+├── StatusBar.vue         # 顶部状态栏（Side Panel）
+├── AppHeader.vue         # 通用 App 头部（Popup/Side Panel）
+├── ToastProvider.vue     # 全局 Toast 提示
+├── ConfirmDialog.vue     # 确认对话框
+└── KeyboardShortcuts.ts  # 快捷键注册与响应
 ```
 
 ---
 
-## 7. 关键流程
+## 8. UI 技术选型
 
-### 7.1 `Alt+S` 唤起并提取
+| 层 | 选型 |
+|----|------|
+| 框架 | Vue 3 (Composition API) |
+| 构建 | Vite + `crxjs/vite-plugin` |
+| CSS | UnoCSS (Atomic CSS) + CSS Variables 主题系统 |
+| 图标 | Iconify (`@iconify/vue`) |
+| 状态管理 | Pinia + `pinia-plugin-persistedstate` |
+| 统一样式体系 | UnoCSS preset `attributify` + 暗色模式适配 |
+| 暗色模式 | 自动跟随系统 `prefers-color-scheme`，Options 中可手动切换 |
+
+---
+
+## 9. 关键流程
+
+### 9.1 Side Panel 打开并自动提取当前页
 
 ```mermaid
 sequenceDiagram
     actor User
+    participant Panel as Side Panel (M1)
     participant BG as Background (M1)
-    participant SP as Side Panel (M1)
     participant CS as Content Script (M2)
-    participant Store as UI Store (M7)
+    participant M7 as Storage (M7)
 
-    User->>BG: Alt+S
-    BG->>SP: chrome.sidePanel.open()
-    BG->>CS: runtime.sendMessage({ type: 'EXTRACT_PAGE' })
-    CS->>CS: 执行 M2 提取流程
-    CS-->>BG: { title, url, text, wordCount }
-    BG->>Store: 更新 currentContext
-    Store->>SP: 状态同步，ContextStatusBar 更新
+    User->>Panel: Alt+S / 点击图标
+    Panel->>BG: 请求当前页上下文
+    BG->>M7: 查询 currentContext
+    alt 有缓存上下文
+        M7-->>BG: 返回 currentContext
+        BG-->>Panel: 渲染 StatusBar
+    else 无缓存 / 过期
+        BG->>CS: EXTRACT_PAGE
+        CS-->>BG: ExtractedContext
+        BG->>M7: 写入 currentContext
+        BG-->>Panel: 渲染 StatusBar
+    end
 ```
-
-### 7.2 Tab 切换时保持上下文
-
-- Side Panel 监听 `chrome.tabs.onActivated` 仅用于显示当前 Tab 信息。
-- **不主动重新提取**；`currentContext` 保持为上一次成功提取的页面。
-- 用户点击「⟳ 刷新提取当前 Tab」时才触发新的 M2 提取。
 
 ---
 
-## 8. 错误处理
+## 10. 错误处理
 
 | 错误场景 | 处理策略 |
 |---|---|
-| Side Panel API 不可用（非 Chrome） | 降级为打开 Popup 提示用户 |
-| 快捷键冲突 | Options 中允许用户自定义快捷键 |
-| 状态同步失败 | 采用 M7 的持久化 store，启动时自动重 Hydrate |
+| Popup / Options 加载失败 | 显示空白页面 + 刷新按钮 |
+| Side Panel 在当前 Tab 不支持 | 提示用户切换到普通网页 |
+| chrome.sidePanel API 不可用 | 降级为仅 Popup 模式 |
+| 快捷键与其他扩展冲突 | 在 Options 中允许用户自定义快捷键 |
 
 ---
 
-## 9. 测试策略
+## 11. 测试策略
 
-- **单元测试**：路由跳转、Pinia store 状态变化、快捷键命令解析。
-- **集成测试**：Popup → Background → Side Panel 唤起链路。
-- **E2E**：使用 WXT 的 dev 模式加载扩展，验证快捷键触发与 Side Panel 渲染。
+- **单元测试**：
+  - 快捷键注册与去冲突逻辑。
+  - 消息路由分发。
+- **集成测试**：
+  - Popup → Side Panel 切换。
+  - 状态栏上下文状态变化。
+  - 暗色模式切换。
+- **E2E 测试**：
+  - `Alt+S` 打开/关闭 Side Panel。
+  - `Alt+P` 打开 Popup。
+  - 提取动画与状态更新。
 
 ---
 
-## 10. 依赖契约
+## 12. 依赖契约
 
 | 依赖模块 | 契约 |
 |---|---|
-| M7 Storage & Data | 读取/写入 `uiState` 与 `currentContext` |
-| M2 Context Extraction | 通过 Background 发起提取请求，接收 `{ title, url, text, wordCount }` |
-| M4 Chat Workspace | Side Panel 提供容器；M4 负责内部消息渲染与输入 |
+| M2 Context Extraction | Background 通过消息通道触发提取 |
+| M4 Chat Workspace | Side Panel / Popup 内嵌 M4 组件，传递 `conversationId` |
+| M7 Storage & Data | 读写 `currentContext`、`LastActiveTab` 等 UI 状态 |
