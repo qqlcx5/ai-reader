@@ -68,6 +68,22 @@ async function handleExtractPage(request: ExtractRequest): Promise<ExtractRespon
       preferredFormat: request.preferredFormat,
     });
 
+    // Persist to chrome.storage.local so the side panel / popup can
+    // pick it up even if the caller doesn't capture the sendResponse.
+    try {
+      const partial: Record<string, unknown> = {
+        title: context.title,
+        url: context.url,
+        excerpt: context.content.slice(0, 600),
+        fullText: context.content,
+        rawText: context.content,
+        mode: 'full',
+      };
+      await chrome.storage.local.set({ _extraction_result: partial });
+    } catch {
+      // best-effort
+    }
+
     // If content is large, cache chunks and return metadata only
     if (context.content.length > 1024 * 1024) {
       const transferId = generateTransferId(context.url);

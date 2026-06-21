@@ -1,13 +1,60 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import ThemeProvider from './ThemeProvider.vue';
 import ContextSummary from './ContextSummary.vue';
 import ActionBar from './ActionBar.vue';
 import { useUiStore } from '@/stores/ui.store';
-import { openSidePanelAndExtract, broadcastAbort, isChromeSidePanelAvailable } from '@/utils/browser';
+import { useContextStore } from '@/stores/context.store';
+import { openSidePanelAndExtract, isChromeSidePanelAvailable } from '@/utils/browser';
 
 const ui = useUiStore();
+const ctx = useContextStore();
 const busy = ref(false);
+
+// On mount, check if there's already an extraction result in storage
+async function checkExtractionResult() {
+  try {
+    const result = await chrome.storage.local.get('_extraction_result');
+    const data = result._extraction_result as Record<string, string> | undefined;
+    if (data && data.fullText) {
+      ctx.setContext({
+        title: data.title || '',
+        url: data.url || '',
+        excerpt: data.excerpt || data.fullText.slice(0, 600),
+        fullText: data.fullText || '',
+        rawText: data.rawText || '',
+        mode: 'full',
+      });
+    }
+  } catch { /* best-effort */ }
+}
+
+// Listen for new extraction results
+function listenForExtraction() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    const d = changes._extraction_result?.newValue;
+    if (d && typeof d === 'object') {
+      const data = d as Record<string, string>;
+      if (data.fullText) {
+        ctx.setContext({
+          title: data.title || '',
+          url: data.url || '',
+          excerpt: data.excerpt || data.fullText.slice(0, 600),
+          fullText: data.fullText || '',
+          rawText: data.rawText || '',
+          mode: 'full',
+        });
+      }
+    }
+  });
+}
+
+onMounted(() => {
+  checkExtractionResult();
+  listenForExtraction();
+});
 
 async function onOpenSidePanel() {
   busy.value = true;
@@ -61,7 +108,7 @@ function onOpenSettings() {
 
 <style scoped>
 .popup {
-  width: 320px;
+  width: 680px;
   max-width: 100vw;
   display: flex;
   flex-direction: column;

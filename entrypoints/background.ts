@@ -1,5 +1,69 @@
-import { openSidePanelAndExtract, broadcastAbort, getActiveTabId, isChromeSidePanelAvailable } from '@/utils/browser';
+import { openSidePanel, broadcastAbort, getActiveTabId, isChromeSidePanelAvailable } from '@/utils/browser';
 import { AUTO_BACKUP_ALARM, performWebDAVBackup, recordBackupSuccess, recordBackupError } from '@/lib/export';
+
+async function triggerExtraction(tabId: number | undefined) {
+  if (!tabId) return;
+  // Open side panel first (if not already open)
+  await openSidePanel({ tabId });
+
+  // Wait briefly for side panel to mount its listeners
+  await new Promise((r) => setTimeout(r, 200));
+
+  try {
+    // Send extraction request directly to the content script in the given tab
+    const response = await browser.tabs.sendMessage(tabId, {
+      type: 'EXTRACT_PAGE',
+      force: false,
+      preferredFormat: 'markdown',
+    }) as Record<string, unknown>;
+
+    if (!response || typeof response !== 'object') return;
+
+    if (response.type === 'EXTRACT_RESULT' && response.success && response.context) {
+      const c = response.context as Record<string, unknown>;
+      const content = String(c.content || '');
+      const ctx = {
+        title: String(c.title || ''),
+        url: String(c.url || ''),
+        excerpt: content.slice(0, 600),
+        fullText: content,
+        rawText: content,
+        mode: 'full',
+      };
+      await chrome.storage.local.set({ _extraction_result: ctx });
+    } else if (response.type === 'TRANSFER_META') {
+      const meta = response as Record<string, unknown>;
+      const transferId = String(meta.transferId || '');
+      const totalChunks = Number(meta.totalChunks || 0);
+      const chunks: string[] = [];
+      for (let i = 0; i < totalChunks; i++) {
+        try {
+          const chunkResp = await browser.tabs.sendMessage(tabId, {
+            type: 'REQUEST_CHUNK',
+            transferId,
+            chunkIndex: i,
+          }) as Record<string, unknown> | null;
+          if (chunkResp?.type === 'CHUNK_DATA' && typeof chunkResp.chunkData === 'string') {
+            chunks.push(chunkResp.chunkData);
+          }
+        } catch { /* skip failed chunk */ }
+      }
+      const fullContent = chunks.join('');
+      await chrome.storage.local.set({
+        _extraction_result: {
+          title: '',
+          url: '',
+          excerpt: fullContent.slice(0, 600),
+          fullText: fullContent,
+          rawText: fullContent,
+          mode: 'full',
+        },
+      });
+    }
+  } catch (err) {
+    console.warn('[background] extraction failed', err);
+  }
+}
 
 export default defineBackground(() => {
   if (typeof browser === 'undefined' || !browser?.runtime) {
@@ -8,10 +72,10 @@ export default defineBackground(() => {
 
   const runtime = browser.runtime;
 
-  // Enable side panel on action click — also covers the `open-side-panel` command.
+  // Enable side panel on action click
   if (isChromeSidePanelAvailable() && browser.action?.onClicked) {
     browser.action.onClicked.addListener(async (tab) => {
-      await openSidePanelAndExtract({ tabId: tab?.id });
+      await triggerExtraction(tab?.id);
     });
   }
 
@@ -19,15 +83,10 @@ export default defineBackground(() => {
   if (browser.commands?.onCommand) {
     browser.commands.onCommand.addListener(async (command) => {
       switch (command) {
-        case 'open-side-panel': {
-          const tabId = await getActiveTabId();
-          await openSidePanelAndExtract({ tabId: tabId ?? undefined });
-          break;
-        }
+        case 'open-side-panel':
         case 'toggle-side-panel': {
-          // Chrome side panel has no public close() — re-open is the safe action.
           const tabId = await getActiveTabId();
-          await openSidePanelAndExtract({ tabId: tabId ?? undefined });
+          await triggerExtraction(tabId ?? undefined);
           break;
         }
         case 'abort-all-generations': {
@@ -35,17 +94,12 @@ export default defineBackground(() => {
           break;
         }
         default:
-          // Unknown command: ignore.
           break;
       }
     });
   }
 
-  // M6 — auto-backup alarm handler. Fires once at the scheduled backup
-  // time (default 02:00). We read the current ExportConfig, run a full
-  // WebDAV backup, persist the outcome, and re-schedule the next run.
-  // Single-flight guard prevents overlapping runs if the alarm fires
-  // twice (e.g. after device wake).
+  // M6 — auto-backup alarm handler
   if (browser.alarms?.onAlarm) {
     let backupInFlight = false;
     browser.alarms.onAlarm.addListener(async (alarm) => {
@@ -60,37 +114,29 @@ export default defineBackground(() => {
         const result = await performWebDAVBackup(config);
         await recordBackupSuccess(Date.now());
         if (process.env.NODE_ENV !== 'production') {
-          // eslint-disable-next-line no-console
           console.debug('[background] auto-backup done', result.remotePath);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         await recordBackupError(message);
         if (process.env.NODE_ENV !== 'production') {
-          // eslint-disable-next-line no-console
           console.warn('[background] auto-backup failed', message);
         }
       } finally {
         backupInFlight = false;
-        // Re-arm the alarm for the next cycle (one-shot alarm model).
         try {
           const { scheduleAutoBackup } = await import('@/lib/export');
           const { useSettingsStore } = await import('@/stores/settings.store');
           await scheduleAutoBackup(useSettingsStore().settings.exportConfig);
-        } catch {
-          // best-effort re-schedule
-        }
+        } catch { /* best-effort */ }
       }
     });
   }
 
-  // Cross-entry runtime messages — fan out as a no-op aggregator.
+  // Relay any incoming extraction message from content script
   runtime.onMessage?.addListener((message) => {
     if (!message || typeof message !== 'object' || !('type' in message)) return;
-    // The command-bus is already wired inside the UI entrypoints; we don't
-    // need to re-broadcast, but logging aids debugging.
     if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
       console.debug('[background] message', message);
     }
   });

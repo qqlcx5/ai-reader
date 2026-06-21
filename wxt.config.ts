@@ -26,10 +26,6 @@ export default defineConfig({
         suggested_key: { default: 'Alt+P' },
         description: 'Toggle side panel visibility',
       },
-      'abort-all-generations': {
-        suggested_key: { default: 'Esc' },
-        description: 'Abort all running LLM requests',
-      },
     },
     side_panel: {
       default_path: 'sidepanel.html',

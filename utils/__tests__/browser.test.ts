@@ -115,9 +115,9 @@ describe('utils/browser', () => {
     await vi.advanceTimersByTimeAsync(100);
     await p;
     expect(open).toHaveBeenCalledWith({ tabId: 3 });
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'EXTRACT_PAGE', payload: { tabId: 3 } }),
-    );
+    // openSidePanelAndExtract no longer sends EXTRACT_PAGE directly;
+    // extraction is handled by background.ts via tabs.sendMessage.
+    expect(sendMessage).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

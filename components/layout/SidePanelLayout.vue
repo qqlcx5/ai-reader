@@ -5,10 +5,10 @@ import ContextStatusBar from './ContextStatusBar.vue';
 import ChatWorkspace from '@/components/workspace/ChatWorkspace.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
-import { openSidePanelAndExtract } from '@/utils/browser';
 import { bindRuntimeListener, on, send, type CommandMessage } from '@/utils/command-bus';
 import LoadingDots from '@/components/shared/LoadingDots.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
+import type { ExtractResponse, TransferMetaMessage, ChunkResponse } from '@/modules/extraction';
 
 const ui = useUiStore();
 const ctx = useContextStore();
@@ -20,16 +20,68 @@ const emit = defineEmits<{
 const loading = ref(false);
 let unsubRuntime: (() => void) | null = null;
 let unsubAbort: (() => void) | null = null;
-let unsubExtract: (() => void) | null = null;
+
+async function getActiveTabId(): Promise<number | undefined> {
+  try {
+    const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+    return tabs[0]?.id;
+  } catch {
+    return undefined;
+  }
+}
+
+function setContextFromExtraction(c: { title?: string; url?: string; fullText?: string; rawText?: string; excerpt?: string }) {
+  ctx.setContext({
+    title: c.title || '',
+    url: c.url || '',
+    excerpt: c.excerpt || (c.fullText || '').slice(0, 600),
+    fullText: c.fullText || '',
+    rawText: c.rawText || '',
+    mode: 'full',
+  });
+}
 
 async function refresh() {
   loading.value = true;
   try {
-    await send('EXTRACT_PAGE');
+    const tabId = await getActiveTabId();
+    if (!tabId) return;
+
+    const response = await browser.tabs.sendMessage(tabId, {
+      type: 'EXTRACT_PAGE',
+      force: false,
+      preferredFormat: 'markdown',
+    }) as ExtractResponse | TransferMetaMessage;
+
+    if (response.type === 'EXTRACT_RESULT') {
+      if (response.success && response.context) {
+        setContextFromExtraction({
+          title: response.context.title,
+          url: response.context.url,
+          fullText: response.context.content,
+        });
+      }
+    } else if (response.type === 'TRANSFER_META') {
+      const chunks: string[] = [];
+      for (let i = 0; i < response.totalChunks; i++) {
+        try {
+          const chunkResp = await browser.tabs.sendMessage(tabId, {
+            type: 'REQUEST_CHUNK',
+            transferId: response.transferId,
+            chunkIndex: i,
+          }) as ChunkResponse | null;
+          if (chunkResp?.type === 'CHUNK_DATA' && chunkResp.chunkData) {
+            chunks.push(chunkResp.chunkData);
+          }
+        } catch { /* skip failed chunk */ }
+      }
+      const fullContent = chunks.join('');
+      setContextFromExtraction({ fullText: fullContent });
+    }
+  } catch (err) {
+    console.warn('[sidepanel] extraction via tabs failed', err);
   } finally {
-    setTimeout(() => {
-      loading.value = false;
-    }, 600);
+    loading.value = false;
   }
 }
 
@@ -37,21 +89,41 @@ function openHistory() {
   ui.setPanel('history');
 }
 
+// Listen for extraction results written to storage by background.ts
+function listenForExtraction() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    const data = changes._extraction_result?.newValue;
+    if (data && typeof data === 'object') {
+      setContextFromExtraction(data as Record<string, string>);
+    }
+  });
+}
+
+// On mount, check if there's already an extraction result in storage
+async function loadExistingExtraction() {
+  try {
+    const result = await chrome.storage.local.get('_extraction_result');
+    const data = result._extraction_result as Record<string, string> | undefined;
+    if (data && data.fullText) {
+      setContextFromExtraction(data);
+    }
+  } catch { /* best-effort */ }
+}
+
 onMounted(() => {
   unsubRuntime = bindRuntimeListener();
   unsubAbort = on('ABORT_ALL_REQUESTS', () => {
     console.log('[sidepanel] ABORT_ALL_REQUESTS received');
   });
-  unsubExtract = on('EXTRACT_PAGE', (msg: CommandMessage) => {
-    // Hook for M2 — actual extraction happens in content script.
-    console.log('[sidepanel] EXTRACT_PAGE received', msg);
-  });
+  loadExistingExtraction();
+  listenForExtraction();
 });
 
 onUnmounted(() => {
   unsubRuntime?.();
   unsubAbort?.();
-  unsubExtract?.();
 });
 </script>
 

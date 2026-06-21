@@ -93,25 +93,11 @@ export interface OpenAndExtractOptions {
 }
 
 /**
- * Open the side panel and dispatch an EXTRACT_PAGE message. Used by the
- * `open-side-panel` command and by the Popup's "Open & extract" action.
+ * Open the side panel. Extraction is now handled by background.ts's
+ * triggerExtraction which uses tabs.sendMessage directly.
  */
 export async function openSidePanelAndExtract(options: OpenAndExtractOptions = {}): Promise<boolean> {
-  const opened = await openSidePanel(options);
-  if (!opened) return false;
-  // Defer slightly so the side panel mounts and binds its runtime listener.
-  await new Promise((r) => setTimeout(r, 80));
-  try {
-    await browser.runtime.sendMessage({
-      type: 'EXTRACT_PAGE',
-      ts: Date.now(),
-      source: 'background',
-      payload: options,
-    } as any);
-  } catch {
-    /* best-effort */
-  }
-  return true;
+  return openSidePanel(options);
 }
 
 export async function toggleSidePanel(): Promise<void> {
