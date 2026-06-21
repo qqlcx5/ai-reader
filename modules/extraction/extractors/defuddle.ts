@@ -20,11 +20,14 @@ export async function extractWithDefuddle(
 ): Promise<ExtractedContext | null> {
   try {
     const defuddleModule = await import('defuddle');
-    const defuddle = defuddleModule.default || (defuddleModule as any).defuddle || defuddleModule;
+    // Defuddle may be default export or named export; handle both
+    const DefuddleClass = defuddleModule.default || defuddleModule;
+    // Defuddle v0.19 uses: new Defuddle(doc, options).parse()
+    const instance = new (DefuddleClass as any)(doc, { markdown: true });
+    const result = instance.parse ? instance.parse() : instance;
 
     const extractPromise = new Promise<ExtractedContext | null>((resolve) => {
       try {
-        const result = defuddle(doc, { markdown: true });
         const content = result?.markdown || result?.content || result?.text || '';
         if (!content || content.length < 200) {
           resolve(null);

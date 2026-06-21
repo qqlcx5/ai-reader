@@ -8,11 +8,16 @@ import type {
   ChunkRequest,
   ChunkResponse,
 } from '@/modules/extraction';
-import { getChunkCache } from '@/modules/storage';
+
+// Lazy import to avoid SSR/build-time resolution issues
+async function getChunkCache() {
+  const { getChunkCache: getCache } = await import('@/modules/storage/chunk-cache');
+  return getCache();
+}
 
 export async function performExtraction(tabId: number): Promise<ExtractedContext | null> {
   // Send extract request to content script
-  const response = await chrome.tabs.sendMessage(tabId, {
+  const response = await browser.tabs.sendMessage(tabId, {
     type: 'EXTRACT_PAGE',
     force: true,
     preferredFormat: 'markdown',
@@ -37,7 +42,7 @@ async function fetchChunksAndAssemble(
   tabId: number,
   meta: TransferMetaMessage
 ): Promise<ExtractedContext | null> {
-  const cache = getChunkCache();
+  const cache = await getChunkCache();
   await cache.setTransferMeta(meta.transferId, {
     totalChunks: meta.totalChunks,
     totalSize: meta.totalSize,
@@ -46,7 +51,7 @@ async function fetchChunksAndAssemble(
   const chunks: ChunkedTransfer[] = [];
 
   for (let i = 0; i < meta.totalChunks; i++) {
-    const chunkResponse = await chrome.tabs.sendMessage(tabId, {
+    const chunkResponse = await browser.tabs.sendMessage(tabId, {
       type: 'REQUEST_CHUNK',
       transferId: meta.transferId,
       chunkIndex: i,
@@ -93,8 +98,8 @@ async function fetchChunksAndAssemble(
  */
 export async function anchorContext(context: ExtractedContext): Promise<void> {
   const storeKey = 'context-store';
-  const current = await chrome.storage.local.get(storeKey);
-  const data = current[storeKey] ? JSON.parse(current[storeKey]) : {};
+  const current = await browser.storage.local.get(storeKey);
+  const data = current[storeKey] ? JSON.parse(current[storeKey] as string) : {};
 
   data.currentContext = {
     title: context.title,
@@ -106,5 +111,5 @@ export async function anchorContext(context: ExtractedContext): Promise<void> {
     mode: 'full',
   };
 
-  await chrome.storage.local.set({ [storeKey]: JSON.stringify(data) });
+  await browser.storage.local.set({ [storeKey]: JSON.stringify(data) });
 }

@@ -55,6 +55,10 @@ export interface RssItemRecord {
   hash: string;
   content?: string;
   url?: string;
+  /** M8: AI-generated 3-sentence summary. */
+  aiSummary?: string;
+  /** M8: Whether AI summarization has been attempted. */
+  isSummarized: boolean;
 }
 
 export interface RssFeedRecord {
@@ -64,6 +68,8 @@ export interface RssFeedRecord {
   lastFetchedAt: number;
   title?: string;
   refreshIntervalMinutes?: number;
+  /** M8: Last fetch error for display in Options. */
+  lastError?: { code: string; message: string; at: number };
 }
 
 export interface ProviderConfig {
@@ -90,8 +96,18 @@ export interface ExportConfig {
   includeApiKeys: boolean;
   autoBackupEnabled: boolean;
   autoBackupIntervalDays?: number;
+  autoBackupHour?: number;
+  autoBackupMinute?: number;
   webDAVUrl?: string;
+  webDAVUsername?: string;
+  webDAVPassword?: string;
+  webDAVBackupPath?: string;
   obsidianVault?: string;
+  obsidianFolder?: string;
+  /** Internal: timestamp of the last successful backup. */
+  lastBackupAt?: number;
+  /** Internal: most recent backup error message, cleared on success. */
+  lastBackupError?: string;
 }
 
 export interface RssConfig {
@@ -106,6 +122,46 @@ export interface UiSettings {
   theme: 'light' | 'dark' | 'system';
   sidebarWidth: number;
   language?: string;
+}
+
+// ─── M5 Workflow ─────────────────────────────────────────────────────
+
+/** A single node inside a workflow session / template. */
+export interface WorkflowNode {
+  id: string;
+  /** Display order (used by Relay Chain). */
+  order: number;
+  /** Display name (e.g. "Red Team"). */
+  name: string;
+  /** Bound provider ID (must exist in Settings.providers). */
+  providerId: string;
+  /** Role / system prompt injected for this node. */
+  systemPrompt: string;
+  /**
+   * Upstream node IDs whose output should be stitched into this node's
+   * input. Only used by Relay Chain; Roundtable ignores this.
+   */
+  upstreamNodeIds: string[];
+}
+
+/** Runtime status of a workflow session. */
+export type WorkflowStatus = 'idle' | 'running' | 'paused' | 'done' | 'error';
+
+/** Status of an individual node during execution. */
+export type WorkflowNodeStatus = 'pending' | 'running' | 'done' | 'error' | 'aborted';
+
+/** Persisted workflow template. */
+export interface WorkflowTemplateRecord {
+  id: string;
+  name: string;
+  type: 'roundtable' | 'relay';
+  description?: string;
+  nodes: WorkflowNode[];
+  /** Creation / last edit timestamps. */
+  createdAt: number;
+  updatedAt: number;
+  /** True for the two built-in templates that ship with the app. */
+  builtIn: boolean;
 }
 
 export interface Settings {

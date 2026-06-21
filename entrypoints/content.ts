@@ -2,7 +2,6 @@
  * M2 — Content script entrypoint
  * Listens for EXTRACT_PAGE requests, performs 3-level extraction, and supports chunked transfer.
  */
-import { defineContentScript } from 'wxt/sandbox';
 import { extractPage, waitForDomReady } from '@/modules/extraction';
 import type {
   ExtractRequest,
@@ -13,7 +12,6 @@ import type {
 } from '@/modules/extraction';
 import {
   splitIntoChunks,
-  createChunkedTransfers,
   createTransferMeta,
   createChunkResponse,
   generateTransferId,
@@ -32,10 +30,10 @@ export default defineContentScript({
   async main() {
     console.log('[AI Reader] Content script loaded on', location.href);
 
-    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      handleMessage(message as any)
+    browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+      handleMessage(message as ExtractRequest | ChunkRequest)
         .then((response) => sendResponse(response))
-        .catch((err) => {
+        .catch((err: unknown) => {
           console.error('[M2] Content script error:', err);
           sendResponse({
             type: 'EXTRACT_RESULT',

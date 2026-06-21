@@ -12,19 +12,25 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "vue-tsc --noEmit",
+    "test": "vitest run",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "defuddle": "^0.19.0",
     "dexie": "^4.4.4",
+    "eventsource-parser": "^3.1.0",
+    "jszip": "^3.10.1",
+    "markdown-it": "^14.2.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "turndown": "^7.2.4",
     "vue": "^3.5.29",
-    "vue-virtual-scroller": "^2.0.1"
+    "vue-virtual-scroller": "^2.0.1",
+    "webdav": "^5.10.0"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
     "@types/mozilla__readability": "^0.4.2",
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-vue": "^6.0.7",
