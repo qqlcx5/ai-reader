@@ -24,6 +24,22 @@ export type UiEventType =
   | 'SETTINGS_CHANGED'       // Settings were updated
   | 'NAVIGATE';              // Navigate to a different route
 
+/** Runtime array of all UiEventType values (for Object.values-like iteration). */
+export const UI_EVENT_TYPES: UiEventType[] = [
+  'EXTRACT_PAGE',
+  'EXTRACT_PAGE_RESULT',
+  'EXTRACT_PAGE_ERROR',
+  'ABORT_ALL_GENERATIONS',
+  'SIDE_PANEL_OPENED',
+  'SIDE_PANEL_CLOSED',
+  'TAB_ACTIVATED',
+  'SHORTCUT_TRIGGERED',
+  'CONTEXT_CHANGED',
+  'THEME_CHANGED',
+  'SETTINGS_CHANGED',
+  'NAVIGATE',
+];
+
 export interface UiEvent {
   type: UiEventType;
   payload?: unknown;
@@ -55,8 +71,8 @@ class UiEventBus {
   /** Subscribe to all events. */
   onAny(listener: UiEventListener): () => void {
     const unsubs: (() => void)[] = [];
-    for (const type of Object.values(UiEventType)) {
-      unsubs.push(this.on(type as UiEventType, listener));
+    for (const type of UI_EVENT_TYPES) {
+      unsubs.push(this.on(type, listener));
     }
     return () => unsubs.forEach((fn) => fn());
   }

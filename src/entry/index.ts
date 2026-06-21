@@ -35,7 +35,6 @@ export type { CommandName } from './commands';
 export {
   initBackground,
   openSidePanel,
-  closeSidePanel,
 } from './background';
 
 // ─── Popup ───────────────────────────────────────────────────────────

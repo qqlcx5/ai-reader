@@ -100,7 +100,7 @@ export function buildPageFrontmatter(
   if (description) properties.push({ name: 'description', value: description, type: 'text' });
   if (published) properties.push({ name: 'published', value: published, type: 'date' });
   if (site) properties.push({ name: 'site', value: site, type: 'text' });
-  if (tags.length > 0) properties.push({ name: 'tags', value: tags, type: 'list' });
+  if (tags.length > 0) properties.push({ name: 'tags', value: tags as unknown as string, type: 'list' });
 
   return properties;
 }

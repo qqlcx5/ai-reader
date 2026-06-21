@@ -168,15 +168,16 @@ function setupMessageListeners(): void {
 async function restoreContext(): Promise<void> {
   try {
     const stored = await chrome.storage.local.get('context-store');
-    if (stored['context-store']?.data) {
-      const ctx = stored['context-store'].data;
+    const contextStore = stored['context-store'] as Record<string, unknown> | undefined;
+    if (contextStore?.data) {
+      const ctx = contextStore.data as Record<string, unknown>;
       sidePanelState.currentContext = {
-        tabId: ctx.tabId ?? 0,
-        url: ctx.url ?? '',
-        title: ctx.title ?? '',
-        wordCount: ctx.wordCount ?? 0,
-        extractedAt: ctx.extractedAt ?? 0,
-        status: ctx.status ?? 'idle',
+        tabId: (ctx.tabId as number) ?? 0,
+        url: (ctx.url as string) ?? '',
+        title: (ctx.title as string) ?? '',
+        wordCount: (ctx.wordCount as number) ?? 0,
+        extractedAt: (ctx.extractedAt as number) ?? 0,
+        status: (ctx.status as SidePanelContext['status']) ?? 'idle',
       };
     }
   } catch {

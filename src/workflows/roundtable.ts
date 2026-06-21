@@ -11,6 +11,7 @@
 import type {
   WorkflowSession,
   WorkflowNode,
+  WorkflowNodeStatus,
   WorkflowContext,
   WorkflowCallbacks,
 } from './types';
@@ -82,7 +83,7 @@ async function executeNode(
       },
     );
 
-    if (node.status !== 'error') {
+    if ((node.status as WorkflowNodeStatus) !== 'error') {
       node.output = output;
       node.status = 'done';
       callbacks.onNodeStatus(node.id, 'done');

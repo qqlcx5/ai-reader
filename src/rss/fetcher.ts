@@ -17,7 +17,7 @@ import { updateBadge } from './badge';
 
 interface ParsedFeed {
   title: string;
-  items: Omit<RssItem, 'id' | 'hash' | 'isRead' | 'isSummarized' | 'createdAt'>[];
+  items: Omit<RssItem, 'id' | 'hash' | 'isRead' | 'isSummarized' | 'createdAt' | 'feedId'>[];
 }
 
 // ─── Public API ──────────────────────────────────────────────────────
@@ -64,6 +64,7 @@ export async function processFeed(feed: RssFeed): Promise<void> {
     const newItems: RssItem[] = parsed.items.map((item) => ({
       ...item,
       id: `rss-item-${feed.id}-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      feedId: feed.id,
       hash: computeItemHash(feed.id, item.title, item.link),
       isRead: false,
       isSummarized: false,

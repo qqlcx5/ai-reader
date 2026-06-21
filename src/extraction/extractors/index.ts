@@ -21,7 +21,7 @@ import { extractWithInnerText } from './inner-text';
 
 type ExtractorFn = (doc: Document, req: ExtractionRequest) => Promise<ExtractedContext>;
 
-interface TierResult {
+export interface TierResult {
   tier: ExtractorType;
   error?: string;
 }

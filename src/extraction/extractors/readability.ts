@@ -68,7 +68,7 @@ export async function extractWithReadability(
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 async function importReadability(): Promise<{
-  Readability: new (doc: Document) => { parse(): { title: string; byline: string; excerpt: string; content: string; textContent: string; siteName?: string } | null };
+  Readability: new (doc: Document, options?: Record<string, unknown>) => { parse(): { title: string | null | undefined; byline: string | null | undefined; excerpt: string | null | undefined; content: string | null | undefined; textContent: string | null | undefined; siteName?: string | null } | null };
 }> {
   try {
     return await import('@mozilla/readability');

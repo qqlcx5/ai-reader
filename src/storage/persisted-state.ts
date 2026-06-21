@@ -36,7 +36,7 @@ export async function saveSettings(settings: Settings): Promise<void> {
 export async function loadSettings(): Promise<Settings> {
   const key = STORE_KEYS.settings;
   const stored = await chrome.storage.local.get(key);
-  return unwrap(stored[key], defaultSettings);
+  return unwrap(stored[key] as PersistedStoreWrapper<Settings> | undefined, defaultSettings);
 }
 
 export async function saveUiState(state: UiState): Promise<void> {
@@ -48,7 +48,7 @@ export async function saveUiState(state: UiState): Promise<void> {
 export async function loadUiState(): Promise<UiState> {
   const key = STORE_KEYS.ui;
   const stored = await chrome.storage.local.get(key);
-  return unwrap(stored[key], getDefaultUiState());
+  return unwrap(stored[key] as PersistedStoreWrapper<UiState> | undefined, getDefaultUiState());
 }
 
 export async function saveContext(context: CurrentContext): Promise<void> {
@@ -60,7 +60,7 @@ export async function saveContext(context: CurrentContext): Promise<void> {
 export async function loadContext(): Promise<CurrentContext | null> {
   const key = STORE_KEYS.context;
   const stored = await chrome.storage.local.get(key);
-  return stored[key]?.data ?? null;
+  return (stored[key] as PersistedStoreWrapper<CurrentContext> | undefined)?.data ?? null;
 }
 
 // ─── Defaults ────────────────────────────────────────────────────────
@@ -114,8 +114,9 @@ export async function hydrateStore<T>(
 ): Promise<void> {
   const storageKey = STORE_KEYS[key];
   const stored = await chrome.storage.local.get(storageKey);
-  if (stored[storageKey]?.data) {
-    apply(stored[storageKey].data as T);
+  const wrapper = stored[storageKey] as PersistedStoreWrapper<T> | undefined;
+  if (wrapper?.data) {
+    apply(wrapper.data);
   }
 }
 

@@ -8,7 +8,7 @@
  * Based on design-07-storage-data.md §6.
  */
 
-import type { SearchResult, MessageRecord, SearchWorkerPayload, SearchWorkerResponse } from '../types';
+import type { SearchResult, MessageRecord, SearchWorkerPayload, SearchWorkerResponse } from './types';
 
 // ─── Main-Thread API ─────────────────────────────────────────────────
 

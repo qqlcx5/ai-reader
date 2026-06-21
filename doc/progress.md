@@ -15,12 +15,12 @@ AIGC:
 
 ## 模块进度
 
-- [ ] 模块 01：系统入口与布局 — [module-01-entry-layout.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-01-entry-layout.md>)
-- [ ] 模块 02：上下文提取与无界锚定 — [module-02-extraction.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-02-extraction.md>)
-- [ ] 模块 03：多 Provider 引擎 — [module-03-provider-client.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-03-provider-client.md>)
-- [ ] 模块 04：Cherry 风格工作区 — [module-04-workspace.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-04-workspace.md>)
-- [ ] 模块 05：高阶 AI 工作流 — [module-05-workflows.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-05-workflows.md>)
-- [ ] 模块 06：跨端输出与灾备同步 — [module-06-export-sync.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-06-export-sync.md>)
-- [ ] 模块 07：存储与数据架构 — [module-07-storage-data.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-07-storage-data.md>)
-- [ ] 模块 08：后台 RSS 自动化流水线 — [module-08-rss-pipeline.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-08-rss-pipeline.md>)
+- [x] 模块 01：系统入口与布局 — [module-01-entry-layout.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-01-entry-layout.md>)
+- [x] 模块 02：上下文提取与无界锚定 — [module-02-extraction.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-02-extraction.md>)
+- [x] 模块 03：多 Provider 引擎 — [module-03-provider-client.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-03-provider-client.md>)
+- [x] 模块 04：Cherry 风格工作区 — [module-04-workspace.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-04-workspace.md>)
+- [x] 模块 05：高阶 AI 工作流 — [module-05-workflows.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-05-workflows.md>)
+- [x] 模块 06：跨端输出与灾备同步 — [module-06-export-sync.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-06-export-sync.md>)
+- [x] 模块 07：存储与数据架构 — [module-07-storage-data.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-07-storage-data.md>)
+- [x] 模块 08：后台 RSS 自动化流水线 — [module-08-rss-pipeline.md](</Users/another/Documents/OpenSource/ai-reader/doc/module-08-rss-pipeline.md>)
 *（内容由AI生成，仅供参考）*

@@ -65,7 +65,7 @@ export class SessionChunkCache implements ChunkCacheAPI {
       const key = this.chunkKey(id, i);
       const stored = await this.sessionArea.get(key);
       if (stored[key] !== undefined) {
-        results.push(stored[key]);
+        results.push(stored[key] as string);
       } else {
         // Try IndexedDB fallback
         const fallback = await this.getChunkFallback(id, i);
@@ -98,7 +98,7 @@ export class SessionChunkCache implements ChunkCacheAPI {
   ): Promise<{ totalChunks: number; totalSize: number } | null> {
     const key = this.metaKey(id);
     const stored = await this.sessionArea.get(key);
-    return stored[key] ?? null;
+    return (stored[key] as { totalChunks: number; totalSize: number } | undefined) ?? null;
   }
 
   // ─── IndexedDB Fallback ─────────────────────────────────────────
