@@ -238,6 +238,23 @@ export interface PageResult<T> {
   nextOffset: number;
 }
 
+// ─── PageRecord ────────────────────────────────────────────────────────────────
+
+export interface PageContent {
+  rawText: string;
+  wordCount: number;
+}
+
+export interface PageRecord {
+  id: string;           // hashUrl(url) 的前 16 位 hex
+  url: string;          // 规范化后的原始 URL
+  title: string;
+  favicon: string;
+  timestamp: number;    // Unix ms，最后更新时间
+  content: PageContent;
+  conversationId: string; // 关联的 conversations.id
+}
+
 export type PersistedStoreId = 'ui' | 'context' | 'settings' | 'conversation';
 
 export const STORE_KEYS: Record<PersistedStoreId, string> = {

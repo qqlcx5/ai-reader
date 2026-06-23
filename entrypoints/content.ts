@@ -28,7 +28,7 @@ export default defineContentScript({
     'chrome-extension://*/*',
   ],
   async main() {
-    console.log('[AI Reader] Content script loaded on', location.href);
+    console.log('[ReadChat Clipper] Content script loaded on', location.href);
 
     browser.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
       handleMessage(message as ExtractRequest | ChunkRequest)

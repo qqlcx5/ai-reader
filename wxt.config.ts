@@ -4,8 +4,8 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'],
   manifest: {
-    name: 'AI Reader',
-    description: 'AI-powered web page reader with multi-model workspace, workflows, and RSS.',
+    name: 'ReadChat Clipper',
+    description: 'Clip any page, chat with AI — per-page, always local.',
     permissions: [
       'storage',
       'tabs',

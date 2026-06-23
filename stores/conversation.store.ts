@@ -61,6 +61,17 @@ export const useConversationStore = defineStore(
       currentMessages.value = messages.items;
     }
 
+    async function loadByUrl(url: string): Promise<string | undefined> {
+      const { pageRepo, hashUrl } = await import('@/modules/storage/repositories/page.repo');
+      const pageId = await hashUrl(url);
+      const page = await pageRepo.findById(pageId);
+      if (page) {
+        await loadConversation(page.conversationId);
+        return page.conversationId;
+      }
+      return undefined;
+    }
+
     function reset() {
       currentConversationId.value = undefined;
       currentMessages.value = [];
@@ -72,6 +83,7 @@ export const useConversationStore = defineStore(
       currentMessages,
       isLoading,
       loadConversation,
+      loadByUrl,
       createConversation,
       addUserMessage,
       appendModelResponse,

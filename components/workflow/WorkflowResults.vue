@@ -55,7 +55,7 @@ async function saveToHistory() {
       conversationId: conv.id,
       role: 'assistant',
       parentId: userMsg.id,
-      content: null,
+      content: undefined,
       modelResponses,
     });
     await conversationRepo.update(conv.id, {

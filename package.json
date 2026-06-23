@@ -35,6 +35,7 @@
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-vue": "^6.0.7",
     "@wxt-dev/module-vue": "^1.0.3",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.9",

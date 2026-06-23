@@ -4,3 +4,4 @@ export { conversationRepo, ConversationRepository } from './repositories/convers
 export { messageRepo, MessageRepository } from './repositories/message.repo';
 export { workflowTemplateRepo, WorkflowTemplateRepository } from './repositories/workflow-template.repo';
 export { getChunkCache, resetChunkCache, ChromeSessionChunkCache, MemoryChunkCache } from './chunk-cache';
+export { pageRepo, normalizeUrl, hashUrl } from './repositories/page.repo';

@@ -19,6 +19,8 @@ import {
   toObsidianOptions,
   type WebDAVClient,
 } from '@/lib/export';
+import { exportJson, exportZipWithPages } from '@/lib/export/manual-export';
+import { importBackup, extractBackupFromZip, type MergeStrategy } from '@/lib/export/import';
 
 const store = useSettingsStore();
 const { settings } = storeToRefs(store);
@@ -105,6 +107,70 @@ function formatLastBackup(at?: number): string {
 }
 
 const obsidianReady = computed(() => Boolean(exportConfig.value.obsidianVault));
+
+// ─── Manual JSON/ZIP export ───────────────────────────────────────────
+const exportingJson = ref(false);
+const exportingZip = ref(false);
+
+async function onExportJson() {
+  exportingJson.value = true;
+  try {
+    await exportJson();
+  } finally {
+    exportingJson.value = false;
+  }
+}
+
+async function onExportZipFull() {
+  exportingZip.value = true;
+  try {
+    await exportZipWithPages();
+  } finally {
+    exportingZip.value = false;
+  }
+}
+
+// ─── Import ──────────────────────────────────────────────────────────
+const importFile = ref<File | null>(null);
+const mergeStrategy = ref<MergeStrategy>('skip');
+const importStats = ref<ImportStats | null>(null);
+const importing = ref(false);
+const importError = ref('');
+
+interface ImportStats {
+  pages: { imported: number; skipped: number; errors: number };
+  conversations: { imported: number; skipped: number };
+  messages: { imported: number; skipped: number };
+}
+
+function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  importFile.value = input.files?.[0] ?? null;
+  importStats.value = null;
+  importError.value = '';
+}
+
+async function handleImport() {
+  if (!importFile.value) return;
+  importing.value = true;
+  importStats.value = null;
+  importError.value = '';
+  try {
+    let json: string;
+    if (importFile.value.name.endsWith('.zip')) {
+      const buf = await importFile.value.arrayBuffer();
+      json = await extractBackupFromZip(buf);
+    } else {
+      json = await importFile.value.text();
+    }
+    const data = JSON.parse(json) as unknown;
+    importStats.value = await importBackup(data, mergeStrategy.value);
+  } catch (err) {
+    importError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    importing.value = false;
+  }
+}
 </script>
 
 <template>
@@ -251,6 +317,79 @@ const obsidianReady = computed(() => Boolean(exportConfig.value.obsidianVault));
         <span v-if="exportError" class="status status--err">{{ exportError }}</span>
       </div>
     </section>
+
+    <!-- Full export (JSON + ZIP with pages) -->
+    <section class="block">
+      <header class="block__head">
+        <h3 class="block__title">完整备份（含页面快照）</h3>
+        <span class="block__hint">导出包含 pages 快照的完整备份，直接触发浏览器下载</span>
+      </header>
+      <div class="block__actions">
+        <IconButton :disabled="exportingJson" label="导出 JSON" @click="onExportJson">
+          {{ exportingJson ? '导出中…' : '导出 JSON' }}
+        </IconButton>
+        <IconButton :disabled="exportingZip" label="导出 ZIP" @click="onExportZipFull">
+          {{ exportingZip ? '打包中…' : '导出 ZIP' }}
+        </IconButton>
+      </div>
+    </section>
+
+    <!-- Import / Restore -->
+    <section class="block">
+      <header class="block__head">
+        <h3 class="block__title">导入恢复</h3>
+        <span class="block__hint">选择 .json 或 .zip 备份文件进行恢复</span>
+      </header>
+      <div class="field">
+        <label class="field__label">备份文件</label>
+        <input
+          class="field__input"
+          type="file"
+          accept=".json,.zip"
+          @change="onFileChange"
+        />
+      </div>
+      <div class="import-strategies">
+        <label class="toggle">
+          <input
+            type="radio"
+            name="mergeStrategy"
+            value="skip"
+            :checked="mergeStrategy === 'skip'"
+            @change="mergeStrategy = 'skip'"
+          />
+          <span class="toggle__label">跳过重复（保留本地）</span>
+        </label>
+        <label class="toggle">
+          <input
+            type="radio"
+            name="mergeStrategy"
+            value="overwrite"
+            :checked="mergeStrategy === 'overwrite'"
+            @change="mergeStrategy = 'overwrite'"
+          />
+          <span class="toggle__label">覆盖本地</span>
+        </label>
+      </div>
+      <div class="block__actions">
+        <IconButton :disabled="importing || !importFile" label="开始导入" @click="handleImport">
+          {{ importing ? '导入中…' : '开始导入' }}
+        </IconButton>
+      </div>
+      <div v-if="importError" class="status status--err">{{ importError }}</div>
+      <div v-if="importStats" class="import-result">
+        <div class="status status--ok">导入完成</div>
+        <div class="status status--muted">
+          页面：导入 {{ importStats.pages.imported }} / 跳过 {{ importStats.pages.skipped }} / 错误 {{ importStats.pages.errors }}
+        </div>
+        <div class="status status--muted">
+          会话：导入 {{ importStats.conversations.imported }} / 跳过 {{ importStats.conversations.skipped }}
+        </div>
+        <div class="status status--muted">
+          消息：导入 {{ importStats.messages.imported }} / 跳过 {{ importStats.messages.skipped }}
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -370,5 +509,18 @@ const obsidianReady = computed(() => Boolean(exportConfig.value.obsidianVault));
   width: 16px;
   height: 16px;
   accent-color: var(--primary);
+}
+
+.import-strategies {
+  display: flex;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.import-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 </style>

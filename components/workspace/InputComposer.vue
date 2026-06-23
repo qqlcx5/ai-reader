@@ -81,6 +81,11 @@ watch(
 function updateSelected(ids: string[]) {
   emit('update:selectedProviderIds', ids);
 }
+
+function sendQuick(prompt: string) {
+  text.value = prompt;
+  nextTick(() => onSend());
+}
 </script>
 
 <template>
@@ -129,14 +134,20 @@ function updateSelected(ids: string[]) {
       <button
         type="button"
         class="composer__shortcut"
-        @click="emit('shortcut', { type: 'roundtable' })"
-      >圆桌交锋</button>
+        @click="sendQuick('请用中文总结这篇文章的核心要点，用 3-5 条 bullet points 格式输出。')"
+      >总结</button>
       <span class="muted-light">·</span>
       <button
         type="button"
         class="composer__shortcut"
-        @click="emit('shortcut', { type: 'relay' })"
-      >串联接力</button>
+        @click="sendQuick('请将以上页面内容翻译成中文，保留段落结构。')"
+      >翻译</button>
+      <span class="muted-light">·</span>
+      <button
+        type="button"
+        class="composer__shortcut"
+        @click="sendQuick('请提取这篇文章的核心论点和关键概念，用清单格式列出。')"
+      >提取要点</button>
     </div>
   </div>
 </template>

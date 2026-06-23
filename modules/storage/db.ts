@@ -5,6 +5,7 @@ import {
   type RssFeedRecord,
   type RssItemRecord,
   type WorkflowTemplateRecord,
+  type PageRecord,
 } from './types';
 
 /**
@@ -29,6 +30,7 @@ export class AiReaderDB extends Dexie {
   rssItems!: EntityTable<RssItemRecord, 'id'>;
   rssFeeds!: EntityTable<RssFeedRecord, 'id'>;
   workflowTemplates!: EntityTable<WorkflowTemplateRecord, 'id'>;
+  pages!: EntityTable<PageRecord, 'id'>;
 
   constructor(name = 'AiReaderDB') {
     super(name);
@@ -80,6 +82,16 @@ export class AiReaderDB extends Dexie {
       rssItems: 'id, [feedId+pubDate], isRead, hash, isSummarized',
       rssFeeds: 'id, url, enabled, lastFetchedAt',
       workflowTemplates: 'id, type, name, builtIn, updatedAt',
+    });
+
+    // Version 6: add URL-keyed pages table for per-page conversation binding.
+    this.version(6).stores({
+      conversations: 'id, updatedAt, title, mode',
+      messages: 'id, [conversationId+createdAt], parentId, createdAt',
+      rssItems: 'id, [feedId+pubDate], isRead, hash, isSummarized',
+      rssFeeds: 'id, url, enabled, lastFetchedAt',
+      workflowTemplates: 'id, type, name, builtIn, updatedAt',
+      pages: 'id, url, conversationId, timestamp',
     });
 
     this.open().catch((err) => {

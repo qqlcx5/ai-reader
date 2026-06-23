@@ -5,11 +5,14 @@ import ContextStatusBar from './ContextStatusBar.vue';
 import ChatWorkspace from '@/components/workspace/ChatWorkspace.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
+import { useConversationStore } from '@/stores/conversation.store';
 import LoadingDots from '@/components/shared/LoadingDots.vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
+import { getOrCreateSession, updatePageContent } from '@/utils/page-session';
 
 const ui = useUiStore();
 const ctx = useContextStore();
+const conversation = useConversationStore();
 
 const loading = ref(false);
 
@@ -70,6 +73,21 @@ async function extractViaScripting(tabId: number): Promise<boolean> {
   return false;
 }
 
+async function bindPageSession(c: { url?: string; title?: string; fullText?: string }) {
+  if (!c.url) return;
+  try {
+    const session = await getOrCreateSession(c.url, c.title || '', '');
+    await conversation.loadConversation(session.conversationId);
+    if (c.fullText) {
+      await updatePageContent(session.pageId, c.fullText);
+    } else if (!c.fullText && session.existingContent?.rawText) {
+      ctx.setContext({ fullText: session.existingContent.rawText, rawText: session.existingContent.rawText });
+    }
+  } catch (err) {
+    console.warn('[sidepanel] page-session bind error:', err);
+  }
+}
+
 async function refresh() {
   loading.value = true;
   try {
@@ -78,12 +96,21 @@ async function refresh() {
     console.log('[sidepanel] refresh tabId:', tabId);
 
     if (tabId) {
-      if (await extractViaScripting(tabId).catch(() => false)) return;
+      if (await extractViaScripting(tabId).catch(() => false)) {
+        await bindPageSession(ctx.currentContext);
+        return;
+      }
     }
 
-    if (await extractViaBackground()) return;
+    if (await extractViaBackground()) {
+      await bindPageSession(ctx.currentContext);
+      return;
+    }
 
-    await extractFromStorage();
+    const ok = await extractFromStorage();
+    if (ok) {
+      await bindPageSession(ctx.currentContext);
+    }
   } catch (err) {
     console.warn('[sidepanel] refresh error:', err);
     await extractFromStorage().catch(() => {});

@@ -86,7 +86,7 @@ function onOpenSettings() {
       <header class="popup__head">
         <div class="popup__brand">
           <span class="popup__logo" aria-hidden="true">✦</span>
-          <span class="popup__name">AI Reader</span>
+          <span class="popup__name">ReadChat Clipper</span>
         </div>
         <div class="popup__head-actions">
           <span v-if="!isChromeSidePanelAvailable()" class="popup__hint">Side Panel API 不可用</span>

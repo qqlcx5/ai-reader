@@ -6,11 +6,13 @@ import SyncOptionsPanel from '@/components/export/SyncOptionsPanel.vue';
 import ProviderConfigForm from '@/components/settings/ProviderConfigForm.vue';
 import PromptManager from '@/components/settings/PromptManager.vue';
 import RssConfigPanel from '@/components/settings/RssConfigPanel.vue';
+import PageLibrary from '@/components/history/PageLibrary.vue';
 import { useUiStore } from '@/stores/ui.store';
 
 const ui = useUiStore();
 
 const tabs: NavTab[] = [
+  { id: 'library', label: 'Library', icon: '📚' },
   { id: 'provider', label: 'Provider', icon: '⚡' },
   { id: 'prompts', label: 'Prompts', icon: '✎' },
   { id: 'sync', label: 'Sync', icon: '⇅' },
@@ -31,7 +33,7 @@ function onTabChange(id: string) {
       <header class="options__head surface-glass">
         <div class="options__brand">
           <span class="options__logo" aria-hidden="true">✦</span>
-          <span class="options__title">AI Reader · Settings</span>
+          <span class="options__title">ReadChat Clipper · Settings</span>
         </div>
         <div class="options__theme">
           <button
@@ -49,7 +51,8 @@ function onTabChange(id: string) {
           <NavTabs v-model="activeTab" :tabs="tabs" size="md" @change="onTabChange" />
         </div>
         <section class="options__panel surface">
-          <ProviderConfigForm v-if="activeTab === 'provider'" />
+          <PageLibrary v-if="activeTab === 'library'" />
+          <ProviderConfigForm v-else-if="activeTab === 'provider'" />
           <PromptManager v-else-if="activeTab === 'prompts'" />
           <SyncOptionsPanel v-else-if="activeTab === 'sync'" />
           <RssConfigPanel v-else-if="activeTab === 'rss'" />
