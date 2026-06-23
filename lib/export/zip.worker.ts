@@ -1,38 +1,95 @@
 /**
- * M6 — Zip export Web Worker.
+ * M7 — Zip export Web Worker (full backup structure).
  *
- * The worker pulls conversations / messages / settings from Dexie and
- * packages them as a zip using jszip. We offload the work so that
- * 1GB+ exports don't block the main UI thread.
+ * Receives a full snapshot from the main thread and packages it as:
+ *   backup-{timestamp}/
+ *     index.json                 all conversation metadata
+ *     articles/{pageId}.md       per-conversation context snapshot (Markdown)
+ *     chats/{pageId}.json        per-conversation full chat JSON
+ *     highlights.json            all highlight records
+ *     templates.json             prompt templates
+ *     rss-feeds.json             RSS feed configs
  *
- * Vite picks this file up via the `new Worker(new URL(...), { type: 'module' })`
- * pattern used by `zip.ts`.
+ * Progress: postMessage({ type:'progress', progress: 0–1, file: filename })
+ * Done:     postMessage({ type:'done', blob, filename })
+ * Error:    postMessage({ type:'error', message })
  */
 /// <reference lib="webworker" />
 
 import JSZip from 'jszip';
-import type { Settings } from '@/modules/storage/types';
-import type { Conversation, Message } from './view-models';
 
 declare const self: DedicatedWorkerGlobalScope;
 
-export interface ZipInput {
-  conversations: Conversation[];
-  messages: Message[];
-  settings: Settings;
+// ─── Input types (plain serialisable shapes, no Dexie imports) ───────────────
+
+export interface ConvData {
+  id: string;
+  title: string;
+  preview?: string;
+  createdAt: number;
+  updatedAt: number;
+  mode: string;
+  activeProviderIds?: string[];
+  messageCount?: number;
 }
+
+export interface MsgData {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant' | 'system';
+  content?: string;
+  modelResponses?: { providerId: string; modelId?: string; content: string }[];
+  createdAt: number;
+}
+
+export interface HighlightData {
+  id: string;
+  pageId: string;
+  selector: string;
+  text: string;
+  style: string;
+  createdAt: number;
+  url?: string;
+  domain?: string;
+}
+
+export interface TemplateData {
+  id: string;
+  name: string;
+  content: string;
+  mode?: string;
+}
+
+export interface RssFeedData {
+  id: string;
+  url: string;
+  title?: string;
+  enabled?: boolean;
+  lastFetchedAt?: number;
+}
+
+export interface ZipAllInput {
+  conversations: ConvData[];
+  messages: MsgData[];
+  highlights: HighlightData[];
+  templates: TemplateData[];
+  rssFeeds: RssFeedData[];
+}
+
+// ─── Output message types ────────────────────────────────────────────────────
 
 export interface ZipProgress {
   type: 'progress';
-  processed: number;
-  total: number;
+  /** 0–1 fraction of work completed */
+  progress: number;
+  /** Human-readable label for the currently processed file */
+  file: string;
 }
 
 export interface ZipDone {
   type: 'done';
   blob: Blob;
   filename: string;
-  totalSize: number;
 }
 
 export interface ZipError {
@@ -42,77 +99,94 @@ export interface ZipError {
 
 export type ZipMessage = ZipProgress | ZipDone | ZipError;
 
-self.addEventListener('message', async (event: MessageEvent<ZipInput>) => {
+// ─── Worker handler ───────────────────────────────────────────────────────────
+
+self.addEventListener('message', async (event: MessageEvent<ZipAllInput>) => {
   try {
-    const { conversations, messages, settings } = event.data;
+    const { conversations, messages, highlights, templates, rssFeeds } = event.data;
     const zip = new JSZip();
 
-    const manifest = {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      generator: 'ai-reader',
-      counts: {
-        conversations: conversations.length,
-        messages: messages.length,
-      },
-    };
-    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const root = `backup-${timestamp}`;
 
-    // Conversations as a single JSON array (small enough to be one file).
-    zip.file('conversations.json', JSON.stringify(conversations, null, 2));
+    // Total work units: fixed files + 1 per conversation (covers articles + chats together)
+    const FIXED_FILES = 4; // index, highlights, templates, rss-feeds
+    const total = FIXED_FILES + conversations.length;
+    let done = 0;
 
-    // Messages: use JSONL so we can stream large datasets. Each line is a
-    // full Message object. We deliberately drop the `id` field — it can
-    // be regenerated on re-import to avoid PK collisions.
-    const messageLines: string[] = [];
-    for (let i = 0; i < messages.length; i++) {
-      const m = messages[i];
-      messageLines.push(JSON.stringify(m));
-      if (i % 200 === 0) {
-        const msg: ZipProgress = { type: 'progress', processed: i, total: messages.length };
-        self.postMessage(msg);
-      }
+    function progress(file: string) {
+      done++;
+      const msg: ZipProgress = { type: 'progress', progress: done / total, file };
+      self.postMessage(msg);
     }
-    zip.file('messages.jsonl', messageLines.join('\n'));
 
-    // Settings: strip API keys unless the user explicitly opted in via
-    // `exportConfig.includeApiKeys`.
-    const includeKeys = settings.exportConfig?.includeApiKeys === true;
-    const safeSettings: Settings = includeKeys
-      ? settings
-      : {
-          ...settings,
-          providers: settings.providers.map((p) => ({ ...p, apiKey: '' })),
-        };
-    zip.file('settings.json', JSON.stringify(safeSettings, null, 2));
+    // ── index.json ──────────────────────────────────────────────────────────
+    zip.file(`${root}/index.json`, JSON.stringify(conversations, null, 2));
+    progress('index.json');
 
-    const blob = await zip.generateAsync(
-      { type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } },
-      (meta) => {
-        const msg: ZipProgress = {
-          type: 'progress',
-          processed: meta.percent,
-          total: 100,
-        };
-        self.postMessage(msg);
-      },
-    );
+    // ── articles/{pageId}.md & chats/{pageId}.json ──────────────────────────
+    const msgByConv = new Map<string, MsgData[]>();
+    for (const m of messages) {
+      const list = msgByConv.get(m.conversationId) ?? [];
+      list.push(m);
+      msgByConv.set(m.conversationId, list);
+    }
+
+    for (const conv of conversations) {
+      const convMsgs = msgByConv.get(conv.id) ?? [];
+      zip.file(`${root}/articles/${conv.id}.md`, buildArticleMd(conv, convMsgs));
+      zip.file(`${root}/chats/${conv.id}.json`, JSON.stringify({ conversation: conv, messages: convMsgs }, null, 2));
+      progress(`chats/${conv.id}.json`);
+    }
+
+    // ── highlights.json ─────────────────────────────────────────────────────
+    zip.file(`${root}/highlights.json`, JSON.stringify(highlights, null, 2));
+    progress('highlights.json');
+
+    // ── templates.json ──────────────────────────────────────────────────────
+    zip.file(`${root}/templates.json`, JSON.stringify(templates, null, 2));
+    progress('templates.json');
+
+    // ── rss-feeds.json ──────────────────────────────────────────────────────
+    zip.file(`${root}/rss-feeds.json`, JSON.stringify(rssFeeds, null, 2));
+    progress('rss-feeds.json');
+
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
 
     const date = new Date().toISOString().split('T')[0];
-    const filename = `ai-reader-export-${date}.zip`;
-    const done: ZipDone = {
-      type: 'done',
-      blob,
-      filename,
-      totalSize: blob.size,
-    };
-    self.postMessage(done);
+    const doneMsg: ZipDone = { type: 'done', blob, filename: `readchat-backup-${date}.zip` };
+    self.postMessage(doneMsg);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const error: ZipError = { type: 'error', message };
-    self.postMessage(error);
+    self.postMessage({ type: 'error', message } satisfies ZipError);
   }
 });
 
-// Mark as a module for tooling; not consumed at runtime.
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildArticleMd(conv: ConvData, msgs: MsgData[]): string {
+  const lines: string[] = [
+    `# ${conv.title}`,
+    '',
+    `- mode: ${conv.mode}`,
+    `- created: ${new Date(conv.createdAt).toISOString()}`,
+    `- updated: ${new Date(conv.updatedAt).toISOString()}`,
+    '',
+  ];
+
+  // Include the first system message as the article context snapshot
+  const systemMsg = msgs.find((m) => m.role === 'system');
+  if (systemMsg?.content) {
+    lines.push('## Context Snapshot', '', systemMsg.content.trim(), '');
+  } else if (conv.preview) {
+    lines.push('## Preview', '', conv.preview.trim(), '');
+  }
+
+  return lines.join('\n');
+}
+
 export {};

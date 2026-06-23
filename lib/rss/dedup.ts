@@ -1,48 +1,41 @@
 /**
- * M8 — Hash-based deduplication.
+ * M9 哈希去重
  *
- * Computes a stable hash from (feedId + title + link) so that the same
- * article fetched multiple times is only stored once. The hash uses a
- * deterministic string-based approach (no crypto dependency needed).
+ * computeArticleId: SHA-256(article.link) → 64 位 hex 字符串
+ * filterNewArticles: 过滤已存在文章，仅返回新文章
  */
-import type { DedupInput } from './types';
+
+import type { RawArticle } from './types'
 
 /**
- * Compute a stable dedup hash for an RSS item.
- *
- * Uses FNV-1a-inspired 32-bit hash for fast, collision-resistant
- * fingerprinting. Hex-encoded to 8 characters for compact storage.
+ * 计算文章唯一 ID：SHA-256(article.link) → hex
+ * 与 RSSArticleRecord.id 保持一致。
  */
-export function computeItemHash(input: DedupInput): string {
-  const raw = `${input.feedId}:${input.title}:${input.link}`;
-  return fnv1a32(raw).toString(16).padStart(8, '0');
+export async function computeArticleId(article: { link: string }): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(article.link)
+  const buffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(buffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /**
- * FNV-1a 32-bit hash.
+ * 过滤新文章：仅返回 ID 不在 existing Set 中的文章。
+ *
+ * @param fetched  从 RSS 源抓取的原始文章列表
+ * @param existing 已存储文章 ID 的 Set（来自 RSSFeedRecord.articles）
  */
-function fnv1a32(str: string): number {
-  let hash = 0x811c9dc5; // FNV offset basis
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    // FNV prime: 0x01000193 (32-bit)
-    hash = Math.imul(hash, 0x01000193);
+export async function filterNewArticles(
+  fetched: RawArticle[],
+  existing: Set<string>,
+): Promise<RawArticle[]> {
+  const results: RawArticle[] = []
+  for (const article of fetched) {
+    const id = await computeArticleId(article)
+    if (!existing.has(id)) {
+      results.push(article)
+    }
   }
-  return hash >>> 0; // ensure unsigned
-}
-
-/**
- * Filter out items whose hash already exists in the store.
- *
- * `existingHashes` is a Set of hashes already present in `rssItems`.
- * Returns only the items that are genuinely new.
- */
-export function filterNewItems<T extends DedupInput>(
-  candidates: T[],
-  existingHashes: Set<string>,
-): T[] {
-  return candidates.filter((item) => {
-    const hash = computeItemHash(item);
-    return !existingHashes.has(hash);
-  });
+  return results
 }

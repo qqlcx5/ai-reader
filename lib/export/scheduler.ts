@@ -46,7 +46,7 @@ export function computeNextDelay(now: Date, hour: number, minute: number): numbe
 }
 
 interface ChromeAlarmsApi {
-  create(name: string, options: { delayInMinutes: number }): Promise<void> | void;
+  create(name: string, options: { delayInMinutes?: number; periodInMinutes?: number }): Promise<void> | void;
   clear(name: string): Promise<boolean> | boolean;
 }
 
@@ -71,7 +71,7 @@ function getAlarmsApi(): ChromeAlarmsApi | null {
 
 export async function scheduleAutoBackup(
   config: ExportConfig,
-  options: { hour?: number; minute?: number; now?: Date } = {},
+  options: { hour?: number; minute?: number; now?: Date; useRecurring?: boolean } = {},
 ): Promise<void> {
   const alarms = getAlarmsApi();
   if (!alarms) return;
@@ -79,12 +79,21 @@ export async function scheduleAutoBackup(
     await alarms.clear(AUTO_BACKUP_ALARM);
     return;
   }
+
+  const intervalDays = config.autoBackupIntervalDays ?? 7;
+  const periodInMinutes = intervalDays * 24 * 60;
+
+  // Use periodInMinutes for recurring alarm (default for auto-backup: every 7 days)
+  // delayInMinutes is set so the first fire aligns with the configured daily time.
   const now = options.now ?? new Date();
-  // M7 stores a 24h interval; we map to a daily time using a default of 02:00.
-  const hour = options.hour ?? 2;
-  const minute = options.minute ?? 0;
+  const hour = options.hour ?? config.autoBackupHour ?? 2;
+  const minute = options.minute ?? config.autoBackupMinute ?? 0;
   const delayInMinutes = computeNextDelay(now, hour, minute);
-  await alarms.create(AUTO_BACKUP_ALARM, { delayInMinutes });
+
+  await alarms.create(AUTO_BACKUP_ALARM, {
+    delayInMinutes,
+    periodInMinutes,
+  });
 }
 
 export async function cancelAutoBackup(): Promise<void> {

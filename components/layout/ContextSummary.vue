@@ -9,7 +9,7 @@ const ctx = useContextStore();
 const ui = useUiStore();
 
 const wordCount = computed(() => {
-  const text = ctx.currentContext.fullText || ctx.currentContext.excerpt || '';
+  const text = ctx.currentContext?.fullText || ctx.currentContext?.excerpt || '';
   const cjk = (text.match(/[\u4e00-\u9fff]/g) || []).length;
   const words = (text.match(/[A-Za-z]+/g) || []).length;
   return cjk + words;
@@ -17,14 +17,14 @@ const wordCount = computed(() => {
 
 const host = computed(() => {
   try {
-    return ctx.currentContext.url ? new URL(ctx.currentContext.url).hostname : '';
+    return ctx.currentContext?.url ? new URL(ctx.currentContext.url).hostname : '';
   } catch {
     return '';
   }
 });
 
 
-const hasContext = computed(() => Boolean(ctx.currentContext.url));
+const hasContext = computed(() => Boolean(ctx.currentContext?.url));
 </script>
 
 <template>
@@ -32,7 +32,7 @@ const hasContext = computed(() => Boolean(ctx.currentContext.url));
     <div class="ctx-summary__head">
       <div class="ctx-summary__title-row">
         <span class="ctx-summary__icon" aria-hidden="true">📄</span>
-        <span class="ctx-summary__title">{{ ctx.currentContext.title || '未提取页面' }}</span>
+        <span class="ctx-summary__title">{{ ctx.currentContext?.title || '未提取页面' }}</span>
       </div>
       <span v-if="hasContext" class="ctx-summary__badge">
         <span class="dot" aria-hidden="true"></span>
@@ -50,7 +50,7 @@ const hasContext = computed(() => Boolean(ctx.currentContext.url));
       </div>
       <div class="ctx-summary__row">
         <span class="label">提取模式</span>
-        <span class="value">{{ ctx.currentContext.mode || 'full' }}</span>
+        <span class="value">{{ ctx.currentContext?.mode || ctx.mode || 'full' }}</span>
       </div>
     </div>
     <div v-else class="ctx-summary__empty muted">

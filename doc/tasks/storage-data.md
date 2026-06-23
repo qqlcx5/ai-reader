@@ -8,8 +8,8 @@
 
 ## 1. 依赖安装与数据库初始化
 
-- [ ] 安装：`dexie`、`dexie-cloud-addon`（可选，用于后期云端扩展）
-- [ ] 实现 `lib/db/database.ts`：
+- [x] 安装：`dexie`、`dexie-cloud-addon`（可选，用于后期云端扩展）
+- [x] 实现 `lib/db/database.ts`：
   ```typescript
   const db = new Dexie('ReadChatClipper')
   db.version(1).stores({
@@ -20,14 +20,14 @@
     Templates:     'id, createdAt',
   })
   ```
-- [ ] 导出 `db` 单例，所有 Repository 通过此单例访问
-- [ ] 数据库升级策略：版本号 + `upgrade()` 迁移函数（预留 v2 schema 扩展位）
+- [x] 导出 `db` 单例，所有 Repository 通过此单例访问
+- [x] 数据库升级策略：版本号 + `upgrade()` 迁移函数（预留 v2 schema 扩展位）
 
 ---
 
 ## 2. 核心接口类型定义
 
-- [ ] 实现 `lib/db/types.ts`，定义所有 TypeScript 接口：
+- [x] 实现 `lib/db/types.ts`，定义所有 TypeScript 接口：
 
   ```typescript
   // 主表 Conversations（元数据，查询 < 5ms）
@@ -123,7 +123,7 @@
 
 ## 3. 主表 Repository（Conversations）
 
-- [ ] 实现 `lib/db/repositories/conversation.repo.ts`
+- [x] 实现 `lib/db/repositories/conversation.repo.ts`
   - `create(record: ConversationRecord): Promise<void>`
   - `findById(id: string): Promise<ConversationRecord | undefined>`
   - `list(options: { sortBy: 'updatedAt' | 'domain'; limit: number; offset: number }): Promise<ConversationRecord[]>`
@@ -136,21 +136,21 @@
 
 ## 4. 副表 Repository（Messages）
 
-- [ ] 实现 `lib/db/repositories/message.repo.ts`
+- [x] 实现 `lib/db/repositories/message.repo.ts`
   - `save(record: MessageRecord): Promise<void>`（upsert）
   - `loadById(id: string): Promise<MessageRecord | undefined>`（懒加载，仅按 ID 查询）
   - `appendMessage(id: string, msg: ChatMessage): Promise<void>`（追加单条消息）
   - `deleteMessage(id: string, msgId: string): Promise<void>`
   - `truncateAfter(id: string, msgId: string): Promise<void>`（截断某消息之后的所有消息）
   - `delete(id: string): Promise<void>`
-- [ ] **严禁**在此 Repo 提供批量扫描接口（防止在列表页误用）
+- [x] **严禁**在此 Repo 提供批量扫描接口（防止在列表页误用）
 - [ ] 单元测试：追加 100 条消息后按 ID 懒加载，验证数据完整
 
 ---
 
 ## 5. Highlights Repository
 
-- [ ] 实现 `lib/db/repositories/highlight.repo.ts`
+- [x] 实现 `lib/db/repositories/highlight.repo.ts`
   - `saveHighlight(record: HighlightRecord): Promise<void>`
   - `listByPageId(pageId: string): Promise<HighlightRecord[]>`
   - `listByDomain(domain: string): Promise<HighlightRecord[]>`
@@ -161,7 +161,7 @@
 
 ## 6. Templates Repository
 
-- [ ] 实现 `lib/db/repositories/template.repo.ts`
+- [x] 实现 `lib/db/repositories/template.repo.ts`
   - `seedDefaultTemplates(): Promise<void>`（首次安装写入 6 个内置模板，跳过已存在）
   - `create / update / delete / listAll / findById`
   - `matchByUrl(url: string): Promise<TemplateRecord | null>`（正则匹配 URL 触发规则）
@@ -171,7 +171,7 @@
 
 ## 7. RSS Repository
 
-- [ ] 实现 `lib/db/repositories/rss.repo.ts`
+- [x] 实现 `lib/db/repositories/rss.repo.ts`
   - `saveFeed(feed: RSSFeedRecord): Promise<void>`
   - `updateArticles(feedId: string, articles: RSSArticleRecord[]): Promise<void>`（哈希去重合并）
   - `markAsRead(feedId: string, articleId: string): Promise<void>`
@@ -182,12 +182,12 @@
 
 ## 8. Pinia Store 与持久化
 
-- [ ] 安装 `pinia`、`@pinia/nuxt`（若使用 Nuxt）或直接集成到 Vue 3
-- [ ] 实现 `stores/settings.store.ts`：
+- [x] 安装 `pinia`、`@pinia/nuxt`（若使用 Nuxt）或直接集成到 Vue 3
+- [x] 实现 `stores/settings.store.ts`：
   - 存储 Provider 配置列表、全局代理开关、API Key（通过 key-store 读写）
   - 使用 `chrome.storage.local` 序列化（Pinia `$subscribe` + `setItem`）
   - Popup 与 Side Panel 共享同一份 settings 状态
-- [ ] 实现 `stores/context.store.ts`：
+- [x] 实现 `stores/context.store.ts`：
   - `currentContext: ExtractionResult | null`（当前锚定页面的提取结果）
   - `currentPageId: string | null`
   - 跨 Tab 切换时保持不变（静默锚定）
@@ -196,17 +196,17 @@
 
 ## 9. 三级缓存实现
 
-- [ ] **L1 内存缓存**（`lib/db/cache/l1-cache.ts`）：
+- [x] **L1 内存缓存**（`lib/db/cache/l1-cache.ts`）：
   - LRU Map，容量 20 条
   - `get(key: string): T | undefined`
   - `set(key: string, value: T): void`（超容量时淘汰最久未用）
   - Key 格式：`extraction:{pageId}` / `apiResponse:{queryHash}`
-- [ ] **L2 持久化缓存**（`lib/db/cache/l2-cache.ts`，IndexedDB）：
+- [x] **L2 持久化缓存**（`lib/db/cache/l2-cache.ts`，IndexedDB）：
   - 相同 URL 的提取结果（`ExtractionResult`）TTL 24h
   - 命中 L2 时跳过提取，直接返回缓存，节省 2～8s
   - `get(pageId): CacheEntry | null`（校验 TTL）
   - `set(pageId, result, ttlMs = 86400000): void`
-- [ ] **L3 API 响应缓存**（`lib/db/cache/l3-cache.ts`，IndexedDB）：
+- [x] **L3 API 响应缓存**（`lib/db/cache/l3-cache.ts`，IndexedDB）：
   - Key = `SHA-256(pageId + prompt + model)`（Content Hash）
   - `get(hash): string | null`
   - `set(hash, responseText): void`
@@ -217,12 +217,12 @@
 
 ## 10. API Key 明文存储（chrome.storage.local）
 
-- [ ] 实现 `lib/db/key-store.ts`：
+- [x] 实现 `lib/db/key-store.ts`：
   - `saveKey(providerId: string, apiKey: string): Promise<void>`
   - `getKey(providerId: string): Promise<string | null>`
   - `deleteKey(providerId: string): Promise<void>`
   - `listConfiguredProviders(): Promise<string[]>`（仅返回已配置 API Key 的 Provider ID）
-- [ ] 确认 API Key 不写入 IndexedDB（仅 `chrome.storage.local`）
+- [x] 确认 API Key 不写入 IndexedDB（仅 `chrome.storage.local`）
 
 ---
 

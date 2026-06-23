@@ -1,57 +1,47 @@
 /**
- * M8 — Badge updater.
+ * M9 扩展 Badge 未读计数
  *
- * Queries unread RSS items count and sets the extension icon badge.
- * Uses the `browser.action` API (Chrome MV3 / Firefox).
+ * updateBadge(): 查询未读文章数，更新扩展图标 Badge
+ * - 有未读：显示数量，背景色 obsidian-primary #5b60e5
+ * - 全已读：清空 Badge
  */
-import { getDb } from '@/modules/storage/db';
 
-const MAX_BADGE = 99;
-const BADGE_COLOR = '#EF4444';
-
-/**
- * Update the extension icon badge with the number of unread RSS items.
- *
- * Badge text is empty when there are no unread items, and capped at
- * "99+" when the count exceeds the displayable range.
- */
-export async function updateBadge(): Promise<number> {
-  const db = getDb();
-  const unreadCount = await db.rssItems.where('isRead').equals(0).count();
-
-  const text = unreadCount > 0 ? String(Math.min(unreadCount, MAX_BADGE)) : '';
-  const displayCount = unreadCount > MAX_BADGE ? `${MAX_BADGE}+` : text;
-
-  try {
-    const action = getActionApi();
-    if (action) {
-      await action.setBadgeText({ text: displayCount });
-      await action.setBadgeBackgroundColor({ color: BADGE_COLOR });
-    }
-  } catch {
-    // best-effort — badge update is non-critical
-  }
-
-  return unreadCount;
-}
-
-// ─── browser.action abstraction ─────────────────────────────────────────
+import { rssRepo } from '@/lib/db/repositories/rss.repo'
 
 interface ActionApi {
-  setBadgeText(details: { text: string }): Promise<void> | void;
-  setBadgeBackgroundColor(details: { color: string }): Promise<void> | void;
+  setBadgeText(details: { text: string }): Promise<void> | void
+  setBadgeBackgroundColor(details: { color: string }): Promise<void> | void
 }
 
 function getActionApi(): ActionApi | null {
-  const candidates: unknown[] = [];
-  if (typeof browser !== 'undefined') candidates.push(browser);
-  if (typeof chrome !== 'undefined') candidates.push(chrome);
+  const candidates: unknown[] = []
+  if (typeof browser !== 'undefined') candidates.push(browser)
+  if (typeof chrome !== 'undefined') candidates.push(chrome)
   for (const c of candidates) {
-    if (!c || typeof c !== 'object') continue;
-    const action = (c as Record<string, unknown>).action as Partial<ActionApi> | undefined;
+    if (!c || typeof c !== 'object') continue
+    const action = (c as Record<string, unknown>).action as Partial<ActionApi> | undefined
     if (action && typeof action.setBadgeText === 'function') {
-      return action as ActionApi;
+      return action as ActionApi
     }
   }
-  return null;
+  return null
+}
+
+/**
+ * 更新扩展图标 Badge 未读数。
+ * 在每次 Alarm 完成后 + 用户标记已读后调用。
+ */
+export async function updateBadge(): Promise<void> {
+  const count = await rssRepo.getUnreadCount()
+
+  try {
+    const action = getActionApi()
+    if (action) {
+      const text = count > 0 ? String(count) : ''
+      await action.setBadgeText({ text })
+      await action.setBadgeBackgroundColor({ color: '#5b60e5' })
+    }
+  } catch {
+    // Badge API 不可用时静默失败（内容脚本、测试环境等）
+  }
 }

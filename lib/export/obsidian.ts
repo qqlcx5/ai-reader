@@ -1,5 +1,5 @@
 /**
- * M6 — Obsidian URI builder.
+ * M7 — Obsidian URI builder.
  *
  * Obsidian registers the `obsidian://` URL scheme. The `new` action lets
  * a caller pass `vault`, `file`, and `content` as query parameters to
@@ -12,6 +12,79 @@ import {
   PayloadTooLargeError,
   type ObsidianOptions,
 } from './types';
+
+// ─── High-level entry point ───────────────────────────────────────────────────
+
+export interface ObsidianExportRecord {
+  title: string;
+  /** Canonical source URL */
+  url?: string;
+  /** Markdown body (without front-matter) */
+  markdown: string;
+  /** Extraction engine used */
+  engine?: string;
+  /** Source text character count */
+  sourceLength?: number;
+  /** Whether text was truncated */
+  truncation?: boolean;
+  /** Model IDs applied in this conversation */
+  modelsApplied?: string[];
+  /** ISO 8601 creation timestamp */
+  created?: string;
+}
+
+/**
+ * Build full Markdown (YAML front-matter + body) for the given record and
+ * open it in Obsidian via the `obsidian://new` URI scheme.
+ *
+ * Falls back to a `.md` download if the URI would exceed the safe length.
+ *
+ * @param record   — the conversation / article record to export
+ * @param vaultName — Obsidian vault name (from user settings)
+ * @param targetPath — folder path inside the vault (e.g. `AI Reader/`)
+ */
+export function writeToObsidian(
+  record: ObsidianExportRecord,
+  vaultName: string,
+  targetPath = '',
+): void {
+  const content = buildObsidianMarkdown(record);
+  const options: ObsidianOptions = { vault: vaultName, folder: targetPath || undefined };
+  try {
+    const uri = buildSafeObsidianUri(record.title, content, options);
+    openObsidianUri(uri);
+  } catch (err) {
+    if (err instanceof PayloadTooLargeError) {
+      // URI too long — fall back to a local .md download
+      downloadAsMarkdown(sanitizeFileName(record.title), content);
+    } else {
+      throw err;
+    }
+  }
+}
+
+/** Build Markdown with YAML front-matter for Obsidian export. */
+export function buildObsidianMarkdown(record: ObsidianExportRecord): string {
+  const fm: string[] = [
+    '---',
+    `title: ${fmEscape(record.title)}`,
+  ];
+  if (record.url) fm.push(`source: ${fmEscape(record.url)}`);
+  if (record.sourceLength != null) fm.push(`source_length: ${record.sourceLength}`);
+  if (record.engine) fm.push(`engine: ${record.engine}`);
+  if (record.truncation != null) fm.push(`truncation: ${record.truncation}`);
+  if (record.modelsApplied?.length)
+    fm.push(`models_applied: [${record.modelsApplied.map((m) => `"${m}"`).join(', ')}]`);
+  if (record.created) fm.push(`created: ${record.created}`);
+  fm.push('---', '');
+  return fm.join('\n') + record.markdown;
+}
+
+function fmEscape(value: string): string {
+  if (!value) return '""';
+  const needsQuote = /[:#\[\]{},&*?|>'"]/.test(value) || /\n/.test(value);
+  return needsQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : value;
+}
 
 /** Build a `obsidian://new?vault=...&file=...&content=...` URI. */
 export function buildObsidianUri(

@@ -1,261 +1,175 @@
 /**
- * M8 — RSS fetcher & parser.
+ * M9 RSS 拉取器
  *
- * Fetches an RSS/Atom/JSON Feed URL and parses it into `ParsedItem[]`.
- * No external dependencies — uses DOMParser for XML feeds and
- * JSON.parse for JSON Feed. Timeout defaults to 30s.
+ * fetchFeed(url): 获取并解析 RSS 2.0 / Atom 1.0 XML，超时 10s。
+ * 返回 RawFeedData { feedTitle, feedUrl, items: RawArticle[] }
  */
-import type { ParsedItem, FetchResult } from './types';
-import type { RssFeedRecord } from './types';
 
-const FETCH_TIMEOUT_MS = 30_000;
-const MAX_ITEMS_PER_FETCH = 200;
+import type { RawArticle, RawFeedData } from './types'
+
+const MAX_ITEMS = 200
 
 /**
- * Fetch and parse a single RSS feed.
- *
- * Supports:
- *   - RSS 2.0 (`<rss><channel><item>`)
- *   - Atom (`<feed><entry>`)
- *   - JSON Feed (application/feed+json / .json)
+ * 拉取并解析一个 RSS/Atom 订阅源。
+ * 使用 AbortSignal.timeout(10000) 保证 10s 超时。
  */
-export async function fetchFeed(feed: RssFeedRecord): Promise<FetchResult> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+export async function fetchFeed(url: string): Promise<RawFeedData> {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(10000),
+    headers: {
+      Accept: 'application/rss+xml, application/atom+xml, text/xml, application/xml, */*',
+    },
+  })
 
-    const response = await fetch(feed.url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'AI-Reader/1.0',
-        Accept: 'application/rss+xml, application/atom+xml, application/feed+json, application/json, text/xml, */*',
-      },
-    });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    const text = await response.text();
-
-    let items: ParsedItem[];
-
-    if (isJsonFeed(contentType, text)) {
-      items = parseJsonFeed(text);
-    } else {
-      items = parseXmlFeed(text);
-    }
-
-    // Trim to a reasonable limit.
-    items = items.slice(0, MAX_ITEMS_PER_FETCH);
-
-    return { feed, items };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return {
-      feed,
-      items: [],
-      error: {
-        code: err instanceof DOMException && err.name === 'AbortError' ? 'TIMEOUT' : 'FETCH_ERROR',
-        message,
-      },
-    };
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`)
   }
+
+  const text = await response.text()
+  return parseXml(url, text)
 }
 
-function isJsonFeed(contentType: string, text: string): boolean {
-  if (contentType.includes('json') || contentType.includes('feed+json')) return true;
-  // Heuristic: check if the body starts with `{`
-  return text.trimStart().startsWith('{');
-}
+// ─── XML 解析 ────────────────────────────────────────────────────────────────
 
-// ─── JSON Feed ──────────────────────────────────────────────────────────
+function parseXml(url: string, text: string): RawFeedData {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(text, 'application/xml')
 
-interface JsonFeed {
-  items: Array<{
-    title?: string;
-    url?: string;
-    external_url?: string;
-    link?: string;
-    content_html?: string;
-    content_text?: string;
-    summary?: string;
-    date_published?: string;
-    date_modified?: string;
-    published?: string;
-  }>;
-}
-
-function parseJsonFeed(text: string): ParsedItem[] {
-  const data = JSON.parse(text) as JsonFeed;
-  return (data.items ?? []).map((item) => {
-    const link = item.url || item.external_url || item.link || '';
-    const content = item.content_html || item.content_text || item.summary || '';
-    const dateStr = item.date_published || item.date_modified || item.published || '';
-    return {
-      title: item.title || 'Untitled',
-      link,
-      pubDate: dateStr ? new Date(dateStr) : new Date(),
-      content,
-    };
-  });
-}
-
-// ─── XML Feed (RSS 2.0 / Atom) ─────────────────────────────────────────
-
-function parseXmlFeed(text: string): ParsedItem[] {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(text, 'text/xml');
-
-  // Check for parse errors — jsdom returns a <parsererror> element.
-  const parseError = doc.querySelector('parsererror');
+  const parseError = doc.querySelector('parsererror')
   if (parseError) {
-    // DOMParser failed (common with namespace prefixes in jsdom).
-    // Fall back to regex-based extraction.
-    return parseWithRegex(text);
+    return parseWithRegex(url, text)
   }
 
-  // Detect feed format.
-  const rssRoot = doc.querySelector('rss');
+  const rssRoot = doc.querySelector('rss')
   if (rssRoot) {
-    return parseRss2(doc);
+    return parseRss2(url, doc)
   }
 
-  const atomRoot = doc.querySelector('feed');
+  const atomRoot = doc.querySelector('feed')
   if (atomRoot) {
-    return parseAtom(doc);
+    return parseAtom(url, doc)
   }
 
-  // Fallback: try RSS 2.0 (some feeds omit the <rss> wrapper).
-  return parseRss2(doc);
+  return parseRss2(url, doc)
 }
 
-/**
- * Regex-based XML parser fallback for environments where DOMParser
- * can't handle namespace prefixes (e.g. jsdom without XML support).
- * Handles RSS 2.0 and Atom feeds.
- */
-function parseWithRegex(text: string): ParsedItem[] {
-  // Try RSS 2.0 first: look for <item> blocks.
-  const rssItems = extractBlocks(text, 'item');
+function parseRss2(url: string, doc: Document): RawFeedData {
+  const feedTitle = textContent(doc.documentElement, 'channel > title') || url
+  const items = doc.querySelectorAll('channel > item')
+  const rawItems: RawArticle[] = []
+
+  items.forEach((item) => {
+    const title = textContent(item, 'title') || 'Untitled'
+    const link = textContent(item, 'link') || textContent(item, 'guid') || ''
+    const description = textContent(item, 'description') || ''
+    const pubDateStr = textContent(item, 'pubDate')
+    const author = textContent(item, 'author') || textContent(item, 'dc\\:creator') || ''
+
+    rawItems.push({
+      title: title.trim(),
+      link: link.trim(),
+      description,
+      pubDate: parseDate(pubDateStr),
+      author: author.trim() || undefined,
+    })
+  })
+
+  return { feedTitle, feedUrl: url, items: rawItems.slice(0, MAX_ITEMS) }
+}
+
+function parseAtom(url: string, doc: Document): RawFeedData {
+  const feedTitle = textContent(doc.documentElement, 'title') || url
+  const entries = doc.querySelectorAll('feed > entry')
+  const rawItems: RawArticle[] = []
+
+  entries.forEach((entry) => {
+    const title = textContent(entry, 'title') || 'Untitled'
+    const linkEl = entry.querySelector('link[href]')
+    const link = linkEl?.getAttribute('href') || textContent(entry, 'link') || ''
+    const description =
+      textContent(entry, 'content') ||
+      textContent(entry, 'summary') ||
+      ''
+    const published =
+      textContent(entry, 'published') ||
+      textContent(entry, 'updated') ||
+      ''
+    const author = textContent(entry, 'author > name') || ''
+
+    rawItems.push({
+      title: title.trim(),
+      link: link.trim(),
+      description,
+      pubDate: parseDate(published),
+      author: author.trim() || undefined,
+    })
+  })
+
+  return { feedTitle, feedUrl: url, items: rawItems.slice(0, MAX_ITEMS) }
+}
+
+// ─── 正则表达式降级解析 ───────────────────────────────────────────────────────
+
+function parseWithRegex(url: string, text: string): RawFeedData {
+  const feedTitleMatch = /<title[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i.exec(text)
+  const feedTitle = feedTitleMatch ? feedTitleMatch[1].trim() : url
+
+  const rssItems = extractBlocks(text, 'item')
   if (rssItems.length > 0) {
-    return rssItems.map((block) => ({
+    const items = rssItems.slice(0, MAX_ITEMS).map((block) => ({
       title: extractTag(block, 'title') || 'Untitled',
       link: extractTag(block, 'link') || extractTag(block, 'guid') || '',
+      description: extractTag(block, 'description') || extractTag(block, 'content:encoded') || '',
       pubDate: parseDate(extractTag(block, 'pubDate')),
-      content:
-        extractTag(block, 'description') ||
-        extractTag(block, 'content:encoded') ||
-        '',
-    }));
+      author: extractTag(block, 'author') || extractTag(block, 'dc:creator') || undefined,
+    }))
+    return { feedTitle, feedUrl: url, items }
   }
 
-  // Try Atom: look for <entry> blocks.
-  const atomEntries = extractBlocks(text, 'entry');
+  const atomEntries = extractBlocks(text, 'entry')
   if (atomEntries.length > 0) {
-    return atomEntries.map((block) => ({
+    const items = atomEntries.slice(0, MAX_ITEMS).map((block) => ({
       title: extractTag(block, 'title') || 'Untitled',
       link: extractHref(block) || '',
-      pubDate: parseDate(
-        extractTag(block, 'published') || extractTag(block, 'updated'),
-      ),
-      content:
-        extractTag(block, 'content') || extractTag(block, 'summary') || '',
-    }));
+      description: extractTag(block, 'content') || extractTag(block, 'summary') || '',
+      pubDate: parseDate(extractTag(block, 'published') || extractTag(block, 'updated')),
+      author: extractTag(block, 'name') || undefined,
+    }))
+    return { feedTitle, feedUrl: url, items }
   }
 
-  return [];
+  return { feedTitle, feedUrl: url, items: [] }
 }
 
-/** Extract the inner content of the first match for a tag name. */
+// ─── 工具函数 ─────────────────────────────────────────────────────────────────
+
+function textContent(parent: Element | Document, selector: string): string {
+  const el = parent.querySelector(selector)
+  return el?.textContent?.trim() ?? ''
+}
+
 function extractTag(xml: string, tagName: string): string {
-  // Match <tag>...</tag> or <tag ...>...</tag> (greedy inner content).
   const regex = new RegExp(
     `<${tagName}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tagName}>`,
     'i',
-  );
-  const match = regex.exec(xml);
-  return match ? match[1].trim() : '';
+  )
+  const match = regex.exec(xml)
+  return match ? match[1].trim() : ''
 }
 
-/** Extract top-level blocks (e.g. <item>, <entry>) from the XML. */
 function extractBlocks(text: string, tag: string): string[] {
-  const regex = new RegExp(
-    `<${tag}[\\s>][\\s\\S]*?<\\/${tag}>`,
-    'gi',
-  );
-  return [...text.matchAll(regex)].map((m) => m[0]);
+  const regex = new RegExp(`<${tag}[\\s>][\\s\\S]*?<\\/${tag}>`, 'gi')
+  return [...text.matchAll(regex)].map((m) => m[0])
 }
 
-/** Extract the href attribute from the first <link> inside a block. */
 function extractHref(block: string): string {
-  const match = /<link[^>]+href=["']([^"']+)["']/i.exec(block);
-  if (match) return match[1];
-  // Some Atom feeds use <link>text</link> instead of href attribute.
-  return extractTag(block, 'link');
+  const match = /<link[^>]+href=["']([^"']+)["']/i.exec(block)
+  if (match) return match[1]
+  return extractTag(block, 'link')
 }
 
-function parseRss2(doc: Document): ParsedItem[] {
-  const items = doc.querySelectorAll('channel > item');
-  const results: ParsedItem[] = [];
-
-  items.forEach((itemEl) => {
-    const title = textContent(itemEl, 'title') || 'Untitled';
-    const link = textContent(itemEl, 'link') || textContent(itemEl, 'guid') || '';
-    const content =
-      textContent(itemEl, 'description') ||
-      '';
-    const pubDate = textContent(itemEl, 'pubDate');
-
-    results.push({
-      title: title.trim(),
-      link: link.trim(),
-      pubDate: pubDate ? parseDate(pubDate) : new Date(),
-      content,
-    });
-  });
-
-  return results;
-}
-
-function parseAtom(doc: Document): ParsedItem[] {
-  const entries = doc.querySelectorAll('feed > entry');
-  const results: ParsedItem[] = [];
-
-  entries.forEach((entryEl) => {
-    const title = textContent(entryEl, 'title') || 'Untitled';
-    const linkEl = entryEl.querySelector('link[href]');
-    const link = linkEl?.getAttribute('href') || '';
-    const content =
-      textContent(entryEl, 'content') ||
-      textContent(entryEl, 'summary') ||
-      '';
-    const published =
-      textContent(entryEl, 'published') ||
-      textContent(entryEl, 'updated') ||
-      '';
-
-    results.push({
-      title: title.trim(),
-      link,
-      pubDate: published ? parseDate(published) : new Date(),
-      content,
-    });
-  });
-
-  return results;
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────
-
-function textContent(parent: Element, selector: string): string {
-  const el = parent.querySelector(selector);
-  return el?.textContent?.trim() ?? '';
-}
-
-function parseDate(str: string): Date {
-  const d = new Date(str);
-  return isNaN(d.getTime()) ? new Date() : d;
+function parseDate(str: string): number {
+  if (!str) return Date.now()
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? Date.now() : d.getTime()
 }

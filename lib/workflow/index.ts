@@ -26,3 +26,42 @@ export {
   validateTemplate,
   assertValidForRun,
 } from './templates';
+
+// Variable resolver
+export {
+  extractVariableNames,
+  validateTemplateVars,
+  resolveVariables,
+} from './variable-resolver';
+export type { PageContext, ResolveOptions } from './variable-resolver';
+
+// Filters
+export { FILTERS, FILTER_NAMES } from './filters';
+export type { FilterFn } from './filters';
+
+// Filter pipeline
+export {
+  parseFilterToken,
+  parseFilters,
+  applyFilterChain,
+  runFilterPipeline,
+  FilterError,
+} from './filter-pipeline';
+export type { ParsedFilter } from './filter-pipeline';
+
+// Template manager (prompt templates)
+export {
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  listTemplates,
+  getTemplate,
+  matchTemplate,
+  matchTemplateBySchema,
+  exportTemplates,
+  downloadTemplatesJson,
+  importTemplates,
+  syncTemplatesToStorage,
+  loadTemplatesFromStorage,
+  seedDefaultTemplates,
+} from './template-manager';

@@ -1,53 +1,24 @@
 /**
- * M8 — RSS Pipeline types.
+ * M9 RSS 自动化流水线 — 核心运行时类型
  *
- * Runtime types used by the RSS scheduler, fetcher, dedup, summarizer,
- * and badge modules. The on-disk representation is the M7
- * `RssFeedRecord` / `RssItemRecord`; this module reuses those field
- * names for consistency.
+ * RawArticle / RawFeedData: fetcher 解析后的中间结构
+ * （持久化类型见 lib/db/types.ts RSSFeedRecord / RSSArticleRecord）
  */
-import type { RssFeedRecord, RssItemRecord } from '@/modules/storage/types';
 
-// Re-export for convenience — consumers import from here.
-export type { RssFeedRecord, RssItemRecord };
-
-/** A parsed feed entry before any storage mapping. */
-export interface ParsedItem {
-  title: string;
-  link: string;
-  pubDate: Date;
-  content: string;
+/** 从 RSS/Atom 源解析出的单篇文章（持久化之前的中间格式） */
+export interface RawArticle {
+  title: string
+  link: string
+  /** HTML 或纯文本描述，用于 AI 摘要生成 */
+  description: string
+  /** Unix 时间戳（毫秒） */
+  pubDate: number
+  author?: string
 }
 
-/** Result of a single feed fetch + parse cycle. */
-export interface FetchResult {
-  feed: RssFeedRecord;
-  items: ParsedItem[];
-  error?: { code: string; message: string };
-}
-
-/** Hash parameters used for dedup computation. */
-export interface DedupInput {
-  feedId: string;
-  title: string;
-  link: string;
-}
-
-/** Options controlling the AI summarization step. */
-export interface SummarizerOptions {
-  enabled: boolean;
-  providerId: string;
-  timeoutMs?: number;
-}
-
-/** A single pending summary request. */
-export interface SummaryJob {
-  itemId: string;
-  title: string;
-  content: string;
-}
-
-/** Statistics for the badge update. */
-export interface BadgeStats {
-  unreadCount: number;
+/** fetchFeed() 的返回值 */
+export interface RawFeedData {
+  feedTitle: string
+  feedUrl: string
+  items: RawArticle[]
 }

@@ -1,110 +1,52 @@
 /**
- * M8 — AI summarizer.
+ * M9 AI 后台摘要生成
  *
- * Generates a 3-sentence summary for each new RSS item using a
- * lightweight LLM provider (M3). Runs in a serial queue to avoid
- * concurrent API cost spikes. Summarization is opt-in (default off)
- * to prevent unexpected billing.
+ * summarizeArticle: 使用 M3 IEngine 静默生成 3 句话摘要
+ * - 超时 30s
+ * - 失败降级：返回 description.slice(0, 200)
+ * - 后台静默执行，不弹任何 UI
  */
-import type { SummaryJob, SummarizerOptions } from './types';
-import type { ProviderConfig as M3ProviderConfig } from '@/modules/provider/types';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const MAX_CONTENT_LENGTH = 8000;
-
-const SUMMARY_PROMPT = '请用 3 句话总结这篇文章的核心观点。';
+import type { RawArticle } from './types'
+import type { IEngine } from '@/lib/providers/types'
 
 /**
- * Summarize a single RSS item using the configured provider.
+ * 为单篇文章生成 AI 摘要。
  *
- * Returns the summary string, or null if summarization fails
- * (caller should mark the item as `isSummarized = false`).
+ * @param article  原始文章
+ * @param engine   M3 IEngine 实例
+ * @param apiKey   API Key
+ * @param model    模型名称（如 'gpt-4o-mini'）
  */
-export async function summarizeItem(
-  job: SummaryJob,
-  options: SummarizerOptions,
-): Promise<string | null> {
-  if (!options.enabled) return null;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-  );
+export async function summarizeArticle(
+  article: RawArticle,
+  engine: IEngine,
+  apiKey: string,
+  model: string,
+): Promise<string> {
+  const prompt = `请用 3 句话（不超过 200 字）概括以下文章内容：\n\n${article.description}`
+  let summary = ''
 
   try {
-    const { createProvider } = await import('@/modules/provider/factory');
-    const { useSettingsStore } = await import('@/stores/settings.store');
-    const store = useSettingsStore();
-
-    // Find the provider config by ID.
-    const storeProvider = store.settings.providers.find(
-      (p) => p.id === options.providerId,
-    );
-    if (!storeProvider) {
-      // eslint-disable-next-line no-console
-      console.warn(`[rss:summarizer] provider ${options.providerId} not found`);
-      return null;
-    }
-
-    // The provider factory expects `model` (required). M7 stores
-    // `defaultModel` — use that as the model name.
-    const providerConfig: M3ProviderConfig = {
-      ...storeProvider,
-      model: storeProvider.defaultModel ?? 'gpt-4o-mini',
-    } as M3ProviderConfig;
-    const provider = createProvider(providerConfig);
-    let summary = '';
-
-    await provider.chatStream(
-      {
-        providerId: options.providerId,
-        signal: controller.signal,
-        messages: [
-          {
-            role: 'user',
-            content: `${SUMMARY_PROMPT}\n\n标题：${job.title}\n\n正文：${truncate(job.content, MAX_CONTENT_LENGTH)}`,
-          },
-        ],
+    await engine.chatStream({
+      messages: [{ role: 'user', content: prompt }],
+      model: model || 'gpt-4o-mini',
+      apiKey,
+      signal: AbortSignal.timeout(30000),
+      onDelta: (text) => {
+        summary += text
       },
-      (event) => {
-        if (event.type === 'delta') {
-          summary += event.content;
+      onMetrics: () => {},
+      onError: (err) => {
+        if (!err.retryable) {
+          console.warn('[rss:summarizer] engine error', err.message)
         }
       },
-    );
+    })
 
-    return summary.trim() || null;
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('[rss:summarizer] failed', err instanceof Error ? err.message : err);
-    return null;
-  } finally {
-    clearTimeout(timeout);
+    const result = summary.trim()
+    return result.length > 0 ? result : article.description.slice(0, 200)
+  } catch {
+    return article.description.slice(0, 200)
   }
-}
-
-/**
- * Process a batch of summary jobs serially.
- *
- * Returns a map of itemId → summary (or absent if summarization failed).
- */
-export async function summarizeBatch(
-  jobs: SummaryJob[],
-  options: SummarizerOptions,
-): Promise<Map<string, string>> {
-  const results = new Map<string, string>();
-
-  for (const job of jobs) {
-    const summary = await summarizeItem(job, options);
-    if (summary) {
-      results.set(job.itemId, summary);
-    }
-  }
-
-  return results;
-}
-
-function truncate(str: string, maxLen: number): string {
-  return str.length > maxLen ? str.slice(0, maxLen) : str;
 }

@@ -62,7 +62,7 @@ const extContext = computed<ExtractedContext | null>(() => {
   if (ignoreContext.value) return null;
   if (props.context !== undefined) return props.context;
   const c = ctx.currentContext;
-  if (!c.url) return null;
+  if (!c?.url) return null;
   return {
     url: c.url,
     title: c.title,

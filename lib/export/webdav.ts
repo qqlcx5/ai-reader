@@ -31,6 +31,20 @@ async function loadModule(): Promise<typeof import('webdav')> {
   return mod;
 }
 
+/**
+ * Create a client and verify connectivity in one step.
+ * Returns `true` if the server responded to a PROPFIND on `backupPath`.
+ */
+export async function testConnection(options: WebDAVOptions): Promise<boolean> {
+  const client = createWebDAVClient(options);
+  try {
+    await client.stat(options.backupPath || '/');
+    return true;
+  } catch (err) {
+    throw mapWebDAVError(err);
+  }
+}
+
 export function createWebDAVClient(options: WebDAVOptions): WebDAVClient {
   // The factory is async; we expose a thin proxy that loads the module on
   // first use. This keeps the public surface synchronous for callers.

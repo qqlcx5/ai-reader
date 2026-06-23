@@ -38,6 +38,24 @@
   --toast-fg: #f5f4ef;
   --modal-overlay: rgba(0, 0, 0, 0.35);
 
+  /* Obsidian aliases — mirror the canonical tokens above */
+  --obsidian-bg: var(--bg);
+  --obsidian-panel: var(--panel);
+  --obsidian-card: var(--card);
+  --obsidian-border: var(--border);
+  --obsidian-borderStrong: var(--border-strong);
+  --obsidian-text: var(--text);
+  --obsidian-muted: var(--muted);
+  --obsidian-mutedLight: var(--muted-light);
+  --obsidian-primary: var(--primary);
+  --obsidian-primarySoft: var(--primary-soft);
+  --obsidian-green: var(--green);
+  --obsidian-greenSoft: var(--green-soft);
+  --obsidian-orange: var(--orange);
+  --obsidian-orangeSoft: var(--orange-soft);
+  --obsidian-red: var(--red);
+  --obsidian-redSoft: var(--red-soft);
+
   /* Spacing scale */
   --space-1: 4px;
   --space-2: 6px;
@@ -238,3 +256,150 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
+/* ─── Markdown content area ──────────────────────────────────────────────── */
+
+.markdown-content {
+  color: var(--text);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.markdown-content h1 {
+  font-size: var(--fs-base);
+  font-weight: 800;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.markdown-content h2 {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  margin: 12px 0 6px;
+  color: var(--text);
+}
+
+.markdown-content h3 {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  margin: 10px 0 4px;
+  color: var(--text);
+}
+
+.markdown-content p {
+  margin: 0 0 8px;
+  font-size: var(--fs-xs);
+  line-height: 1.65;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  font-size: var(--fs-xs);
+  line-height: 1.65;
+}
+
+.markdown-content ul {
+  list-style: disc;
+}
+
+.markdown-content ol {
+  list-style: decimal;
+}
+
+.markdown-content li {
+  margin-bottom: 2px;
+}
+
+.markdown-content pre {
+  font-size: var(--fs-11);
+  font-family: var(--font-mono);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+
+.markdown-content code {
+  font-size: var(--fs-11);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: var(--bg);
+  color: var(--primary);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.markdown-content pre code {
+  background: none;
+  color: var(--text);
+  padding: 0;
+  font-weight: 400;
+}
+
+.markdown-content blockquote {
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  border-left: 3px solid var(--primary);
+  background: var(--primary-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+
+.markdown-content a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.markdown-content strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.markdown-content em {
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* ─── Streaming typing cursor ─────────────────────────────────────────────── */
+
+.typing-cursor::after {
+  content: '▋';
+  display: inline;
+  color: var(--primary);
+  animation: typing-pulse 1s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes typing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ─── Obsidian utility classes ───────────────────────────────────────────── */
+
+.bg-obsidian-bg       { background: var(--bg); }
+.bg-obsidian-panel    { background: var(--panel); }
+.bg-obsidian-card     { background: var(--card); }
+.bg-obsidian-primary  { background: var(--primary); }
+.bg-obsidian-primarySoft { background: var(--primary-soft); }
+.bg-obsidian-greenSoft   { background: var(--green-soft); }
+.bg-obsidian-orangeSoft  { background: var(--orange-soft); }
+.bg-obsidian-redSoft     { background: var(--red-soft); }
+
+.text-obsidian-text    { color: var(--text); }
+.text-obsidian-muted   { color: var(--muted); }
+.text-obsidian-primary { color: var(--primary); }
+.text-obsidian-green   { color: var(--green); }
+.text-obsidian-orange  { color: var(--orange); }
+.text-obsidian-red     { color: var(--red); }
+
+.border-obsidian-border       { border-color: var(--border); }
+.border-obsidian-borderStrong { border-color: var(--border-strong); }
+.border-obsidian-primary      { border-color: var(--primary); }

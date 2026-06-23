@@ -1,28 +1,17 @@
 /**
- * M8 — Public surface for the RSS pipeline module.
+ * M9 RSS 自动化流水线 — 公共导出
  */
-export * from './types';
-export {
-  computeItemHash,
-  filterNewItems,
-} from './dedup';
-export {
-  fetchFeed,
-} from './fetcher';
-export {
-  scheduleAllFeeds,
-  clearRssAlarms,
-  parseRssAlarmName,
-  RSS_ALARM_PREFIX,
-} from './scheduler';
-export {
-  summarizeItem,
-  summarizeBatch,
-} from './summarizer';
-export {
-  updateBadge,
-} from './badge';
-export {
-  runFeedPipeline,
-  type PipelineResult,
-} from './pipeline';
+
+export type { RawArticle, RawFeedData } from './types'
+
+export { fetchFeed } from './fetcher'
+
+export { computeArticleId, filterNewArticles } from './dedup'
+
+export { summarizeArticle } from './summarizer'
+
+export { initAlarm, handleAlarm, saveRssConfig, loadConfig, RSS_ALARM_NAME } from './scheduler'
+
+export { updateBadge } from './badge'
+
+export { generateBriefing, checkShouldShowBriefing, markBriefingShown } from './daily-briefing'

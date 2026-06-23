@@ -6,6 +6,7 @@ import {
   type RssItemRecord,
   type WorkflowTemplateRecord,
 } from './types';
+import type { HighlightRecord } from '@/lib/extraction/types';
 
 /**
  * M7 Storage & Data Layer — Dexie database
@@ -29,6 +30,8 @@ export class AiReaderDB extends Dexie {
   rssItems!: EntityTable<RssItemRecord, 'id'>;
   rssFeeds!: EntityTable<RssFeedRecord, 'id'>;
   workflowTemplates!: EntityTable<WorkflowTemplateRecord, 'id'>;
+  /** M2 — Highlight records, indexed by pageId and domain */
+  highlights!: EntityTable<HighlightRecord, 'id'>;
 
   constructor(name = 'AiReaderDB') {
     super(name);
@@ -80,6 +83,17 @@ export class AiReaderDB extends Dexie {
       rssItems: 'id, [feedId+pubDate], isRead, hash, isSummarized',
       rssFeeds: 'id, url, enabled, lastFetchedAt',
       workflowTemplates: 'id, type, name, builtIn, updatedAt',
+    });
+
+    // Version 6 (M2): add Highlights table for persistent highlight storage.
+    // Indexed by pageId (for per-page queries) and domain (for grouped export).
+    this.version(6).stores({
+      conversations: 'id, updatedAt, title, mode',
+      messages: 'id, [conversationId+createdAt], parentId, createdAt',
+      rssItems: 'id, [feedId+pubDate], isRead, hash, isSummarized',
+      rssFeeds: 'id, url, enabled, lastFetchedAt',
+      workflowTemplates: 'id, type, name, builtIn, updatedAt',
+      highlights: 'id, pageId, domain, createdAt',
     });
 
     this.open().catch((err) => {

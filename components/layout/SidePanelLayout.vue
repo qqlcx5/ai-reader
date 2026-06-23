@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import ThemeProvider from './ThemeProvider.vue';
 import ContextStatusBar from './ContextStatusBar.vue';
+import ExtractionStatusBar from './ExtractionStatusBar.vue';
 import ChatWorkspace from '@/components/workspace/ChatWorkspace.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
@@ -13,21 +14,23 @@ const ctx = useContextStore();
 
 const loading = ref(false);
 
-function setContextFromExtraction(c: { title?: string; url?: string; fullText?: string }) {
-  const fullText = c.fullText || '';
+function setContextFromExtraction(c: Record<string, string | number>) {
+  const fullText = String(c.fullText || '');
   ctx.setContext({
-    title: c.title || '',
-    url: c.url || '',
+    title: String(c.title || ''),
+    url: String(c.url || ''),
     excerpt: fullText.slice(0, 600),
     fullText,
     rawText: fullText,
+    wordCount: typeof c.wordCount === 'number' ? c.wordCount : 0,
+    engine: (c.engine as 'readability' | 'defuddle' | 'fallback') || 'fallback',
     mode: 'full',
   });
 }
 
 function extractFromStorage(): Promise<boolean> {
   return chrome.storage.local.get('_extraction_result').then((r) => {
-    const data = r._extraction_result as Record<string, string> | undefined;
+    const data = r._extraction_result as Record<string, string | number> | undefined;
     if (data?.fullText) { setContextFromExtraction(data); return true; }
     return false;
   });
@@ -36,9 +39,15 @@ function extractFromStorage(): Promise<boolean> {
 async function extractViaBackground(): Promise<boolean> {
   try {
     const resp = await browser.runtime.sendMessage({ type: 'TRIGGER_EXTRACTION' }) as
-      { ok: boolean; title?: string; url?: string; fullText?: string } | undefined;
+      { ok: boolean; title?: string; url?: string; fullText?: string; engine?: string; wordCount?: number } | undefined;
     if (resp?.ok && resp.fullText) {
-      setContextFromExtraction({ title: resp.title, url: resp.url, fullText: resp.fullText });
+      setContextFromExtraction({
+        title: resp.title || '',
+        url: resp.url || '',
+        fullText: resp.fullText,
+        engine: resp.engine || 'fallback',
+        wordCount: resp.wordCount ?? 0,
+      });
       return true;
     }
   } catch {}
@@ -62,7 +71,12 @@ async function extractViaScripting(tabId: number): Promise<boolean> {
     });
     const data = result?.result;
     if (data?.content && data.content.length >= 50) {
-      setContextFromExtraction({ title: data.title, url: data.url, fullText: data.content });
+      setContextFromExtraction({
+        title: data.title,
+        url: data.url,
+        fullText: data.content,
+        engine: 'fallback',
+      });
       await chrome.storage.local.set({ _extraction_result: data, mode: 'full' }).catch(() => {});
       return true;
     }
@@ -75,14 +89,11 @@ async function refresh() {
   try {
     const tabs = await browser.tabs.query({ active: true, lastFocusedWindow: true });
     const tabId = tabs[0]?.id;
-    console.log('[sidepanel] refresh tabId:', tabId);
 
     if (tabId) {
       if (await extractViaScripting(tabId).catch(() => false)) return;
     }
-
     if (await extractViaBackground()) return;
-
     await extractFromStorage();
   } catch (err) {
     console.warn('[sidepanel] refresh error:', err);
@@ -102,7 +113,7 @@ function listenForExtraction() {
     if (area !== 'local') return;
     const data = changes._extraction_result?.newValue;
     if (data && typeof data === 'object' && (data as Record<string, string>).fullText) {
-      setContextFromExtraction(data as Record<string, string>);
+      setContextFromExtraction(data as Record<string, string | number>);
     }
   });
 }
@@ -110,7 +121,7 @@ function listenForExtraction() {
 async function loadExistingExtraction() {
   try {
     const r = await chrome.storage.local.get('_extraction_result');
-    const data = r._extraction_result as Record<string, string> | undefined;
+    const data = r._extraction_result as Record<string, string | number> | undefined;
     if (data?.fullText) setContextFromExtraction(data);
   } catch {}
 }
@@ -125,19 +136,25 @@ onMounted(() => {
 <template>
   <ThemeProvider>
     <div class="side-panel">
+      <!-- Header: 64px context anchor bar -->
       <ContextStatusBar
         @refresh="refresh"
         @open-history="openHistory"
       />
+
+      <!-- Status bar: 32px extraction info -->
+      <ExtractionStatusBar />
+
+      <!-- Chat view: flex-1, scrollable -->
       <main class="side-panel__main">
         <div v-if="loading" class="side-panel__loading">
           <LoadingDots size="md" />
           <span class="muted">正在提取…</span>
         </div>
         <EmptyState
-          v-else-if="!ctx.currentContext.url"
+          v-else-if="!ctx.currentContext?.url"
           title="还没有页面上下文"
-          description="按 Alt+S 唤起并提取，或点击上方的 ↻ 按钮"
+          description="按 Alt+S 唤起并提取，或点击上方的「提取当前 Tab」按钮"
           icon="✦"
           size="lg"
         />
@@ -145,11 +162,6 @@ onMounted(() => {
           <ChatWorkspace />
         </div>
       </main>
-      <footer class="side-panel__foot">
-        <span class="mono muted">{{ ui.activePanel }}</span>
-        <span class="muted-light">·</span>
-        <span class="muted">{{ ctx.currentContext.mode || 'full' }}</span>
-      </footer>
     </div>
   </ThemeProvider>
 </template>
@@ -160,12 +172,12 @@ onMounted(() => {
   flex-direction: column;
   height: 100vh;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .side-panel__main {
   flex: 1;
   overflow-y: auto;
-  padding: 0 var(--space-3) var(--space-3);
   display: flex;
   flex-direction: column;
 }
@@ -175,49 +187,14 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: var(--space-7);
+  padding: 32px 16px;
   font-size: var(--fs-xs);
+  color: var(--muted);
 }
 
 .side-panel__workspace {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-}
-
-.workspace-placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-card {
-  padding: var(--space-6);
-  text-align: center;
-  max-width: 360px;
-}
-
-.placeholder-title {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  margin-bottom: var(--space-2);
-  color: var(--text);
-}
-
-.placeholder-desc {
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-}
-
-.side-panel__foot {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  font-size: 10px;
-  padding: 6px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--panel);
 }
 </style>
