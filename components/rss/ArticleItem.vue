@@ -18,7 +18,7 @@ const emit = defineEmits<{
   (e: 'startChat', article: RSSArticleRecord): void
 }>()
 
-const relativeTime = computed(() => dayjs(props.article.publishedAt).fromNow())
+const relativeTimeText = computed(() => dayjs(props.article.publishedAt).fromNow())
 
 function onStartChat() {
   emit('markRead', props.article.id)
@@ -60,7 +60,7 @@ function onMarkRead() {
       <div class="article-item__meta">
         <span class="article-item__source">{{ feedTitle }}</span>
         <span class="article-item__sep">·</span>
-        <span class="article-item__time">{{ relativeTime }}</span>
+        <span class="article-item__time">{{ relativeTimeText }}</span>
       </div>
       <button class="article-item__chat-btn" @click.stop="onStartChat">
         以此开启对话

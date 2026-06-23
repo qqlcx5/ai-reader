@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+<script lang="ts">
 export interface NavItem {
   id: string;
   label: string;
@@ -6,7 +6,7 @@ export interface NavItem {
   badge?: number;
 }
 
-const DEFAULT_ITEMS: NavItem[] = [
+export const DEFAULT_ITEMS: NavItem[] = [
   { id: 'chat',      label: '对话',   icon: '💬' },
   { id: 'history',   label: '历史',   icon: '🕐' },
   { id: 'rss',       label: 'RSS',    icon: '📡' },
@@ -14,7 +14,9 @@ const DEFAULT_ITEMS: NavItem[] = [
   { id: 'export',    label: '导出',   icon: '📤' },
   { id: 'settings',  label: '设置',   icon: '⚙' },
 ];
+</script>
 
+<script lang="ts" setup>
 const props = withDefaults(
   defineProps<{
     items?: NavItem[];

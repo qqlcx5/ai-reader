@@ -25,11 +25,7 @@ export default defineConfig({
       'toggle-side-panel': {
         suggested_key: { default: 'Alt+P' },
         description: 'Toggle side panel visibility',
-      },
-      'abort-all-generations': {
-        suggested_key: { default: 'Escape' },
-        description: 'Abort all ongoing AI generations',
-      },
+      }
     },
     side_panel: {
       default_path: 'sidepanel.html',

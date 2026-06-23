@@ -24,7 +24,7 @@ const emit = defineEmits<{
   (e: 'long-press', item: ConversationRecord): void
 }>()
 
-function relativeTime(ts: number): string {
+function formatRelativeTime(ts: number): string {
   return dayjs(ts).fromNow()
 }
 
@@ -92,7 +92,7 @@ function onContextMenu(e: MouseEvent) {
     <div class="history-item__body">
       <div class="history-item__title">{{ item.title || item.url }}</div>
       <div class="history-item__meta">
-        <span class="history-item__time">{{ relativeTime(item.updatedAt) }}</span>
+        <span class="history-item__time">{{ formatRelativeTime(item.updatedAt) }}</span>
         <span class="history-item__sep">·</span>
         <span class="history-item__domain">{{ item.domain }}</span>
       </div>
