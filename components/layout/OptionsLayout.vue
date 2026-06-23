@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed } from 'vue';
 import ThemeProvider from './ThemeProvider.vue';
 import ThreeColumnLayout from './ThreeColumnLayout.vue';
 import BrandHeader from './BrandHeader.vue';
@@ -9,16 +9,27 @@ import ContextStatusBar from './ContextStatusBar.vue';
 import ExtractionStatusBar from './ExtractionStatusBar.vue';
 import ChatWorkspace from '@/components/workspace/ChatWorkspace.vue';
 import LibraryPage from '@/components/library/LibraryPage.vue';
+import SettingsPage from '@/components/settings/SettingsPage.vue';
 import { useUiStore } from '@/stores/ui.store';
 import { useContextStore } from '@/stores/context.store';
 
 const ui = useUiStore();
 const ctx = useContextStore();
 
-const activeRoute = ref<string>('chat');
+/**
+ * 中栏路由：MainNav 的 id（chat/history/rss/workflows/export/settings）
+ * 映射到中栏视图。settings / library 渲染宽屏管理页，其余渲染 ChatWorkspace。
+ *
+ * activeRoute 来源 ui store（持久化，刷新后保留），右栏"前往设置页"按钮
+ * 通过 ui.setRoute('settings') 触发同一份状态。
+ */
+const activeRoute = computed<string>(() => ui.activeRoute || 'home');
 
 function onNavigate(id: string) {
-  activeRoute.value = id;
+  // MainNav id 与 AppRoute 语义对齐：chat → home，其余直接复用
+  const route = id === 'chat' ? 'home' : (id as 'home' | 'history' | 'settings' | 'workflows' | 'rss');
+  ui.setRoute(route);
+  // 同步 panel 状态（影响部分组件的 active 标记）
   if (id === 'chat' || id === 'history') {
     ui.setPanel(id === 'history' ? 'history' : 'chat');
   }
@@ -50,7 +61,7 @@ async function onRefresh() {
       <template #left>
         <BrandHeader />
         <MainNav
-          :active-id="activeRoute"
+          :active-id="activeRoute === 'home' ? 'chat' : activeRoute"
           @navigate="onNavigate"
         />
 
@@ -77,15 +88,16 @@ async function onRefresh() {
       <!-- Center column: main workspace -->
       <template #center>
         <div class="options-center">
-          <!-- Context anchor bar (64px) -->
+          <!-- Context anchor bar (64px) — 全局显示，保持上下文锚定 -->
           <ContextStatusBar @refresh="onRefresh" />
 
           <!-- Extraction status bar (32px) -->
           <ExtractionStatusBar />
 
-          <!-- Chat workspace or Library page -->
+          <!-- Chat workspace / Library / Settings -->
           <div class="options-center__workspace">
-            <LibraryPage v-if="activeRoute === 'library'" />
+            <SettingsPage v-if="activeRoute === 'settings'" />
+            <LibraryPage v-else-if="activeRoute === 'history'" />
             <ChatWorkspace v-else />
           </div>
         </div>

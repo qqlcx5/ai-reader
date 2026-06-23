@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import EmptyState from '@/components/shared/EmptyState.vue';
 import RSSPanel from '@/components/rss/RSSPanel.vue';
 import HistoryList from '@/components/library/HistoryList.vue';
@@ -8,6 +8,10 @@ import type { ConversationRecord } from '@/lib/db/types';
 import { conversationRepo } from '@/lib/db/repositories/conversation.repo';
 import { search as workerSearch } from '@/lib/library/search';
 import type { SearchResult } from '@/lib/library/search';
+import { useSettingsStore } from '@/stores/settings.store';
+import { useUiStore } from '@/stores/ui.store';
+import { getDb } from '@/modules/storage/db';
+import { hasWebDAVConfig } from '@/lib/export';
 
 // ── History panel state ───────────────────────────────────────────────────────
 const historySelectedConv = ref<ConversationRecord | null>(null);
@@ -43,6 +47,35 @@ function onHistorySelect(item: ConversationRecord) {
 function onHistoryContinue(pageId: string) {
   window.dispatchEvent(new CustomEvent('library:continue-conversation', { detail: { pageId } }));
 }
+
+// ── Settings / Export overview state ─────────────────────────────────────────
+const settings = useSettingsStore();
+const ui = useUiStore();
+const feedCount = ref(0);
+
+const providerCount = computed(() => settings.settings.providers.length);
+const promptCount = computed(() => settings.settings.prompts.length);
+const webDAVReady = computed(() => hasWebDAVConfig(settings.settings.exportConfig));
+
+async function refreshFeedCount() {
+  try {
+    feedCount.value = await getDb().rssFeeds.count();
+  } catch {
+    feedCount.value = 0;
+  }
+}
+
+/** 跳转到中栏设置页（可指定初始子 Tab，通过自定义事件传递） */
+function goToSettings(tab?: 'providers' | 'prompts' | 'sync' | 'rss') {
+  ui.setRoute('settings');
+  if (tab) {
+    window.dispatchEvent(new CustomEvent('settings:goto-tab', { detail: { tab } }));
+  }
+}
+
+onMounted(() => {
+  refreshFeedCount();
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -167,44 +200,44 @@ function renderArch(md: string): string {
           <div class="rpt__card-title">导出与同步</div>
           <div class="rpt__setting-row">
             <span class="rpt__setting-label">WebDAV 备份</span>
-            <span class="rpt__setting-status rpt__setting-status--warn">未配置</span>
-          </div>
-          <div class="rpt__setting-row">
-            <span class="rpt__setting-label">S3 存储</span>
-            <span class="rpt__setting-status rpt__setting-status--warn">未配置</span>
-          </div>
-          <div class="rpt__setting-row">
-            <span class="rpt__setting-label">本地导出</span>
-            <button class="rpt__setting-btn">JSON / MD</button>
+            <span class="rpt__setting-status" :class="webDAVReady ? 'rpt__setting-status--ok' : 'rpt__setting-status--warn'">
+              {{ webDAVReady ? '已配置' : '未配置' }}
+            </span>
           </div>
         </div>
+        <button class="rpt__goto-btn" @click="goToSettings('sync')">
+          前往设置页 · 同步备份 →
+        </button>
       </template>
 
-      <!-- Settings -->
+      <!-- Settings (overview + jump to center column) -->
       <template v-else-if="activeTab === 'settings'">
         <div class="rpt__card">
-          <div class="rpt__card-title">Provider 密钥</div>
-          <div class="rpt__field">
-            <label class="rpt__field-label">OpenAI API Key</label>
-            <input type="password" class="rpt__field-input" placeholder="sk-••••••••" autocomplete="off" />
+          <div class="rpt__card-title">设置概览</div>
+          <div class="rpt__overview-grid">
+            <div class="rpt__overview-item" @click="goToSettings('providers')">
+              <span class="rpt__overview-num">{{ providerCount }}</span>
+              <span class="rpt__overview-label">Provider</span>
+            </div>
+            <div class="rpt__overview-item" @click="goToSettings('prompts')">
+              <span class="rpt__overview-num">{{ promptCount }}</span>
+              <span class="rpt__overview-label">模板</span>
+            </div>
+            <div class="rpt__overview-item" @click="goToSettings('sync')">
+              <span class="rpt__overview-num" :class="{ 'rpt__overview-num--warn': !webDAVReady }">
+                {{ webDAVReady ? '✓' : '—' }}
+              </span>
+              <span class="rpt__overview-label">WebDAV</span>
+            </div>
+            <div class="rpt__overview-item" @click="goToSettings('rss')">
+              <span class="rpt__overview-num">{{ feedCount }}</span>
+              <span class="rpt__overview-label">RSS 源</span>
+            </div>
           </div>
-          <div class="rpt__field">
-            <label class="rpt__field-label">Anthropic API Key</label>
-            <input type="password" class="rpt__field-input" placeholder="sk-ant-••••••••" autocomplete="off" />
-          </div>
-          <div class="rpt__field">
-            <label class="rpt__field-label">Gemini API Key</label>
-            <input type="password" class="rpt__field-input" placeholder="AIza••••••••" autocomplete="off" />
-          </div>
-          <button class="rpt__save-btn">保存密钥</button>
         </div>
-        <div class="rpt__card">
-          <div class="rpt__card-title">同步配置</div>
-          <div class="rpt__field">
-            <label class="rpt__field-label">WebDAV 地址</label>
-            <input type="url" class="rpt__field-input" placeholder="https://your-server/dav/" />
-          </div>
-        </div>
+        <button class="rpt__goto-btn" @click="goToSettings()">
+          前往设置页 →
+        </button>
       </template>
 
       <!-- Architecture -->
@@ -342,6 +375,66 @@ function renderArch(md: string): string {
 .rpt__setting-status--ok {
   color: var(--green);
   background: var(--green-soft);
+}
+
+/* Settings overview grid */
+.rpt__overview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.rpt__overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.rpt__overview-item:hover {
+  background: var(--primary-soft);
+  border-color: #d2d6ff;
+}
+
+.rpt__overview-num {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.rpt__overview-num--warn {
+  color: var(--orange);
+}
+
+.rpt__overview-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Go-to-settings button */
+.rpt__goto-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border: 1px solid #d2d6ff;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.rpt__goto-btn:hover {
+  background: #e3e5ff;
 }
 
 .rpt__setting-btn {

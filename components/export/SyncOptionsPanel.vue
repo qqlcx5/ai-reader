@@ -10,6 +10,7 @@ import { computed, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useSettingsStore } from '@/stores/settings.store';
 import IconButton from '@/components/shared/IconButton.vue';
+import ExportProgressModal from '@/components/export/ExportProgressModal.vue';
 import {
   scheduleAutoBackup,
   collectBackupSnapshot,
@@ -75,10 +76,24 @@ async function onToggleAutoBackup(value: boolean) {
 const exporting = ref(false);
 const exportProgress = ref<{ processed: number; total: number } | null>(null);
 const exportError = ref('');
+const exportDone = ref(false);
+
+const progressModalVisible = computed(() => exporting.value || exportDone.value || !!exportError.value);
+const progressFraction = computed(() => {
+  if (!exportProgress.value || exportProgress.value.total === 0) return 0;
+  return exportProgress.value.processed / exportProgress.value.total;
+});
+
+function closeProgressModal() {
+  exportDone.value = false;
+  exportError.value = '';
+  exportProgress.value = null;
+}
 
 async function onExportZip() {
   exporting.value = true;
   exportError.value = '';
+  exportDone.value = false;
   exportProgress.value = null;
   try {
     const snapshot = await collectBackupSnapshot();
@@ -91,11 +106,11 @@ async function onExportZip() {
       },
     });
     downloadZip(result.blob, result.filename);
+    exportDone.value = true;
   } catch (err) {
     exportError.value = err instanceof Error ? err.message : String(err);
   } finally {
     exporting.value = false;
-    exportProgress.value = null;
   }
 }
 
@@ -251,6 +266,15 @@ const obsidianReady = computed(() => Boolean(exportConfig.value.obsidianVault));
         <span v-if="exportError" class="status status--err">{{ exportError }}</span>
       </div>
     </section>
+
+    <!-- Export progress modal -->
+    <ExportProgressModal
+      :visible="progressModalVisible"
+      :progress="progressFraction"
+      :done="exportDone"
+      :error="exportError"
+      @close="closeProgressModal"
+    />
   </div>
 </template>
 

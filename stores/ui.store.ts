@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 
 export type Panel = 'chat' | 'history' | 'rss' | 'settings';
 
-export type AppRoute = 'home' | 'history' | 'settings' | 'workflows';
+export type AppRoute = 'home' | 'history' | 'settings' | 'workflows' | 'rss';
 export type Theme = 'light' | 'dark';
 
 export interface CurrentContextMeta {

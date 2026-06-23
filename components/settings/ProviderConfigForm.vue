@@ -1,12 +1,17 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import { useSettingsStore } from '@/stores/settings.store';
+import { hasKey } from '@/lib/db/key-store';
 import type { ProviderConfig } from '@/modules/storage/types';
 
 const store = useSettingsStore();
 
 const editingId = ref<string | null>(null);
 const showForm = ref(false);
+/** 编辑模式下该 Provider 是否已在 key-store 配置过 Key（用于显示提示） */
+const hasExistingKey = ref(false);
+/** apiKey 是否被修改过（区分"留空表示沿用旧 Key"与"主动清空"） */
+const apiKeyDirty = ref(false);
 
 const form = ref<ProviderConfig>({
   id: '',
@@ -38,6 +43,9 @@ const defaultUrls: Record<string, string> = {
   gemini: 'https://generativelanguage.googleapis.com/v1beta',
 };
 
+/** 表单中是否输入了新的 API Key */
+const hasNewKey = computed(() => apiKeyDirty.value && form.value.apiKey.trim().length > 0);
+
 function openNew() {
   form.value = {
     id: crypto.randomUUID(),
@@ -50,13 +58,21 @@ function openNew() {
     storage: 'plaintext',
   };
   editingId.value = null;
+  hasExistingKey.value = false;
+  apiKeyDirty.value = false;
   showForm.value = true;
 }
 
-function openEdit(p: ProviderConfig) {
-  form.value = { ...p };
+async function openEdit(p: ProviderConfig) {
+  form.value = { ...p, apiKey: '' };
   editingId.value = p.id;
+  hasExistingKey.value = await hasKey(p.id);
+  apiKeyDirty.value = false;
   showForm.value = true;
+}
+
+function onApiKeyInput() {
+  apiKeyDirty.value = true;
 }
 
 function onTypeChange() {
@@ -66,19 +82,24 @@ function onTypeChange() {
 }
 
 function save() {
-  if (!form.value.name.trim() || !form.value.apiKey.trim()) return;
+  if (!form.value.name.trim()) return;
+  // 新建 Provider 必须输入 API Key；编辑模式下留空表示沿用已存储的旧 Key。
+  if (!editingId.value && !form.value.apiKey.trim()) return;
+
+  // 仅在用户输入了新 Key 时才写入 key-store。
+  if (hasNewKey.value) {
+    void store.setApiKey(form.value.id, form.value.apiKey);
+  }
   if (editingId.value) {
     store.updateProvider(editingId.value, form.value);
   } else {
     store.addProvider({ ...form.value });
   }
   showForm.value = false;
-  ;(store as any).$persist?.();
 }
 
 function remove(id: string) {
   store.removeProvider(id);
-  ;(store as any).$persist?.();
 }
 
 function cancel() {
@@ -130,8 +151,18 @@ function cancel() {
         </label>
 
         <label class="pcf-field">
-          <span>API Key</span>
-          <input v-model="form.apiKey" type="password" placeholder="sk-..." />
+          <span class="pcf-field-head">
+            API Key
+            <span v-if="editingId && hasExistingKey && !hasNewKey" class="pcf-key-hint">✓ 已配置（留空沿用）</span>
+            <span v-else-if="editingId && hasNewKey" class="pcf-key-hint pcf-key-hint--edit">将更新为新 Key</span>
+          </span>
+          <input
+            v-model="form.apiKey"
+            type="password"
+            :placeholder="editingId && hasExistingKey ? '留空保留当前 Key' : 'sk-...'"
+            autocomplete="off"
+            @input="onApiKeyInput"
+          />
         </label>
 
         <label class="pcf-field">
@@ -151,7 +182,11 @@ function cancel() {
 
         <div class="pcf-form-actions">
           <button class="pcf-btn" @click="cancel">取消</button>
-          <button class="pcf-btn pcf-btn--primary" @click="save" :disabled="!form.name.trim() || !form.apiKey.trim()">
+          <button
+            class="pcf-btn pcf-btn--primary"
+            @click="save"
+            :disabled="!form.name.trim() || (!editingId && !form.apiKey.trim())"
+          >
             保存
           </button>
         </div>
@@ -293,6 +328,20 @@ function cancel() {
   flex-direction: column;
   gap: 4px;
   font-size: var(--fs-xs);
+}
+.pcf-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pcf-key-hint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green);
+}
+.pcf-key-hint--edit {
+  color: var(--orange);
 }
 .pcf-field--row {
   flex-direction: row;

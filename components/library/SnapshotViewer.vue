@@ -8,6 +8,7 @@
 import { ref, watch } from 'vue'
 import type { ConversationRecord, MessageRecord, ChatMessage } from '@/lib/db/types'
 import { messageRepo } from '@/lib/db/repositories/message.repo'
+import { exportAsMarkdown, exportAsText, copyToClipboard, type LocalExportRecord } from '@/lib/export/local-file'
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer.vue'
 import MessageList, { type ChatTurn } from '@/components/chat/MessageList.vue'
 
@@ -66,6 +67,37 @@ function formatDate(dateStr?: string): string {
     return dateStr
   }
 }
+
+/** 从 conversation + messageRecord 构造 LocalExportRecord */
+function buildExportRecord(): LocalExportRecord | null {
+  if (!props.conversation || !messageRecord.value?.rawText) return null
+  const msg = messageRecord.value
+  return {
+    title: props.conversation.title,
+    url: props.conversation.url,
+    markdown: msg.rawText,
+    engine: props.conversation.engine,
+    sourceLength: msg.rawText.length,
+    truncation: false,
+    modelsApplied: props.conversation.models,
+    createdAt: new Date(props.conversation.createdAt).toISOString(),
+  }
+}
+
+function onExportMarkdown() {
+  const record = buildExportRecord()
+  if (record) exportAsMarkdown(record)
+}
+
+function onExportText() {
+  const record = buildExportRecord()
+  if (record) exportAsText(record)
+}
+
+function onCopyToClipboard() {
+  const record = buildExportRecord()
+  if (record) copyToClipboard(record.markdown)
+}
 </script>
 
 <template>
@@ -100,6 +132,12 @@ function formatDate(dateStr?: string): string {
           </div>
         </div>
         <button class="snapshot-viewer__close" aria-label="关闭查看器" @click="emit('close')">✕</button>
+        <!-- Export actions (visible when article tab is active and content exists) -->
+        <div v-if="activeTab === 'article' && messageRecord?.rawText" class="snapshot-viewer__export-bar">
+          <button class="snapshot-viewer__export-btn" title="导出 Markdown" @click="onExportMarkdown">.md</button>
+          <button class="snapshot-viewer__export-btn" title="导出纯文本" @click="onExportText">.txt</button>
+          <button class="snapshot-viewer__export-btn" title="复制到剪贴板" @click="onCopyToClipboard">📋</button>
+        </div>
       </div>
 
       <!-- Tab bar -->
@@ -324,6 +362,34 @@ function formatDate(dateStr?: string): string {
 .snapshot-viewer__close:hover {
   background: var(--border, #e6e2d8);
   color: var(--text, #2e2d2a);
+}
+
+/* Export bar */
+.snapshot-viewer__export-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.snapshot-viewer__export-btn {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  color: var(--muted, #7a7568);
+  background: var(--card, #faf9f5);
+  border: 1px solid var(--border, #e6e2d8);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.snapshot-viewer__export-btn:hover {
+  background: var(--primary-soft, #f0f1fe);
+  border-color: #d2d6ff;
+  color: var(--primary, #5b60e5);
 }
 
 /* Tabs */
