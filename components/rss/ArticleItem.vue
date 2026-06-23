@@ -187,7 +187,7 @@ function onMarkRead() {
 }
 
 .article-item__chat-btn:hover {
-  background: #e0e2fc;
-  border-color: #c5c9f8;
+  background: var(--primary-soft);
+  border-color: var(--border);
 }
 </style>

@@ -78,8 +78,8 @@ const statusLabel = computed(() => {
 }
 
 .ep-modal {
-  background: var(--card, #1e1e2e);
-  border: 1px solid var(--border, rgba(255,255,255,.1));
+  background: var(--card, #faf9f5);
+  border: 1px solid var(--border, #e6e2d8);
   border-radius: var(--radius-xl, 16px);
   padding: var(--space-7, 28px) var(--space-8, 32px);
   min-width: 340px;
@@ -104,14 +104,14 @@ const statusLabel = computed(() => {
 .ep-bar-track {
   height: 8px;
   border-radius: 99px;
-  background: var(--panel, rgba(255,255,255,.08));
+  background: var(--panel, #ffffff);
   overflow: hidden;
 }
 
 .ep-bar-fill {
   height: 100%;
   border-radius: 99px;
-  background: var(--primary, #7c3aed);
+  background: var(--primary, #5b60e5);
   transition: width 150ms ease-out;
 }
 
@@ -134,7 +134,7 @@ const statusLabel = computed(() => {
   margin: 0;
   font-size: var(--fs-sm, 13px);
   font-weight: 700;
-  color: var(--primary, #7c3aed);
+  color: var(--primary, #5b60e5);
   text-align: right;
 }
 
@@ -143,7 +143,7 @@ const statusLabel = computed(() => {
   padding: 8px 20px;
   border: none;
   border-radius: var(--radius-md, 8px);
-  background: var(--primary, #7c3aed);
+  background: var(--primary, #5b60e5);
   color: #fff;
   font-size: var(--fs-sm, 13px);
   font-weight: 600;
@@ -153,3 +153,4 @@ const statusLabel = computed(() => {
 
 .ep-btn:hover { opacity: 0.85; }
 </style>
+

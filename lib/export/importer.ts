@@ -49,12 +49,6 @@ export async function importFromZip(
   // Detect root folder (backup-{timestamp}/) — the zip may have one or be flat.
   const rootPrefix = detectRoot(zip);
 
-  function readJson<T>(path: string): T | null {
-    const f = zip.file(rootPrefix + path) ?? zip.file(path);
-    return f ? null : null; // resolved below asynchronously
-  }
-  void readJson; // suppress unused-var warning; we use readJsonAsync below
-
   async function readJsonAsync<T>(path: string): Promise<T | null> {
     const f = zip.file(rootPrefix + path) ?? zip.file(path);
     if (!f) return null;

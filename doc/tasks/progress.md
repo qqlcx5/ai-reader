@@ -151,3 +151,30 @@
 - ✅ `.typing-cursor::after { content: '▋'; animation }` 已实现（theme.css + StreamingText scoped）
 - ✅ ModelCardFooter：`font-mono text-[10px]`、`⚡ Cached` 使用 `var(--green)` 颜色
 - ✅ RightPanelTabs：6 个标签，激活态 `border-bottom-color: var(--primary)` + `color: var(--primary)`
+
+## M7/M9 补充审查完成（2026-06-23）
+
+**最终编译状态**：`npx tsc --noEmit` → **0 错误**
+
+### M7 跨端导出与同步
+- ✅ ZIP 结构：`backup-{timestamp}/index.json + articles/ + chats/ + highlights.json + templates.json + rss-feeds.json`
+- ✅ `importer.ts` 两种策略（overwrite/skip）Dexie `transaction('rw', [...])` 原子写入
+- ✅ YAML Frontmatter 包含全部 7 字段：title/source/source_length/engine/truncation/models_applied/created
+- ✅ `settings-sync.ts` CHUNK_SIZE=8000，key 格式 `settings_chunk_0`...
+- ✅ WebDAV `testConnection()` 调用 `client.stat()`（底层 PROPFIND）
+- ✅ ExportProgressModal 进度条 `var(--primary)` + `transition: width 150ms ease-out`
+- 🔧 **已修复**：`importer.ts` 中恒返回 `null` 的死代码 `readJson` stub 已删除
+- 🔧 **已修复**：`ExportProgressModal.vue` CSS fallback 颜色由深色主题值更正为设计稿值（`#faf9f5`、`#e6e2d8`、`#ffffff`、`#5b60e5`）
+
+### M9 RSS 自动化流水线
+- ✅ `dedup.ts` 使用 WebCrypto SHA-256（`crypto.subtle.digest`）
+- ✅ `summarizer.ts` 超时 `AbortSignal.timeout(30000)` + 失败降级 `description.slice(0, 200)`
+- ✅ `scheduler.ts` 单 Feed 失败 `try/catch` 隔离，不影响其他 Feed
+- ✅ `daily-briefing.ts` 检测 `rss_lastBriefingDate` 防重复展示
+- ✅ RightPanelTabs RSS Tab 已使用 `<RSSPanel>`
+- ✅ Badge 背景色 `#5b60e5`（obsidian-primary）
+- ✅ ArticleItem 未读态 `border-left: 4px solid var(--primary)`
+- ✅ ArticleItem 已读态 `opacity: 0.85`
+- ✅ AI 摘要区 `bg: var(--bg)` + `border: var(--border)` + `border-radius: var(--radius-lg)` + `font-size: 11px`
+- ✅ "以此开启对话"：`color: var(--primary)` + `background: var(--primary-soft)`
+- 🔧 **已修复**：`ArticleItem.vue` chat 按钮 hover 由硬编码 `#e0e2fc` 更正为 `var(--primary-soft)`
