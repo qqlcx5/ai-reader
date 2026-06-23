@@ -1,100 +1,111 @@
-# M2 上下文提取 — Vibe Coding 任务清单
+# M2 智能正文提取引擎 — Vibe Coding 任务清单 (v1)
 
-> **目标**：在 content script 中实现三级降级正文提取，并将结果完整传输到 Background。
-> **输入**：`doc/1.md` 模块 1、`doc/design-02-extraction.md`
-> **建议执行顺序**：与 M7 并行开始；可在 M1 之前完成核心提取逻辑。
-
----
-
-## 1. 依赖安装与目录
-
-- [x] 安装 `@mozilla/readability`、`turndown`、`defuddle`
-- [x] 创建 `modules/extraction/` 目录结构
-- [x] 创建 `modules/extraction/types.ts` 定义 `ExtractedContext`、`ExtractRequest`、`ExtractResponse`
-- [x] 创建 `modules/extraction/__tests__/fixtures/` 存放 5 类测试 HTML 快照
+> **目标**：实现三级降级提取算法、无截断上下文直通、结构化元数据采集、高亮选区与浮动工具栏，并通过 Shadow DOM 隔离注入式 UI。
+> **输入**：`doc/proposal_v1.md` §2.1
+> **依赖**：M8（存储层，用于持久化高亮数据）
 
 ---
 
-## 2. Readability 提取器
+## 1. 三级降级提取算法
 
-- [x] 实现 `modules/extraction/extractors/readability.ts`
-- [x] 使用 `new Readability(document.cloneNode(true))` 解析
-- [x] 使用 `turndown` 将 HTML 正文转为 Markdown
-- [x] 返回 `ExtractedContext`，包含 `extractor: 'readability'`
-- [x] 如果内容长度 < 200 字符，返回 `null` 以触发降级
-- [x] 对 3 个真实网页运行测试，验证提取质量
-
----
-
-## 3. Defuddle 提取器
-
-- [x] 实现 `modules/extraction/extractors/defuddle.ts`
-- [x] 调用 `defuddle(document, { markdown: true })`
-- [x] 使用 `Promise.race` 实现 8 秒超时
-- [x] 超时或失败时返回 `null` 以触发降级
-- [x] 返回 `ExtractedContext`，包含 `extractor: 'defuddle'`
-- [x] 对 3 个真实网页运行测试
+- [ ] 安装依赖：`@mozilla/readability`、`turndown`、`defuddle`
+- [ ] 实现 `lib/extraction/readability-engine.ts`
+  - 接收 `document` 对象，调用 `@mozilla/readability` 提取正文
+  - 结果经 `turndown` 转为 Markdown，返回 `{ markdown, wordCount, confidence }`
+  - 置信度判断：返回内容 < 200 字 or 内容为空时 `confidence = 'low'`
+- [ ] 实现 `lib/extraction/defuddle-engine.ts`
+  - 使用 `defuddle` 的 `createMarkdownContent` 一步完成 DOM → Markdown 转换
+  - 设置 8 秒超时（`Promise.race` + `AbortSignal`），超时后 reject
+- [ ] 实现 `lib/extraction/fallback-engine.ts`
+  - 清洗 `<script>` / `<style>` / `<noscript>` 节点
+  - 直取 `document.body.innerText` 并简单格式化（去多余空行）
+- [ ] 实现 `lib/extraction/extraction-orchestrator.ts`
+  - 按优先级串行 / 降级：Readability → Defuddle → Fallback
+  - 返回统一结果类型 `ExtractionResult { markdown, engine, wordCount, metadata }`
+- [ ] 单元测试：mock `document`，覆盖三条降级路径，验证超时 8s 触发降级
 
 ---
 
-## 4. innerText 兜底
+## 2. 无截断上下文直通（No Truncation）
 
-- [x] 实现 `modules/extraction/extractors/innerText.ts`
-- [x] 移除 DOM 中的 `<script>`、`<style>`、`<nav>`、`<footer>`、`<aside>`、`<header>`
-- [x] 提取 `document.body.innerText`
-- [x] 清洗多余空行
-- [x] 返回 `format: 'text'`、`extractor: 'innerText'`
-
----
-
-## 5. 三级降级主入口
-
-- [x] 实现 `modules/extraction/extractPage.ts`
-- [x] 按 Readability → Defuddle → innerText 顺序执行
-- [x] 记录最终使用的提取器
-- [x] 预估字数：中文字符 + 英文单词
-- [x] 在测试页面上验证三级降级链路
+- [ ] 确认 `ExtractionResult.markdown` 不做任何长度截断
+- [ ] 在 Context 注入层严禁 `substring` / `slice` 等截断操作（代码 review checklist）
+- [ ] 向 M4 Chat 模块暴露完整 `rawText`，由 LLM API 自行处理 Token 超限
+- [ ] 提取状态条展示 `No Truncation` 绿色 badge（对接 M1 `ExtractionStatusBar`）
 
 ---
 
-## 6. Content Script 注入
+## 3. 结构化元数据提取
 
-- [x] 修改 `entrypoints/content.ts`：匹配 `['<all_urls>']`（或按需配置）
-- [x] 监听 `runtime.onMessage` 中的 `EXTRACT_PAGE` 请求
-- [x] 调用 `extractPage()` 并返回元数据（不含完整内容）
-- [x] 确保在 DOM 未就绪时等待 `DOMContentLoaded` 后重试一次
-
----
-
-## 7. 大文本分片传输
-
-- [x] 实现 `modules/extraction/transfer.ts`：定义分片协议（1MB/片）
-- [x] 在 content script 中将大文本切分为 `ChunkedTransfer` 数组
-- [x] 在 Background 中实现分片请求 → 接收 → 拼接 → 缓存
-- [x] 实现断点续传：按 `chunkIndex` 可单独请求缺失分片
-- [x] 用 10MB 以上文本测试分片传输完整性与性能
+- [ ] 实现 `lib/extraction/metadata-extractor.ts`
+  - 预置变量：`title` / `author` / `description` / `published` / `site` / `domain` / `favicon` / `image` / `words`
+  - Meta 变量：解析 `<meta>` 标签提取 Open Graph 数据（`og:title` / `og:description` / `og:image`）
+  - Schema.org：解析页面内 `<script type="application/ld+json">` JSON-LD，提取 `@Article` / `@Recipe` / `@Product` 等
+- [ ] 元数据输出为 `PageMetadata` 接口类型，存入 M8 副表 `Messages.metadata`
+- [ ] 单元测试：解析含 JSON-LD 的 HTML fixture，验证字段正确提取
 
 ---
 
-## 8. 上下文锚定
+## 4. 上下文静默锚定机制
 
-- [x] Background 接收提取结果后写入 M7 的 `currentContext`
-- [x] 切换 Tab 时不主动重新提取
-- [x] Side Panel 的「刷新提取当前 Tab」按钮触发新的提取流程
-- [x] 验证 Tab 切换后上下文保持原页面
+- [ ] 在 Content Script 中监听 `chrome.tabs.onActivated` / `chrome.tabs.onUpdated`
+- [ ] Tab 切换时：保持上一次提取的 `ExtractionResult` 作为当前对话上下文，不自动刷新
+- [ ] 触发轻量 Toast 提示："上下文已锚定至 [页面标题]，点击刷新可更新"
+- [ ] 实现【⟳ 刷新提取当前 Tab】按钮回调：重新执行提取流程并更新状态栏
+
+---
+
+## 5. 高亮选区提取
+
+- [ ] 安装 / 集成 Dexie.js（对接 M8 `Highlights` 表）
+- [ ] 实现 `lib/extraction/highlighter.ts`
+  - 监听页面 `mouseup` 事件，获取当前 `Selection`
+  - 通过 `Range` API 记录选区 CSS selector + 文本内容 + 样式类型
+  - 支持三种提取模式：① 嵌入 `==highlight==` 完整正文；② 仅提取高亮列表；③ 忽略高亮
+- [ ] 高亮样式预设（CSS class 切换）：`mark`（高亮背景色）/ `underline`（点状）/ `blur` / `wave` / `bold` / `italic`
+- [ ] 高亮数据写入 M8 `Highlights` 表，关联 `pageId`（`Conversation.id`）
+- [ ] 页面重新打开时：从 Dexie 按 `pageId` 查询并恢复高亮显示（重新注入 DOM 样式）
+- [ ] 实现高亮数据按域名分组导出为 `.json` 文件
+
+---
+
+## 6. 浮动工具栏（Shadow DOM 隔离）
+
+- [ ] 在 Content Script 中注册 `mouseup` 事件
+- [ ] 检测到有效选区（`selection.toString().trim().length > 0`）时挂载浮动工具栏
+- [ ] 使用 **Shadow DOM** 创建工具栏容器（`attachShadow({ mode: 'open' })`），避免宿主 CSS 污染
+- [ ] 工具栏内 4 个操作按钮：**解释 / 总结 / 翻译 / 提问**（触发对应预置 Prompt）
+- [ ] 工具栏定位：`position: fixed`，基于 `Range.getBoundingClientRect()` 计算位置，边缘检测自动翻转
+- [ ] 点击页面空白处自动消失（监听 `document.click` 并比较事件 target）
+- [ ] 工具栏内部样式完全自包含（inlined CSS，不依赖宿主页面任何样式）
+
+---
+
+## 7. 右键菜单集成
+
+- [ ] 在 `background.ts` 中注册 `chrome.contextMenus.create`：
+  - 菜单项：解释 / 总结 / 翻译 / 朗读 / 搜索（共 5 项）
+  - `contexts: ['selection']`：仅在有选区时显示
+- [ ] 监听 `chrome.contextMenus.onClicked`，将选中文本 + 操作类型发送给 Side Panel
+- [ ] Side Panel 接收消息后，在输入框预填对应 Prompt 并自动提交
+
+---
+
+## 8. 框选模式（Manual Selection Fallback）
+
+- [ ] 当 `ExtractionResult.confidence === 'low'` 时，向用户展示框选模式提示横幅
+- [ ] 实现 `lib/extraction/area-selector.ts`：
+  - 注入半透明覆盖层，鼠标拖拽绘制选区矩形（`mousedown` → `mousemove` → `mouseup`）
+  - 通过 `document.elementsFromPoint()` 获取矩形区域内的 DOM 元素列表
+  - 提取这些元素的 `innerText`，合并为纯文本 / Markdown
+- [ ] 框选完成后替换当前 `ExtractionResult.markdown`，更新状态栏
 
 ---
 
 ## 验收标准
 
-1. 在新闻、博客、SPA 三种典型页面上，至少有一种提取器能返回非空正文。
-2. 三级降级链路覆盖：Readability 失败 → Defuddle 失败 → innerText 成功。
-3. 10MB 长文本分片传输后，MD5 与原内容一致。
-4. Tab 切换不改变 Side Panel 中的上下文状态，直到用户手动刷新。
-
----
-
-## 依赖提醒
-
-- **阻塞项**：M7 需提供 `currentContext` 写入接口。
-- **后续接入**：M1 的 Side Panel 将展示 `currentContext`。
+1. 访问主流新闻网页（如 36kr.com），`Readability` 提取成功，耗时 < 100ms，无截断。
+2. 访问 SPA 或提取失败的页面，自动降级到 `defuddle`，8s 超时后再降级到 `fallback`。
+3. 高亮文字后数据写入 `Highlights` 表，刷新页面后高亮颜色自动恢复。
+4. 浮动工具栏通过 Shadow DOM 渲染，与宿主页面样式完全隔离（DevTools 中查看 Shadow Root）。
+5. 右键菜单"总结"点击后，Side Panel 输入框自动填充总结 Prompt。

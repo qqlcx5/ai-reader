@@ -1,117 +1,135 @@
-# M8 后台 RSS 自动化流水线 — Vibe Coding 任务清单
+# M9 RSS 自动化流水线 — Vibe Coding 任务清单 (v1)
 
-> **目标**：在 Background Service Worker 中实现 RSS 定时抓取、去重、AI 摘要与 badge 更新。
-> **输入**：`doc/1.md` 模块 5、`doc/design-08-rss-pipeline.md`
-> **建议执行顺序**：M3、M7 完成后开始；可独立运行。
-
-## 收尾记录
-
-> 主 Agent 在 2026-06-21 完成 M8 收尾：
-> - 核心实现位于 `lib/rss/`（types / fetcher / dedup / scheduler / summarizer / badge / pipeline）
-> - `pnpm test` 23/23 通过、`pnpm compile` 0 错误、`pnpm build` 成功
-> - RSS UI（Tab、FeedList、ItemList）属于二期，依赖 M1 Side Panel 容器
-> - Options RSS 管理 UI 属于二期
+> **目标**：在 Service Worker 后台实现定时 RSS 拉取、哈希去重、AI 后台摘要生成、扩展 badge 未读计数，以及今日简报（Daily Briefing）功能。
+> **输入**：`doc/proposal_v1.md` §2.7
+> **依赖**：M3（Provider 客户端，用于 AI 摘要）、M8（存储层，RSSFeeds 表）
 
 ---
 
-## 1. 依赖安装与数据模型
+## 1. RSS 拉取器（Fetcher）
 
-- [x] RSS 解析无外部依赖（使用浏览器原生 DOMParser + JSON.parse）
-- [x] 创建 `lib/rss/` 目录（与 M4/M5/M6 一致，避免 WXT 0.20 modules/ 冲突）
-- [x] 定义 `ParsedItem`、`FetchResult`、`DedupInput`、`SummarizerOptions`、`SummaryJob`、`BadgeStats` 类型
-- [x] 复用 M7 的 `RssFeedRecord` / `RssItemRecord` 存储类型
-- [ ] 在 Options 中增加 RSS 订阅源管理 UI（二期，需 M1 容器）
-
----
-
-## 2. RSS 抓取与解析
-
-- [x] 实现 `lib/rss/fetcher.ts`
-- [x] 使用 `fetch` 获取 RSS XML，设置 30s 超时
-- [x] 解析 RSS 2.0（DOMParser）、Atom（DOMParser）、JSON Feed（JSON.parse）
-- [x] 提取 `title`、`link`、`pubDate`、`content`/`description`
-- [x] 单元测试覆盖 3 种格式 + HTTP 错误 + 超时 + 解析失败（7 个测试）
+- [ ] 实现 `lib/rss/fetcher.ts`
+  - `fetchFeed(url: string): Promise<RawFeedData>`
+    - 通过 `fetch(url)` 获取 RSS / Atom XML
+    - 使用 `DOMParser` 解析 XML（`application/xml`）
+    - 支持 RSS 2.0 / Atom 1.0 两种格式
+    - 提取字段：`title` / `link` / `description` / `pubDate` / `author`
+    - 超时 10s（`AbortSignal.timeout(10000)`）
+  - 返回 `RawFeedData { feedTitle, feedUrl, items: RawArticle[] }`
 
 ---
 
-## 3. 哈希去重
+## 2. 哈希去重（Deduplication）
 
-- [x] 实现 `lib/rss/dedup.ts`
-- [x] 计算 `hash = fnv1a32(feedId + title + link)`（FNV-1a 32-bit）
-- [x] `filterNewItems()` 过滤已存在 hash 的条目
-- [x] Pipeline 中查询 `rssItems` 表已有 hash，仅写入新条目
-- [x] 单元测试覆盖一致性、不同输入、空值（7 个测试）
-
----
-
-## 4. 定时轮询调度
-
-- [x] 实现 `lib/rss/scheduler.ts`
-- [x] 使用 `browser.alarms.create('rss:<feedId>', { periodInMinutes })`
-- [x] 默认间隔 360 分钟（6 小时），最小 1 分钟
-- [x] 用户添加/删除/修改源时调用 `scheduleAllFeeds()` 重建 alarms
-- [x] 单元测试覆盖默认间隔、自定义间隔、跳过 disabled、最小间隔（4 个测试）
+- [ ] 实现 `lib/rss/dedup.ts`
+  - `computeArticleId(article: RawArticle): string`：`SHA-256(article.link)` → hex（与 M8 `RSSArticleRecord.id` 一致）
+  - `filterNewArticles(fetched: RawArticle[], existing: Set<string>): RawArticle[]`
+    - 比较 ID set，仅返回不在 `existing` 中的新文章
+  - 对应 M8 `rss.repo.updateArticles` 在写入前调用此函数
 
 ---
 
-## 5. AI 摘要生成（可选开关）
+## 3. AI 后台摘要生成（Summarizer）
 
-- [x] 实现 `lib/rss/summarizer.ts`
-- [x] 默认关闭（`summarizerOptions.enabled = false`）
-- [x] 使用轻量模型（默认 `gpt-4o-mini` 或用户指定 Provider）
-- [x] Prompt：「请用 3 句话总结这篇文章的核心观点。」
-- [x] 串行队列 `summarizeBatch()` 处理摘要，避免并发费用飙升
-- [x] 摘要失败时返回 null，Pipeline 中标记 `isSummarized = false`
-
----
-
-## 6. Badge 更新
-
-- [x] 实现 `lib/rss/badge.ts`
-- [x] 查询 `rssItems` 表中 `isRead = false` 的数量
-- [x] 使用 `browser.action.setBadgeText` 设置未读数（最大 99+）
-- [x] 全部已读后清空 badge
-- [x] 单元测试覆盖（3 个测试）
+- [ ] 实现 `lib/rss/summarizer.ts`
+  - `summarizeArticle(article: RawArticle, engine: IEngine, apiKey: string): Promise<string>`
+    - 构建 Prompt：`"请用 3 句话（不超过 200 字）概括以下文章内容：\n\n${article.description}"`
+    - 调用 M3 `engine.chatStream()`，收集完整响应后返回摘要文本
+    - 超时 30s，失败时返回 `article.description.slice(0, 200)` 降级摘要
+  - **后台静默执行**：不弹出任何 UI，用户无感知
+  - 批量处理：每个 Feed 新文章串行生成摘要（避免并发打爆 Rate Limit）
 
 ---
 
-## 7. Pipeline 编排
+## 4. 定时调度器（Service Worker Alarm）
 
-- [x] 实现 `lib/rss/pipeline.ts`
-- [x] 完整流程：fetch → dedup → summarize → store → badge
-- [x] 单个源失败不影响其他源（每个 feed 独立运行）
-- [x] 抓取失败时记录 `feed.lastError`（code、message、at timestamp）
-
----
-
-## 8. RSS 信息流 UI（二期）
-
-- [ ] 在 Side Panel 中增加 RSS 信息 Tab（M1 提供容器）
-- [ ] 实现 `RssFeedList.vue` 与 `RssItemList.vue`
-- [ ] 列表项显示：标题、来源、时间、AI 摘要（如有）、未读圆点
-- [ ] 点击条目在新标签页打开原文，并标记 `isRead = true`
-- [ ] 支持「全部标为已读」
+- [ ] 实现 `lib/rss/scheduler.ts`
+  - `initAlarm(intervalMinutes = 30): void`
+    - `chrome.alarms.create('rss-fetch', { periodInMinutes: intervalMinutes })`
+  - `handleAlarm(alarmName: string): Promise<void>`
+    - 仅处理 `'rss-fetch'` alarm
+    - 从 M8 读取所有 `RSSFeedRecord`
+    - 对每个 Feed 依次：`fetch → dedup → summarize → save`
+  - 错误隔离：单个 Feed 失败不影响其他 Feed
+- [ ] 在 `background.ts` 中：
+  - `chrome.alarms.onAlarm.addListener(scheduler.handleAlarm)`
+  - 扩展安装时调用 `initAlarm()`
 
 ---
 
-## 9. 错误处理与监控 UI（二期）
+## 5. 扩展 Badge 未读计数
 
-- [ ] Options 中展示每个源最后一次错误信息
-- [ ] 实现「立即重试」按钮
+- [ ] 实现 `lib/rss/badge.ts`
+  - `updateBadge(): Promise<void>`
+    - `count = await rssRepo.getUnreadCount()`
+    - `chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' })`
+    - `chrome.action.setBadgeBackgroundColor({ color: '#5b60e5' })`（`obsidian-primary` 紫色）
+  - 每次 Alarm 完成后调用 `updateBadge()`
+  - 用户在 RSS 面板标记已读后调用 `updateBadge()`
+
+---
+
+## 6. RSS 面板 UI
+
+- [ ] 实现 `components/rss/RSSPanel.vue`（接入 M1 右栏"RSS"Tab）
+- [ ] 实现 `components/rss/FeedList.vue`
+  - 已订阅 Feed 列表：Feed 标题 + favicon + 未读数 badge
+  - 点击展开该 Feed 的文章列表
+  - 右键 / 操作按钮：删除 Feed / 立即刷新
+- [ ] 实现 `components/rss/ArticleItem.vue`
+  - 未读态：左侧 4px 紫色边框条（`border-l-4 border-obsidian-primary`）
+  - 已读态：`opacity-85`
+  - 文章标题 + 未读 badge
+  - AI 摘要区域：`bg-obsidian-bg` + `border` + `rounded-lg`，`text-[11px]`，3 句话展示
+  - 底部：来源 + 时间（`dayjs` 相对时间）+ "以此开启对话"紫色软按钮
+  - 点击"以此开启对话"：将文章 `description`（或全文）作为上下文，在 M4 Chat 中发起新对话
+- [ ] 实现 `components/rss/AddFeedModal.vue`
+  - 输入 RSS URL，【验证】按钮（`testConnection` 式校验：fetch + 解析前 3 条）
+  - 验证成功后显示 Feed 标题预览
+  - 【添加订阅】写入 M8
+
+---
+
+## 7. 今日简报（Daily Briefing）
+
+- [ ] 实现 `lib/rss/daily-briefing.ts`
+  - `generateBriefing(): Promise<string>`
+    - 查询当天（`publishedAt > todayMidnight`）所有 RSS 文章的 AI 摘要
+    - 按 Feed 分组，生成如下格式的 Markdown：
+      ```markdown
+      # 今日简报 — 2025-01-15
+
+      ## 📰 The Verge（3 篇）
+      - **文章标题**：AI 摘要内容...
+      - ...
+
+      ## 📰 36kr（5 篇）
+      - **文章标题**：AI 摘要内容...
+      ```
+    - 底部附"共 X 篇新文章，来自 Y 个订阅源"
+- [ ] 实现 `components/rss/DailyBriefingCard.vue`
+  - 每日首次打开浏览器时展示（`chrome.storage.local` 记录 `lastBriefingDate`，与今日比较）
+  - 卡片形式出现在 RSS Tab 顶部，可折叠
+  - 【导出到 Obsidian】按钮（调用 M7 `obsidian.ts`）
+  - 文章标题可点击：触发"以此开启对话"
+
+---
+
+## 8. Options RSS 管理 UI
+
+- [ ] 在 Options 页 RSS Tab 中嵌入订阅源管理：
+  - 已订阅源列表（Feed 标题 / URL / 拉取间隔 / 上次拉取时间）
+  - 拉取间隔可编辑（下拉：15 / 30 / 60 / 120 分钟）
+  - 删除订阅源（含确认 Modal）
+  - AI 摘要模型选择（用哪个 Provider 生成摘要）
 
 ---
 
 ## 验收标准
 
-1. ✅ 后台 pipeline 能定时抓取并写入新条目（fetcher + pipeline 测试通过）。
-2. ✅ 同一篇文章重复抓取时不产生重复 `RssItem`（dedup 测试通过）。
-3. ✅ 未读数正确显示在扩展图标 badge 上（badge 测试通过）。
-4. ✅ 关闭摘要开关时，新增条目不产生任何 LLM API 费用（enabled: false 默认）。
-5. ⚠️ 信息流 UI 展示（二期，需 M1 Side Panel 容器）。
-
----
-
-## 依赖提醒
-
-- **阻塞项**：M3（摘要调用）、M7（RssFeed/RssItem 存储）。 ✅ 已完成
-- **后续接入**：M1 的 Side Panel 提供 RSS 信息流展示容器。 （二期）
+1. 添加一个有效 RSS 源，Alarm 触发后（或手动触发）新文章出现在 RSS 面板，含 AI 3 句摘要。
+2. 扩展图标 badge 显示未读数量，全部标为已读后 badge 消失。
+3. 重复拉取同一 RSS 源，哈希去重正确：已存在文章不重复写入。
+4. 点击"以此开启对话"，Side Panel 打开，InputComposer 预填文章摘要内容。
+5. 今日简报：当天新文章 > 0 时，RSS Tab 顶部显示简报卡片，格式正确。
+6. 单个 Feed 拉取 / 摘要失败时，其他 Feed 继续处理，错误写入 `console.error` 但不崩溃。

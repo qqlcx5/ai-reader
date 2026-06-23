@@ -1,89 +1,94 @@
-# AI Reader 总体开发进度
+# ReadChat Clipper — 总体开发进度 (v1)
 
-> **输入**：`doc/1.md`（需求文档）、`doc/design-*.md`（详细设计）
-> **任务清单**：`doc/tasks/module-name.md`
-> **更新方式**：每个模块所有子任务完成后，勾选本文件对应模块；可直接用此文件做 Vibe Coding 看板。
+> **需求文档**：`doc/proposal_v1.md`（v1.1 详细设计稿）
+> **视觉规范**：`doc/design.html` / `doc/design-tokens.md`
+> **任务清单**：每个模块对应一个 `doc/tasks/module-name.md`
+> **更新方式**：每个模块所有子任务完成后勾选本文件对应项；可直接用此文件做 Vibe Coding 看板。
 
 ---
 
-## 执行建议顺序
+## 推荐执行顺序
 
 | 阶段 | 模块 | 原因 |
 |------|------|------|
-| 第一阶段 | M7 存储与数据层 | 所有业务模块依赖 |
-| 第一阶段 | M2 上下文提取 | 可独立开发，无 UI 依赖 |
-| 第一阶段 | M3 Provider 与 LLM 客户端 | 可被独立单元测试 |
-| 第二阶段 | M1 入口与布局 | 需要 M7 提供状态；M4 完成后可替换中部内容 |
-| 第二阶段 | M4 多模型工作区 | 依赖 M2、M3、M7 |
-| 第三阶段 | M5 高阶 AI 工作流 | 依赖 M3、M4 |
-| 第三阶段 | M6 跨端输出与灾备同步 | 依赖 M7，可并行 |
-| 第三阶段 | M8 后台 RSS 流水线 | 依赖 M3、M7，可并行 |
+| 第一阶段 | **M8 存储与数据层** | 所有业务模块的数据基础，必须最先完成 |
+| 第一阶段 | **M2 智能正文提取** | 无 UI 依赖，可独立开发与单元测试 |
+| 第一阶段 | **M3 多模型 Provider 客户端** | 无 UI 依赖，可独立单元测试 |
+| 第二阶段 | **M1 入口与布局** | 需要 M8 提供状态；M4 完成后替换中部内容 |
+| 第二阶段 | **M4 页面对话工作区** | 依赖 M2（提取）、M3（Provider）、M8（存储）|
+| 第三阶段 | **M5 AI 工作流** | 依赖 M3、M4 调度器与数据模型 |
+| 第三阶段 | **M6 历史库与检索** | 依赖 M8 主副表读写 |
+| 第三阶段 | **M7 跨端导出与同步** | 依赖 M8，可与 M5/M6 并行 |
+| 第三阶段 | **M9 RSS 流水线** | 依赖 M3、M8，可与 M5/M6 并行 |
 
 ---
 
 ## 模块完成 Checklist
 
-- [x] **M7 存储与数据层**（`doc/tasks/storage-data.md`）
-  - Dexie 数据库、主副表、Pinia 同步、虚拟滚动、Worker 检索、分片缓存、明文 API Key 存储
-  - **状态：核心代码已完成，待性能测试验证**
+- [ ] **M8 存储与数据层**（`doc/tasks/storage-data.md`）
+  - Dexie 数据库初始化、5 张表 Schema、主副表 Repository、三级缓存（L1 LRU / L2 TTL / L3 Hash）、Pinia Store、API Key 存储
+  
+- [ ] **M2 智能正文提取**（`doc/tasks/context-extraction.md`）
+  - 三级降级算法（Readability → Defuddle → innerText）、No Truncation、结构化元数据提取、上下文静默锚定、高亮选区、浮动工具栏（Shadow DOM）、右键菜单、框选模式
 
-- [x] **M2 上下文提取**（`doc/tasks/context-extraction.md`）
-  - Readability / Defuddle / innerText 三级降级、分片传输、上下文锚定
-  - **状态：核心代码已完成，单元测试通过，待集成测试验证**
+- [ ] **M3 多模型 Provider 客户端**（`doc/tasks/provider-client.md`）
+  - IEngine 抽象接口、15 个 Provider 适配器（11 个 OpenAI-compatible + Anthropic + Gemini + Cohere + ChatGPT Web）、SSE 流式解析（eventsource-parser）、断线重连（指数退避）、故障转移链、错误码分层处理、API Key 安全存储
 
-- [x] **M3 Provider 与 LLM 客户端**（`doc/tasks/provider-client.md`）
-  - OpenAI / Anthropic / Gemini / Custom Provider、自定义 base URL 与模型、SSE 流式、明文 API Key、错误重试
-  - **状态：核心代码完成，50 单元测试通过（src + extraction spec），TypeScript 编译通过**
+- [ ] **M1 入口与布局**（`doc/tasks/entry-layout.md`）
+  - 设计令牌（CSS 变量 / obsidian 色板）、Popup 弹窗（330px）、Side Panel 三区布局、上下文锚定栏、全局提取状态条、桌面端三栏响应式布局、左栏品牌导航、右栏 6 标签面板、Options 设置页、全局快捷键（Alt+S / Alt+P / Escape）、共享组件（Toast / Modal / IconButton）
 
-- [x] **M1 入口与布局**（`doc/tasks/entry-layout.md`）
-  - Popup / Side Panel / Options 三入口、设计令牌、ThemeProvider、ContextStatusBar、ActionBar、ContextSummary、共享组件（IconButton/LoadingDots/EmptyState/NavTabs）、3 个 commands（Alt+S / Alt+P / Esc）、ABORT_ALL 广播
-  - **状态：核心代码完成，81 单元测试全过，TypeScript 编译通过，wxt build 成功生成 .output/chrome-mv3/**
+- [ ] **M4 页面对话工作区**（`doc/tasks/chat-workspace.md`）
+  - URL 绑定（SHA-256）与会话隔离、Context 自动注入、Arena 多模型并发调度、消息流视图（UserBubble / ModelCard / StreamingText）、模型卡片底栏（TTFT / TPS / Cost）、对话管理（重试 / 编辑 / 删除 / 单分支追问）、底部输入区（ModelRouteChips / QuickPromptBar）、页面摘要卡片
 
-- [x] **M4 多模型工作区**（`doc/tasks/chat-workspace.md`）
-  - 多模型并发（runMultiModelChat）、增量流式渲染（StreamingText + markdown-it）、指标底栏（ModelCardFooter）、分支追问、System Prompt 上下文注入
-  - 核心实现位于 `lib/workspace/`（types / buildSystemPrompt / scheduler），UI 位于 `components/workspace/`
-  - 重要架构调整：代码从 `modules/workspace/` 迁移到 `lib/workspace/`，因 WXT 0.20 会自动扫描 `modules/*/index.ts` 作为用户模块，该目录下的 jiti 加载无法解析 tsconfig path 别名 `@/...`，必须移出 `modules/`
-  - **状态：92 单元测试全过（11 新增），TypeScript 编译通过，wxt build 成功（sidepanel 254KB / total 730KB）**
+- [ ] **M5 AI 工作流**（`doc/tasks/advanced-workflows.md`）
+  - 串行接力引擎（Relay Chain，变量传递）、多角色圆桌（Roundtable，3 预设角色）、变量解析器（编译期静态分析，无 eval）、提示词模板系统（CRUD + URL 触发规则 + lz-string 同步）、Filter 管道（40+ 后处理器）、工作流 UI 面板
 
-- [x] **M5 高阶 AI 工作流**（`doc/tasks/advanced-workflows.md`）
-  - Roundtable 圆桌、Relay Chain 接力链、模板管理、上下文注入、并发/串行执行
-  - 核心实现位于 `lib/workflow/`（topological-sort / runner / roundtable / relay / templates / types / index）
-  - 存储层新增 `workflow-template.repo.ts`（`modules/storage/repositories/`，CRUD + 内置模板 seed）
-  - Pinia store `workflow.store.ts` 管理 active session 与 per-node 状态
-  - UI 组件：`WorkflowTemplateList`、`NodeEditor`、`WorkflowTemplateEditor`、`WorkflowResults`
-  - 业务逻辑：单节点错误不中断 Roundtable；Relay 任一节点失败立即中断后续；上游输出拼接到下游 user message；context 通过 system prompt（Roundtable）或 user message（Relay）注入
-  - 决策：保留 `modules/workflow/` 存根（防止 WXT 0.20 自动扫描），实现在 `lib/workflow/`
-  - **状态：123 单元测试全过（含 28 新增：topological-sort 9、roundtable 6、relay 6、templates 7），TypeScript 编译通过，wxt build 成功（total 730KB）**
+- [ ] **M6 历史库与检索**（`doc/tasks/library.md`）
+  - 历史记录列表（vue-virtual-scroller 虚拟滚动）、快照查看器（主副表懒加载 + 双 Tab）、Web Worker 全文检索（search.worker.ts）、搜索结果高亮、历史记录管理（删除 / 批量 / 域名筛选）
 
-- [x] **M6 跨端输出与灾备同步**（`doc/tasks/export-sync.md`）
-  - Obsidian URI 直写、WebDAV 同步、Zip 手动导出、自动备份调度
-  - 核心实现位于 `lib/export/`（obsidian / webdav / zip / zip.worker / scheduler / backup / markdown / options / view-models）
-  - Options Sync Tab 表单（SyncOptionsPanel.vue）、background.ts auto-backup alarm handler
-  - 类型修复：引入 view-models.ts 桥接 M7 ConversationRecord/MessageRecord 与导出视图模型
-  - **状态：52 单元测试全过，TypeScript 编译通过，wxt build 成功（total 1.15MB）**
+- [ ] **M7 跨端导出与同步**（`doc/tasks/export-sync.md`）
+  - ZIP 全量导出（jszip Web Worker + 进度条）、全量导入合并（覆盖 / 跳过两种策略）、WebDAV 双向增量同步（webdav 库 + chrome.alarms）、Obsidian URI 直写（YAML Frontmatter）、本地文件导出（.md / .html / .txt）、浏览器间设置同步（lz-string 分片）
 
-- [x] **M8 后台 RSS 流水线**（`doc/tasks/rss-pipeline.md`）
-  - 定时抓取、哈希去重、AI 摘要、badge 更新
-  - 核心实现位于 `lib/rss/`（types / fetcher / dedup / scheduler / summarizer / badge / pipeline）
-  - **状态：核心代码完成，23 单元测试通过，TypeScript 编译通过，wxt build 成功（total 1.15MB）**
-  - RSS UI（Tab、FeedList、ItemList）与 Options RSS 管理 UI 留待二期
+- [ ] **M9 RSS 自动化流水线**（`doc/tasks/rss-pipeline.md`）
+  - RSS Fetcher（RSS 2.0 / Atom 1.0）、哈希去重（SHA-256）、AI 后台摘要（静默串行）、Service Worker Alarm 定时调度、扩展 Badge 未读计数、RSS 面板 UI（FeedList / ArticleItem / AddFeedModal）、今日简报（Daily Briefing + 导出到 Obsidian）、Options RSS 管理
 
 ---
 
 ## 里程碑
 
-- [x] **MVP 可运行**：M7 + M2 + M3 + M1 + M4 完成，可打开 Side Panel、提取页面、并发对话。
-  - **当前：M7 / M2 / M3 / M1 / M4 已完成，可进入 MVP 验证。**
-- [x] **工作流版**：MVP + M5 完成，可运行 Roundtable 与 Relay Chain。
-- [x] **完整版**：全部模块完成，包含导出、同步、RSS。
+- [ ] **MVP 可运行**（v0.5）
+  - M8 + M2 + M3 + M1 + M4 完成
+  - 可打开 Side Panel，提取页面正文，与单模型对话，历史记录持久化
+
+- [ ] **核心差异化版**（v0.8）
+  - MVP + M4 Arena Mode 完善 + M3 全部 Provider
+  - 多模型并发对比可用，TTFT/TPS/Cost 指标正常展示
+
+- [ ] **工作流版**（v1.0）
+  - v0.8 + M5 + M6
+  - 可运行 Roundtable 与 Relay Chain，历史库检索可用
+
+- [ ] **完整版**（v1.2）
+  - 全部 9 个模块完成，包含导出、同步、RSS 今日简报
+
+---
+
+## 架构红线（所有模块必须遵守）
+
+1. **列表渲染**：历史列表必须使用 `vue-virtual-scroller`，严禁 `v-for` 全量渲染
+2. **数据库读写分离**：严禁在列表页查询副表 `Messages`，仅在用户点击时懒加载
+3. **Web Worker 检索**：搜索逻辑放入 `search.worker.ts`，严禁主线程正则全文扫描
+4. **流式渲染节流**：使用 `requestAnimationFrame` 约 16ms 节流，帧率目标 ≥ 45fps
+5. **AbortController 隔离**：每个 Provider SSE 连接绑定独立 `AbortController`
+6. **Shadow DOM 注入**：浮动工具栏、右键注入 UI 全部使用 Shadow DOM 隔离
+7. **模板安全**：变量解析走编译期静态分析，严禁 `eval()` / `Function()` 动态执行
+8. **API Key 不过服务器**：所有 LLM 请求直连厂商端点，Key 仅存 `chrome.storage.local`
 
 ---
 
 ## 当前状态
 
-- 8 份详细设计文档已生成（`doc/design-01-entry-layout.md` ~ `design-08-rss-pipeline.md`）。
-- 8 份模块任务清单已生成（`doc/tasks/entry-layout.md` ~ `rss-pipeline.md`）。
-- 第一阶段 + 第二阶段 + 第三阶段全部完成：M7 / M2 / M3 / M1 / M4 / M5 / M6 / M8 八模块完成，**完整版** 达成。
-- 二期待做：RSS 信息流 UI（Side Panel Tab）、S3 兼容上传、真实 WebDAV/Obsidian 集成测试。
-- 架构调整记录：M4 代码从 modules/workspace/ 迁移到 lib/workspace/，原因 WXT 0.20 自动扫描 modules/*/index.ts，但 jiti 不支持 tsconfig path 别名；M5 遵循同一约束；M6 遵循同一约束（lib/export/）。
-- M6 类型修复记录：原 M6 代码引用了不存在的 Conversation/Message 类型和不存在的 settingsStore 导出。引入 view-models.ts 将 ConversationRecord/MessageRecord 映射为导出用 Conversation/Message 视图模型；将 settingsStore 修正为 useSettingsStore；scheduler 使用 browser 全局替代 chrome.alarms 类型。
+- 9 份模块任务清单已生成（`doc/tasks/*.md`）
+- 需求文档版本：`proposal_v1.md` v1.1 详细设计稿
+- 视觉稿：`doc/design.html`（含完整 Vue 3 交互原型）+ `doc/design-tokens.md`（设计令牌速查）
+- 所有模块待开发，建议从 **M8 存储与数据层** 开始

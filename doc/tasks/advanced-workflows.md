@@ -1,84 +1,144 @@
-# M5 高阶 AI 工作流 — Vibe Coding 任务清单
+# M5 AI 工作流 — Vibe Coding 任务清单 (v1)
 
-> **目标**：实现 Roundtable 圆桌讨论与 Relay Chain 模型接力链两种高阶工作流。
-> **输入**：`doc/1.md` 模块 3、`doc/design-05-workflows.md`
-> **建议执行顺序**：M3、M4 完成后开始。
-
----
-
-## 1. 数据模型与模板
-
-- [x] 定义 `WorkflowNodeSpec`、`WorkflowRuntimeNode`、`WorkflowSession`、`WorkflowTemplate` 类型（`lib/workflow/types.ts`）
-- [x] `WorkflowNode` 与 `WorkflowTemplateRecord` 也定义在 `modules/storage/types.ts`
-- [x] 在 M7 中增加 `workflowTemplates` 表（`modules/storage/db.ts`）；`workflowSessions` 复用 `conversations` 表（`mode = 'roundtable' | 'relay'`）
-- [x] 实现模板保存/读取/删除接口（`lib/workflow/template.repo.ts`）
-- [x] 创建 2 个默认模板：Roundtable 辩论、Relay Chain 审校（硬编码在 `lib/workflow/defaults.ts`）
-- [x] 验证模板持久化
+> **目标**：实现串行接力（Relay Chain）、多角色圆桌（Roundtable）、提示词模板系统（含变量 + URL 触发规则）与 Filter 管道（40+ 后处理器）。
+> **输入**：`doc/proposal_v1.md` §2.4
+> **依赖**：M3（Provider 客户端）、M4（多模型调度器）、M8（存储层，Templates 表）
 
 ---
 
-## 2. Roundtable 圆桌讨论
+## 1. 核心类型定义
 
-- [x] 实现 `lib/workflow/roundtable.ts`
-- [x] 对每个节点注入不同 `systemPrompt` 角色
-- [x] 并发调用多个 Provider（复用 M3 `chatStream`）
-- [x] 将同一问题的多角色结果存入 `runtimeNode.output`
-- [x] 实现结果按角色并排展示 UI（`WorkflowResults.vue` / `RoundtableView.vue`）
-- [x] 用 mock Provider 测试 3 角色并发（`lib/workflow/__tests__/`）
-
----
-
-## 3. Relay Chain 接力链
-
-- [x] 实现 `lib/workflow/relay.ts`
-- [x] 实现节点拓扑排序 `topologicalSort()`
-- [x] 检测循环依赖并抛出错误
-- [x] 串行执行节点，上游输出拼接为下游输入
-- [x] 支持一个节点依赖多个上游输出
-- [x] 用 mock Provider 测试 3 节点串行链路
-
----
-
-## 4. 节点编辑器
-
-- [x] 实现 `components/workflow/NodeEditor.vue`
-- [x] 选择 Provider、填写模型、编写角色 prompt
-- [x] Relay Chain 中可选择上游节点
-- [x] 表单校验：Provider 非空、prompt 非空、无循环依赖
-- [x] 验证保存后模板可重新加载编辑
+- [ ] 在 `lib/workflow/types.ts` 中定义：
+  ```typescript
+  interface WorkflowNode {
+    id: string
+    inputSource: 'page' | 'variable' | 'merge'
+    inputVars: string[]       // 引用上游输出变量名
+    providerId: string
+    model: string
+    systemPrompt: string
+    promptTemplate: string   // 含 {{变量}} 语法
+    outputVar: string        // 本节点输出变量名
+    mode: 'serial' | 'parallel'
+  }
+  interface WorkflowSession {
+    id: string
+    nodes: WorkflowNode[]
+    variables: Record<string, string>  // 运行时变量池
+    nodeStatuses: Record<string, 'pending' | 'running' | 'done' | 'aborted' | 'error'>
+  }
+  ```
 
 ---
 
-## 5. 工作流启动器与执行器
+## 2. 串行接力引擎（Relay Chain）
 
-- [x] 实现 `components/workflow/WorkflowTemplateList.vue`（替代 WorkflowLauncher.vue）
-- [x] 实现 `components/workflow/WorkflowTemplateEditor.vue`（新建/编辑模板）
-- [x] 实现 `components/workflow/WorkflowResults.vue`（替代 WorkflowRunner.vue）
-- [x] 选择模板 → 输入初始问题 → 执行（`WorkflowResults.vue` 中触发）
-- [x] 实时显示每个节点的 `status` 与输出
-- [x] 支持中止整个工作流
+- [ ] 实现 `lib/workflow/relay.ts`
+  - 按节点顺序执行 Promise 链（`for...of` 顺序 await）
+  - 每个节点完成后将 `outputVar` 写入 `session.variables`
+  - 下游节点的 Prompt 中使用 `{{变量名}}` 引用上游输出
+  - 任一节点失败立即中断后续节点（`throw` 向上传播）
+  - 支持手动中断：`AbortController` 注入每个节点，中断后下游标记 `'aborted'`
+- [ ] 节点执行时实时流式渲染到对应 `ModelCard`（复用 M4 `StreamingText`）
+- [ ] 单元测试：3 节点接力链，mock 3 个 Provider，验证变量传递正确
 
 ---
 
-## 6. 结果保存与复用
+## 3. 多角色圆桌（Roundtable）
 
-- [ ] 工作流完成后，将结果转换为 `Conversation`（mode 标记为 `roundtable` 或 `relay`）
-- [ ] 保存到 M7，可在历史记录中查看
-- [ ] 复用 M4 的 `MessageList`/`ModelCard` 展示工作流结果
-- [ ] 验证历史记录中可区分普通聊天与工作流会话
+- [ ] 实现 `lib/workflow/roundtable.ts`
+  - 接收角色配置数组：`[{ role: '红方挑刺', systemPrompt, providerId, model }]`
+  - 为每个角色并发启动独立 `chatStream`（复用 M3 `IEngine`）
+  - 单节点错误不中断其他角色（try/catch 局部处理）
+  - 所有角色完成后收集输出，供用户查看
+- [ ] `stores/roundtable.store.ts`：管理各角色状态与输出
+- [ ] 内置 3 个预设角色：
+  - 🟥 **红方挑刺**（system: "请以批判性思维挑出文章的逻辑漏洞..."）
+  - 🟩 **蓝方辩护**（system: "请以支持者角度补充文章的合理之处..."）
+  - 🟧 **产品落地**（system: "请从产品经理角度分析文章的落地价值..."）
+- [ ] 单元测试：3 角色并发，mock 第 2 个 Provider 抛错，验证第 1、3 角色继续完成
+
+---
+
+## 4. 变量解析器（Template Compiler）
+
+- [ ] 实现 `lib/workflow/variable-resolver.ts`
+  - 解析 `{{变量名}}` 语法，从 `session.variables` + 页面上下文中查找替换
+  - 支持变量链：`{{content}}` / `{{title}}` / `{{author}}` / `{{url}}` / `{{selection}}`
+  - 支持 Meta 变量：`{{meta:property:og:title}}`
+  - 支持 Schema.org 变量：`{{schema:@Article.headline}}`
+  - **编译期静态分析**：提取模板中所有变量名，校验是否已定义，未定义的变量输出警告而非运行时崩溃
+  - **严禁** `eval()` 或 `Function()` 动态执行
+- [ ] 单元测试：覆盖普通变量、Meta 变量、未定义变量三种场景
+
+---
+
+## 5. 提示词模板系统
+
+- [ ] 实现 `lib/workflow/template-manager.ts`
+  - CRUD：`createTemplate` / `updateTemplate` / `deleteTemplate` / `listTemplates`
+  - 数据通过 M8 `Templates` 表持久化
+  - 支持导入 `.json` 文件（解析 `Template[]` 数组）
+  - 支持导出选中模板为 `.json`
+- [ ] URL 触发规则：
+  - 字段：`urlPattern?: string`（JavaScript 正则字符串）
+  - `matchTemplate(url: string): Template | null`：遍历模板，返回第一个匹配的
+  - Schema.org 类型匹配：当前页 `metadata.schemaType` 与模板 `schemaType` 字段匹配
+- [ ] 内置预设模板（seed 数据，首次安装写入 Templates 表）：
+  - 📋 **总结摘要**：`请用三段话总结 {{title}} 的核心论点：\n\n{{content}}`
+  - 🔬 **红队批判**：`以批判性思维指出以下文章的逻辑漏洞：\n\n{{content}}`
+  - 🗺️ **脉络大纲**：`为以下文章生成完整章节级结构大纲：\n\n{{content}}`
+  - 🌐 **翻译成中文**：`将以下内容翻译为地道简体中文，保留原有排版：\n\n{{content}}`
+  - 💡 **解释关键概念**：`提取并解释以下文章中所有专业术语：\n\n{{content}}`
+  - 🎯 **提取核心观点**：`提取作者在以下文章中最想表达的 3～5 个核心观点：\n\n{{content}}`
+- [ ] 实现模板压缩同步：
+  - 使用 `lz-string` 将模板 JSON 压缩为 UTF16
+  - 按 `CHUNK_SIZE=8000` 分片存入 `chrome.storage.sync`
+  - 读取时解压拼接还原
+
+---
+
+## 6. Filter 管道
+
+- [ ] 实现 `lib/workflow/filters.ts`，40+ Filter 函数（纯函数，输入字符串/数组 → 输出字符串/数组）：
+  - **文本转换**：`capitalize` / `upper` / `lower` / `trim` / `replace(from,to)` / `strip_tags` / `strip_md` / `safe_name`
+  - **结构转换**：`blockquote` / `callout(type)` / `table` / `link(text)` / `footnote`
+  - **列表操作**：`slice(start,end)` / `reverse` / `merge(separator)` / `join(separator)` / `map(template)` / `template(tpl)`
+  - **日期处理**：`date(format)` / `date_modify(amount,unit)`
+- [ ] 实现 `lib/workflow/filter-pipeline.ts`
+  - 解析 `{{变量名|filter1|filter2(arg)}}` 语法（Filter 链）
+  - 按顺序执行 Filter，将输出传入下一个 Filter
+  - Filter 白名单校验：不在白名单中的 Filter 名称抛出编译期错误
+- [ ] 单元测试：`'hello world' | capitalize | upper` → `'HELLO WORLD'`
+
+---
+
+## 7. 工作流 UI 面板
+
+- [ ] 实现 `components/workflow/WorkflowPanel.vue`（接入 M1 右栏"工作流"Tab）
+  - 顶部：圆桌 / 接力链 / 模板三个子面板切换
+- [ ] 实现 `components/workflow/RoundtablePanel.vue`
+  - 3 列角色卡片网格（`bg-obsidian-bg` + `border` + `rounded-lg`，居中）
+  - 每个角色卡片：角色名 + 颜色圆圈 + 模型下拉 + System Prompt 输入框
+  - 【启动圆桌】紫色主按钮 + 【重置】白色边框按钮
+- [ ] 实现 `components/workflow/RelayChainPanel.vue`
+  - 节点列表（最多 4 个节点），每个节点：模型选择 + Prompt 输入 + 输出变量名
+  - 节点间连线箭头（纯 CSS `border-left` 或 SVG）
+  - 【启动接力】按钮
+- [ ] 实现 `components/workflow/TemplateList.vue`
+  - 列表展示所有模板（图标 + 名称 + URL 规则预览）
+  - 单击一键填入 M4 InputComposer
+  - 长按 / 右键：编辑 / 删除 / 导出
+- [ ] 实现 `components/workflow/WorkflowResults.vue`
+  - 展示各节点 / 角色的流式输出卡片（复用 M4 `ModelCard`）
+  - 底部显示整体用时 + 各节点状态
 
 ---
 
 ## 验收标准
 
-1. Roundtable 3 角色对同一问题返回不同视角的回复，且互不影响。
-2. Relay Chain 3 节点串行执行，下游节点输入包含上游输出。
-3. 循环依赖模板在保存时被拒绝，并给出明确错误提示。
-4. 工作流结果可在历史记录中查看，并复用 M4 UI 渲染。
-
----
-
-## 依赖提醒
-
-- **阻塞项**：M3（Provider 调用）、M4（会话模型与 UI 组件）、M7（Workflow 存储）。
-- **后续接入**：可在 M4 的侧边栏中增加「工作流」Tab 作为入口。
+1. 配置 DeepSeek → Claude 接力链，DeepSeek 完成翻译后，Claude 自动收到 `{{translation}}` 并开始提取技术难点。
+2. 启动圆桌：3 个角色同时流式输出，mock 第 2 个 Provider 失败不影响其他两个。
+3. 模板 `{{meta:property:og:title}}` 在含 OG 元数据的页面正确替换为实际标题。
+4. Filter `'  Hello World  ' | trim | lower` → `'hello world'`。
+5. 模板压缩同步：导入 20 个模板后，`chrome.storage.sync` 分片写入不超过 8KB / chunk。

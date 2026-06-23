@@ -1,107 +1,153 @@
-# M3 Provider 与 LLM 客户端 — Vibe Coding 任务清单
+# M3 多模型 Provider 客户端 — Vibe Coding 任务清单 (v1)
 
-> **目标**：实现统一的 Provider 抽象，支持自定义 base URL 和模型名，提供 SSE 流式请求。
-> **输入**：`doc/1.md` 技术选型 / 模块 2、`doc/design-03-provider-client.md`
-> **建议执行顺序**：在 M7 settings stub 之后即可开始；M4 依赖此模块。
-
-## 收尾记录
-
-> 主 Agent 在 2026-06-21 完成 M3 收尾：
-> - 修复 `eventsource-parser` v3 兼容性（拆分 import 子句）
-> - `pnpm test` 81/81 通过、`pnpm compile` 0 错误、`pnpm build` 成功
-> - 详细偏差记录在 `doc/notes/provider-client-dev-notes.md`
-> - M3 范围内全部完成；Options UI 提示与跨 entry 同步留待 M1 接入
+> **目标**：实现 `IEngine` 抽象接口与 15 个 Provider 适配器，支持 SSE 流式解析、多 Provider 故障转移、指数退避重连、错误码分层处理，API Key 仅存本地、绝不过服务器。
+> **输入**：`doc/proposal_v1.md` §2.2
+> **依赖**：M8（存储层，用于读取 API Key 与 Provider 配置）
 
 ---
 
-## 1. 依赖安装与基础类型
+## 1. IEngine 抽象接口
 
-- [x] 安装 `eventsource-parser`
-- [x] 创建 `modules/provider/` 目录
-- [x] 定义 `ProviderConfig`、`ProviderType`、`ChatMessage`、`ChatRequest`、`StreamEvent`、`RequestMetrics` 类型
-- [x] 在 `types.ts` 中明确 `baseUrl` 和 `model` 为可编辑字段
-- [x] 创建 `modules/provider/__tests__/mock-server.ts` 用于测试 SSE _(注：实际未创建独立 mock-server 文件，测试改用 inline mock 验证 buildBody/parseStreamChunk；端到端 fetch + SSE 真实流式测试留待二期。详见 dev-notes)_
+- [ ] 定义 `lib/providers/types.ts`：
+  ```typescript
+  interface IEngine {
+    id: string
+    name: string
+    buildHeaders(apiKey: string): Record<string, string>
+    buildBody(messages: Message[], model: string, stream: boolean): unknown
+    getBaseUrl(customBaseUrl?: string): string
+    parseSSEChunk(chunk: string): string | null  // 返回增量文本
+  }
+  interface ChatStreamOptions {
+    messages: Message[]
+    model: string
+    apiKey: string
+    customBaseUrl?: string
+    signal: AbortSignal
+    onDelta: (text: string) => void
+    onMetrics: (m: RequestMetrics) => void
+    onError: (err: ProviderError) => void
+  }
+  interface RequestMetrics { ttft: number; tps: number; totalTokens: number; cost: number; cached: boolean }
+  interface ProviderError { code: number; message: string; provider: string }
+  ```
+- [ ] 实现 `lib/providers/base-engine.ts`：
+  - `chatStream(options: ChatStreamOptions)` 方法，处理 SSE 连接、流式解析、重试、超时
+  - 使用 `eventsource-parser` 解析 SSE，避免中文字符截断乱码
+  - 使用 `best-effort-json-parser` 处理不完整 JSON 增量
+  - 记录 `TTFT`（首个 delta 时间）、`TPS`（总 token / 总耗时）
 
-## 2. BaseProvider 抽象类
+---
 
-- [x] 实现 `modules/provider/base.ts`
-- [x] 定义抽象方法：`chatStream`、`defaultBaseUrl`、`buildHeaders`、`buildBody`、`parseStreamChunk`
-- [x] 实现 `get baseUrl()`：优先使用 `config.baseUrl`，否则使用官方默认地址
-- [x] 提供 `apiKey` 非空校验，缺失时抛出 `MISSING_API_KEY`
+## 2. OpenAI-compatible 适配器基类
 
-## 3. Provider 工厂
+- [ ] 实现 `lib/providers/openai-compatible.ts`（继承 `BaseEngine`）
+  - `buildHeaders`: `Authorization: Bearer ${apiKey}` + `Content-Type: application/json`
+  - `buildBody`: `{ model, messages, stream: true }`
+  - `parseSSEChunk`: 提取 `data.choices[0].delta.content`
+  - `getBaseUrl`: 支持 `customBaseUrl` 覆盖
+- [ ] 基于此实现以下 Provider 子类（仅 override `getBaseUrl` + `id` + `name`）：
+  - [ ] `OpenAIEngine`（`https://api.openai.com/v1`）
+  - [ ] `DeepSeekEngine`（`https://api.deepseek.com/v1`）
+  - [ ] `MiniMaxEngine`
+  - [ ] `MoonshotEngine`（`https://api.moonshot.cn/v1`）
+  - [ ] `GroqEngine`（`https://api.groq.com/openai/v1`）
+  - [ ] `CerebrasEngine`
+  - [ ] `PerplexityEngine`（`https://api.perplexity.ai`）
+  - [ ] `xAIEngine`（`https://api.x.ai/v1`）
+  - [ ] `AzureOpenAIEngine`（动态 endpoint，需额外 `api-version` Header）
+  - [ ] `LMStudioEngine`（默认 `http://localhost:1234/v1`）
+  - [ ] `OllamaEngine`（`http://localhost:11434/api/chat`，Ollama REST API 格式）
 
-- [x] 实现 `modules/provider/factory.ts`
-- [x] 根据 `type` 创建对应 Provider 实例
-- [x] 支持 `openai`、`anthropic`、`gemini`、`custom` 四种类型
-- [x] `custom` 类型强制校验 `baseUrl` 和 `model` 非空
+---
 
-## 4. OpenAI Provider
+## 3. 非兼容 Provider 适配器
 
-- [x] 实现 `modules/provider/providers/openai.ts`
-- [x] 默认 baseUrl：`https://api.openai.com/v1`
-- [x] 实现 `buildBody`（`model` 使用 `config.model`）
-- [x] 实现 `parseStreamChunk` 解析 `delta.content`
-- [x] 用 mock server 测试 SSE 流式输出 _(注：见第 1 节说明)_
-- [x] 支持 `AbortSignal` 终止请求
+- [ ] 实现 `lib/providers/anthropic-engine.ts`
+  - Header：`x-api-key` + `anthropic-version: 2023-06-01`
+  - Body：`{ model, max_tokens, messages, stream: true }`
+  - SSE 解析：`event: content_block_delta` → `delta.text`
+- [ ] 实现 `lib/providers/gemini-engine.ts`
+  - 使用 Google AI API（`generativelanguage.googleapis.com`）
+  - Body 格式：`{ contents: [{ parts: [{ text }] }] }`
+  - SSE 解析：`candidates[0].content.parts[0].text`
+- [ ] 实现 `lib/providers/cohere-engine.ts`
+  - Header：`Authorization: Bearer ${apiKey}`
+  - Body：Cohere `/v1/chat` 格式
+  - SSE 解析：`event-type: text-generation` → `text`
+- [ ] 实现 `lib/providers/chatgpt-web-engine.ts`（Web Session 模式）
+  - 从 `chrome.cookies` 读取 ChatGPT session token
+  - 调用 ChatGPT Web API（零 API 额度消耗）
+  - 标注此 Provider 为实验性，需用户手动启用
 
-## 5. Anthropic Provider
+---
 
-- [x] 实现 `modules/provider/providers/anthropic.ts`
-- [x] 默认 baseUrl：`https://api.anthropic.com/v1`
-- [x] 适配 Anthropic Messages API 的请求体与 SSE 事件格式
-- [x] 用 mock server 测试 SSE 流式输出 _(注：见第 1 节说明)_
-- [x] 支持 `AbortSignal` 终止请求
+## 4. API Key 安全存储
 
-## 6. Gemini Provider
+- [ ] 实现 `lib/providers/key-store.ts`
+  - `saveKey(providerId, apiKey)` → `chrome.storage.local.set`
+  - `getKey(providerId)` → `chrome.storage.local.get`
+  - `deleteKey(providerId)` → `chrome.storage.local.remove`
+  - Provider 配置（Base URL / 模型列表）→ `chrome.storage.sync`（经 `lz-string` 压缩）
+- [ ] 确认 API Key 不出现在任何日志、错误上报、网络请求 Header 之外
+- [ ] 设置页 API Key 输入框使用 `type="password"`，展示模拟圆点占位符
 
-- [x] 实现 `modules/provider/providers/gemini.ts`
-- [x] 默认 baseUrl：`https://generativelanguage.googleapis.com/v1beta`
-- [x] 适配 Gemini 流式生成 API（可能需要 SSE 封装）
-- [x] 用 mock server 或真实 API key 测试 _(注：见第 1 节说明)_
-- [x] 支持 `AbortSignal` 终止请求
+---
 
-## 7. Custom Provider
+## 5. 网络代理配置
 
-- [x] 实现 `modules/provider/providers/custom.ts`
-- [x] 兼容 OpenAI 格式，允许任意自定义 baseUrl 和 model
-- [x] 支持额外请求头 `config.headers` 覆盖
-- [x] 支持额外参数 `config.parameters` 覆盖
-- [x] 测试连接本地代理或兼容 API _(注：见第 1 节说明)_
+- [ ] 在 Provider 配置中支持 `customBaseUrl` 字段（每个 Provider 独立）
+- [ ] 实现全局代理开关：一键将所有 Provider 的 `baseUrl` 替换为同一代理地址
+- [ ] 代理 URL 仅修改目标地址，不修改请求体和 Header
 
-## 8. SSE 解析与流控
+---
 
-- [x] 实现 `modules/provider/sse-parser.ts` 包装 `eventsource-parser`
-- [x] 处理多字节字符截断，中文乱码防护
-- [x] 实现统一的 `StreamEvent` 分发：`start` / `delta` / `usage` / `error` / `done`
-- [x] 实现请求级重试：超时 1 次、429 退避最多 3 次、5xx 指数退避最多 3 次
-- [x] 提供全局 abort 注册表：M1/M4 可触发 `ABORT_ALL_REQUESTS`
+## 6. SSE 断线自动重连
 
-## 9. 指标与费用估算
+- [ ] 在 `BaseEngine.chatStream` 中实现指数退避重连：
+  - 初始等待 1s，每次翻倍，最大 30s，最多重试 5 次
+  - 重连时携带上次接收的最后内容 offset（实现断点续渲染）
+  - 重连期间在侧边栏显示轻量重连指示器（小 spinner + "重连中..."）
+- [ ] 正常关闭（用户主动中止）不触发重连（检查 `signal.aborted`）
 
-- [x] 实现 `modules/provider/metrics.ts`
-- [x] 计算 `startTime` / `firstTokenTime` / `endTime` / `totalLatency`
-- [x] 计算 `tokensPerSecond`（优先使用返回的 usage，否则按字符估算）
-- [x] 维护价格表，计算 `estimatedCost`
-- [x] 在 mock 测试中验证指标计算正确性
+---
 
-## 10. 安全提示与配置
+## 7. 多 Provider 故障转移链
 
-- [x] 在 Options UI 中添加 API Key 明文存储风险提示 _(注：`stores/settings.store.ts` 已暴露 `apiKeyWarning` computed；UI 消费留待 M1)_
-- [x] 实现 `ProviderConfig` 的导入/导出（不含 API Key 导出）_(注：`exportSettings(includeApiKeys=false)` 默认剔除 apiKey)_
-- [x] 在 `settings` 中保存 `ProviderConfig[]`（按用户要求明文）
-- [x] 验证配置在 Popup / Side Panel / Options 间同步 _(注：依赖 M1 入口挂载 Pinia 实例后即可跨 entry 共享)_
+- [ ] 实现 `lib/providers/failover-chain.ts`
+  - 用户可配置有序的 Provider 链（如 `['openai', 'anthropic', 'deepseek']`）
+  - 当主模型失败或超时（默认 30s 可配置）时，自动切换到下一个重试
+  - 切换透明：用户仅在最终成功或全部失败时看到 Toast
+- [ ] 错误码分层处理：
+  - `401` / `403` → Toast "API Key 无效，请检查设置"，打开 Options 页
+  - `429` → Toast 展示 Rate Limit 冷却时间（Rate Limit Reset 时间戳解析）
+  - `5xx` → 自动重试 1 次，仍失败则展示错误详情
+
+---
+
+## 8. Provider 注册表与工厂
+
+- [ ] 实现 `lib/providers/registry.ts`：
+  - 统一注册所有 Provider 实例
+  - `getEngine(providerId: string): IEngine`
+  - `listEngines(): EngineInfo[]`（含 id / name / icon / isLocal / isConfigured）
+- [ ] 实现 `lib/providers/pricing.ts`：存储各模型的每千 token 输入 / 输出价格，供 `RequestMetrics.cost` 估算
+
+---
+
+## 9. 单元测试
+
+- [ ] 用 mock SSE server 测试 `BaseEngine` 流式解析（覆盖中文多字节截断场景）
+- [ ] 测试 `AnthropicEngine` / `GeminiEngine` 的 SSE 格式解析正确
+- [ ] 测试故障转移链：mock 主模型返回 `500`，验证自动切换到备用模型
+- [ ] 测试指数退避：mock SSE 断线，验证重连等待时间序列 1s → 2s → 4s → 8s
 
 ---
 
 ## 验收标准
 
-1. ✅ 使用 mock SSE server，4 种 Provider 均能正确输出流式文本并触发 `done`。
-2. ⚠️ 自定义 Provider 连接本地代理或 OpenAI 兼容端点成功。_(注：构造测试通过，未做真实 HTTP 调用)_
-3. ✅ AbortSignal 触发后 fetch 立即终止，不再接收后续 chunk。_(代码路径完整覆盖，真实 HTTP 端到端测试未做)_
-4. ✅ 指标计算中 TTFT、Latency、Tokens/s 与费用估算不为空或 NaN。_(metrics.test.ts 8 个测试覆盖)_
-
-## 依赖提醒
-
-- **阻塞项**：M7 需提供 `ProviderConfig` 读取与明文存储接口。_(已由 `stores/settings.store.ts` + `modules/storage/types.ts` 提供)_
-- **后续接入**：M4 将并发调用 `createProvider` 与 `chatStream`。
+1. 配置 OpenAI API Key 后，发送消息可收到流式回复，TTFT < 2s（正常网络）。
+2. Gemini / Anthropic / DeepSeek / Ollama 各自正常完成一次流式对话。
+3. 关闭 API Key 后发送消息，Toast 显示"API Key 无效"并高亮 Options 入口。
+4. 主模型故障转移：mock 主模型 500 错误，1s 内自动切换到备用模型并继续生成。
+5. 单元测试全部通过，TypeScript 无编译错误。
