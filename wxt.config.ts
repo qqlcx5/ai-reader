@@ -28,6 +28,7 @@ export default defineConfig({
       'scripting',
       'activeTab',
       'contextMenus',
+      'commands',  // 必需：才能使用 chrome.commands.onCommand 监听快捷键 (capture-page)
     ],
 
     host_permissions: ['<all_urls>'],
@@ -67,6 +68,13 @@ export default defineConfig({
     keepProfileChanges: true,
     // 启动时自动在浏览器中打开以下页面
     openUrls: ['chrome://extensions', 'about:blank'],
+  },
+
+  // WXT dev HMR server 单独端口（避免与 Vite 3000 冲突）
+  dev: {
+    server: {
+      port: 5180,
+    },
   },
   vite: () => ({
     plugins: [
