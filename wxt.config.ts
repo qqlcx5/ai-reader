@@ -34,6 +34,8 @@ export default defineConfig({
 
     action: {
       default_title: 'Open ReadChat',
+      // 不设 default_popup，否则会与 sidePanel.setPanelBehavior 冲突
+      // 点击图标应由 background.ts 的 onClicked 监听器处理（打开 side panel）
     },
 
     side_panel: {

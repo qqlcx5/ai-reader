@@ -1,30 +1,22 @@
 <script lang="ts" setup>
-import HelloWorld from '@/components/HelloWorld.vue';
+// 工具栏 popup 已停用：点击图标改为打开 Side Panel（见 background.ts onClicked）
+// 此处保留为最小占位以避免 WXT 报错
 </script>
 
 <template>
-  <div>
-    <a href="https://wxt.dev" target="_blank">
-      <img src="/wxt.svg" class="logo" alt="WXT logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="@/assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="popup-placeholder">
+    <p>ReadChat</p>
   </div>
-  <HelloWorld msg="WXT + Vue" />
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #54bc4ae0);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+.popup-placeholder {
+  width: 100px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #666;
 }
 </style>
