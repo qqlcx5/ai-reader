@@ -66,8 +66,10 @@ export default defineConfig({
     // 之后 dev 重启会保留
     chromiumProfile: './.wxt/chrome-data',
     keepProfileChanges: true,
+    openConsole: true,
+    openDevtools: true,
     // 启动时自动在浏览器中打开以下页面
-    openUrls: ['chrome://extensions', 'about:blank'],
+    // openUrls: ['chrome://extensions', 'https://www.bestblogs.dev/article/c963e649'],
   },
 
   // WXT dev HMR server 单独端口（避免与 Vite 3000 冲突）
@@ -83,17 +85,15 @@ export default defineConfig({
         port: 5180,
         clientPort: 5180,
       },
-    },
-    plugins: [
-      UnoCSS(),
-    ],
-    resolve: {
-      alias: {
-        '@': '/',
+      plugins: [
+        UnoCSS(),
+      ],
+      resolve: {
+        alias: {
+          '@': '/',
+        },
       },
     },
-  }),
-  vite: () => ({
     plugins: [
       UnoCSS(),
     ],
