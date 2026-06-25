@@ -20,7 +20,18 @@ const STREAMING_STATE = 'streaming_state';
 const streamingControllers = new Map<string, AbortController>();
 
 export default defineBackground(() => {
-  console.log('[ReadChat] background loaded');
+  // SW 顶层全局错误捕获 - 防止任一未捕获错误让 Chrome 重启循环
+  // 这些仅在 SW 运行时可用，dev mode 下 ViteNode 会跳过
+  if (typeof self !== 'undefined' && self.addEventListener) {
+    self.addEventListener('error', (e) => {
+      console.error('[ReadChat SW] uncaught error:', e.error || (e as ErrorEvent).message, e);
+    });
+    self.addEventListener('unhandledrejection', (e) => {
+      console.error('[ReadChat SW] unhandled rejection:', e.reason);
+    });
+  }
+  try {
+    console.log('[ReadChat] background loaded');
 
   // ========== 1. Side Panel 打开触发器 ==========
   // 参考 chrome-extensions skill 规则 #2 + foundation.md 章节 1
@@ -136,4 +147,7 @@ export default defineBackground(() => {
       console.warn('[ReadChat] initIndex on startup failed:', err);
     }
   });
+  } catch (err) {
+    console.error('[ReadChat] background init failed:', err);
+  }
 });

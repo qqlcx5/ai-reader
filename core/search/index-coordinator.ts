@@ -10,7 +10,7 @@ let worker: Worker | null = null;
 let indexReady = false;
 const readyPromise: { resolve?: () => void; reject?: (err: Error) => void } = {};
 
-function ensureWorker(): Worker {
+function ensureWorker(): Worker | null {
   if (worker) return worker;
   try {
     worker = new Worker(new URL('../../workers/search.worker.ts', import.meta.url), {
@@ -29,7 +29,9 @@ function ensureWorker(): Worker {
     });
   } catch (err) {
     console.error('[SearchWorker] failed to create:', err);
-    throw err;
+    // 不抛 - 让 indexReady 保持 false，业务走 fallback
+    indexReady = false;
+    return null;
   }
   return worker;
 }
@@ -53,6 +55,7 @@ export async function initIndex(): Promise<void> {
  */
 export async function notifyIndexUpdate(documentId: string): Promise<void> {
   const w = ensureWorker();
+  if (!w) return;
   w.postMessage({ type: 'UPSERT_DOCUMENT', payload: { documentId } });
 }
 
@@ -61,6 +64,7 @@ export async function notifyIndexUpdate(documentId: string): Promise<void> {
  */
 export async function notifyIndexRemove(documentId: string): Promise<void> {
   const w = ensureWorker();
+  if (!w) return;
   w.postMessage({ type: 'REMOVE_DOCUMENT', payload: { documentId } });
 }
 
@@ -69,10 +73,20 @@ export async function notifyIndexRemove(documentId: string): Promise<void> {
  */
 export async function search(query: string, limit = 20): Promise<SearchResult[]> {
   if (!indexReady) {
-    await initIndex();
+    try {
+      await initIndex();
+    } catch {
+      // worker 创建失败时回退到 searchFallback
+      return searchFallback(query, limit);
+    }
   }
   return new Promise((resolve) => {
     const w = ensureWorker();
+    if (!w) {
+      // worker 创建失败 - 直接回退
+      searchFallback(query, limit).then(resolve);
+      return;
+    }
     const handler = (e: MessageEvent) => {
       if (e.data?.type === 'SEARCH_RESULT' && e.data?.queryId === queryId) {
         w.removeEventListener('message', handler);
