@@ -55,3 +55,8 @@
 - `db/dexie.ts`（documents 表，参考 `storage-utils.ts`）
 - `entrypoints/sidepanel/`（时间轴页面，参考 `popup.ts` 和 `side-panel.html`）
 - `core/documents/document.service.ts`（读取文档，参考 `content-extractor.ts`）
+
+## 参考资料
+- `obsidian-clipper/date-utils.ts` - 日期处理
+- `obsidian-clipper/storage-utils.ts` - stats 统计
+- `obsidian-clipper/styles/charts.scss` - 热力图样式参考

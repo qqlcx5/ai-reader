@@ -3,6 +3,9 @@
 ## 目标
 搭建 WXT + Vue 3 + TypeScript 的 Chrome Extension MV3 项目骨架，配置 manifest、权限、构建流程。
 
+> ⚠️ **关键约束**：本任务文件已通过 [chrome-extensions] skill 技术评审（详见 `tech-review_2026-06-25.md`）
+> 涉及 Manifest V3 关键规则：侧边栏打开触发器、`action` 字段、权限精确声明
+
 ## 最小可执行任务
 
 ### 1. 项目初始化
@@ -10,12 +13,29 @@
 - [ ] 安装依赖：`vue`, `typescript`, `vite`（参考 `obsidian-clipper` 的 `package.json`）
 - [ ] 配置 `wxt.config.ts`（参考 `manifest.chrome.json` 的权限配置）：
   - `modules: ['@wxt-dev/module-vue']`
-  - `manifest.permissions: ['sidePanel', 'storage', 'activeTab']`
-  - `manifest.side_panel.default_path`
+  - `manifest.action: {}` ⚠️ **必须**（即使为空对象，参考 chrome-extensions 规则 #11：`chrome.action` API 需要 `action` 字段）
+  - `manifest.permissions: ['sidePanel', 'storage', 'tabs', 'scripting']` ⚠️ **不要使用 `activeTab`**（参考规则 #12：从 Side Panel 触发无效，参考 `obsidian-clipper` 的 `manifest.chrome.json`）
+  - `manifest.host_permissions: ['<all_urls>']` ⚠️ **必须**（defuddle 需要访问任意网页 DOM，参考 `obsidian-clipper` 的 `host_permissions`）
+  - `manifest.side_panel.default_path: 'sidepanel.html'`
+- [ ] ✅ **Side Panel 打开触发器**（参考 chrome-extensions 规则 #2：仅定义 `default_path` 无法打开 Side Panel）：
+  ```ts
+  // entrypoints/background.ts
+  chrome.action.onClicked.addListener(async (tab) => {
+    await chrome.sidePanel.open({ windowId: tab.windowId });
+  });
+  ```
+  ⚠️ 注意：`chrome.action.onClicked` 仅在**没有 `default_popup`** 时触发
+- [ ] 备选方案：使用 `setPanelBehavior` 自动打开（参考 chrome-extensions 规则 #2）：
+  ```ts
+  // ⚠️ 属性名是 openPanelOnActionClick，不是 openPanelOnActionIconClick（后者会抛出 TypeError）
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+  // ⚠️ 使用此方案时不能同时定义 default_popup
+  ```
 - [ ] 验证构建：`npm run build` 生成 dist/（参考 `obsidian-clipper` 的构建脚本）
 
 ### 2. 目录结构初始化
 - [ ] 创建 `entrypoints/background.ts`（Service Worker，参考 `obsidian-clipper` 的 `background.ts`）
+  - ⚠️ **不要在 SW 中使用全局变量存储状态**（参考 chrome-extensions 规则 #7：SW 是 ephemeral，使用 `chrome.storage`）
 - [ ] 创建 `entrypoints/content.ts`（Content Script，参考 `obsidian-clipper` 的 `content.ts`）
 - [ ] 创建 `entrypoints/sidepanel/`（Side Panel，参考 `obsidian-clipper` 的 `side-panel.html`）
   - `index.html`, `main.ts`, `App.vue`
@@ -42,6 +62,7 @@
   - `useSearchStore`（搜索结果、索引状态）
   - `useSyncStore`（同步状态、配置）
   - `useSettingsStore`（模型配置、WebDAV 配置）
+- [ ] ⚠️ **Background 中的状态必须使用 `chrome.storage.session`**（参考 chrome-extensions 规则 #7）
 
 ### 5. 跨上下文通信封装
 - [ ] 创建 `shared/messaging/messages.ts`（参考 `obsidian-clipper` 的 `types/types.ts` 接口定义风格）
@@ -49,11 +70,33 @@
 - [ ] 创建 `shared/messaging/runtime-client.ts`（参考 `obsidian-clipper` 的 `browser-polyfill.ts`）
   - 封装 `chrome.runtime.sendMessage` 和 `chrome.runtime.onMessage`
   - Promise 化 API（参考 `browser-polyfill.ts` 的封装方式）
+- [ ] ⚠️ **异步 `onMessage` 监听器必须 `return true`**（参考 chrome-extensions 规则 #5）：
+  ```ts
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    (async () => {
+      const data = await chrome.storage.local.get('key');
+      sendResponse({ data });
+    })();
+    return true; // 关键！保持通道开放以发送异步响应
+  });
+  ```
   - 错误处理（超时、连接断开，参考 `background.ts` 的错误处理）
 
 ### 6. 图标与资源
-- [ ] 准备图标：`icon-16.png`, `icon-48.png`, `icon-128.png`（参考 `obsidian-clipper` 的 `icons/` 目录）
-- [ ] 配置 manifest 图标路径（参考 `manifest.chrome.json` 的 `icons` 字段）
+- [ ] ⚠️ **多尺寸独立图标文件**（参考 chrome-extensions 规则 #1）：
+  - `public/icons/icon-16.png` (16×16px)
+  - `public/icons/icon-48.png` (48×48px)
+  - `public/icons/icon-128.png` (128×128px)
+  - 每个尺寸必须是**独立文件**，不能复用同一图片
+  - 备选：从 manifest 中删除 `icons` 字段（Chrome 会用默认图标）
+- [ ] 配置 manifest 图标路径（参考 `manifest.chrome.json` 的 `icons` 字段）：
+  ```json
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+  ```
 - [ ] 悬浮按钮图标（SVG 或 PNG，参考 `icons/icons.ts` 的图标系统）
 
 ### 7. 开发工具配置
@@ -65,6 +108,11 @@
 ### 8. 构建与打包
 - [ ] 配置 Chrome Web Store 打包脚本（参考 `obsidian-clipper` 的构建脚本）
 - [ ] 生成 `.zip` 文件（manifest v3，参考 `manifest.chrome.json`）
+- [ ] ✅ **创建 `CHROMEWEBSTORE.md`**（参考 chrome-extensions skill Part 2 - 上架元数据）
+  - 权限理由（每个权限的中文说明）
+  - 隐私政策
+  - 截图清单（1280×800 至少 1 张）
+- [ ] ✅ **创建 `.manifest-checklist.md`** - 每次 PR 前的 manifest 字段验证清单
 - [ ] 验证 manifest 字段完整性（参考 `manifest.chrome.json` 的字段）
 
 ---
@@ -72,10 +120,18 @@
 ## 验收标准
 - [ ] `npm run dev` 热更新正常（参考 `obsidian-clipper` 的开发模式）
 - [ ] `npm run build` 无错误，生成可加载的扩展包（参考 `obsidian-clipper` 的构建流程）
-- [ ] Side Panel 可正常打开（参考 `side-panel.html`）
-- [ ] Content Script 在任意页面注入按钮（参考 `content.ts` 的按钮注入）
-- [ ] Background Service Worker 正常唤醒（参考 `background.ts` 的生命周期）
-- [ ] 跨上下文消息通信正常（参考 `browser-polyfill.ts`）
+- [ ] ✅ **Side Panel 可正常打开**（点击扩展图标 → 打开 Side Panel，参考 `side-panel.html`）
+- [ ] ✅ **Content Script 在任意页面注入按钮**（`<all_urls>` host_permissions，参考 `content.ts` 的按钮注入）
+- [ ] ✅ **Background Service Worker 正常唤醒**（无状态泄漏，参考 `background.ts` 的生命周期）
+- [ ] ✅ **跨上下文消息通信正常**（异步响应 `return true`，参考 `browser-polyfill.ts`）
+- [ ] ✅ **图标资源 100% 存在**（16/48/128 PNG 独立文件，参考 chrome-extensions 规则 #1）
 
 ## 依赖模块
 - 所有其他模块（基础框架，参考 `obsidian-clipper` 的 `src/` 目录结构）
+
+## 参考资料
+- [chrome-extensions] skill - Manifest V3 最佳实践
+- `obsidian-clipper/manifest.chrome.json` - 权限配置参考
+- `obsidian-clipper/background.ts` - SW 生命周期
+- `obsidian-clipper/content.ts` - Content Script 注入
+- `obsidian-clipper/browser-polyfill.ts` - 跨浏览器 API 封装

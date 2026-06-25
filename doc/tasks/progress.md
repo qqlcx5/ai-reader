@@ -108,3 +108,8 @@
 ## 最近更新
 
 - 2026-06-25: 初始化任务列表
+- 2026-06-25: **技术评审完成**（详见 [tech-review_2026-06-25.md](./tech-review_2026-06-25.md)）
+  - 发现 11 个问题：3 个 Critical + 4 个 High + 4 个 Medium
+  - 修复：调整 `activeTab` → `tabs` + `host_permissions`，增加 `action` 字段，添加 Side Panel 触发器任务
+  - 创建：[.manifest-checklist.md](../../.manifest-checklist.md) + [CHROMEWEBSTORE.md](../../CHROMEWEBSTORE.md)
+  - 修复了 `world: 'MAIN'` 风险、`return true` 异步响应、SW 状态存储等关键问题

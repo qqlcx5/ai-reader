@@ -45,6 +45,7 @@
 - [ ] 文档删除后：Background → Worker `REMOVE_DOCUMENT`（参考 `storage-utils.ts` 的数据清理）
 - [ ] Worker 内部读取文档并 `addDocument()` / `remove()`（参考 MiniSearch API）
 - [ ] 更新耗时 < 10ms（单篇，参考 `popup.ts` 的性能要求）
+- [ ] ✅ **Worker 通信使用 `chrome.runtime.sendMessage` / `chrome.runtime.connect`**（参考 chrome-extensions 规则 #5）
 
 ### 6. 搜索降级策略
 - [ ] MiniSearch 索引失败时，降级为 Dexie `where('title').startsWith(query)`（参考 `storage-utils.ts` 的查询模式）
@@ -64,3 +65,8 @@
 - `db/dexie.ts`（documents 表，参考 `storage-utils.ts`）
 - `entrypoints/sidepanel/`（搜索页面，参考 `popup.ts` 和 `side-panel.html`）
 - `entrypoints/background.ts`（通知 Worker 更新，参考 `background.ts` 的消息路由）
+
+## 参考资料
+- [chrome-extensions] skill - Message Passing
+- `obsidian-clipper/popup.ts` - 搜索逻辑
+- `obsidian-clipper/background.ts` - 消息路由

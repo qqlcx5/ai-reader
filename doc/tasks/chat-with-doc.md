@@ -23,6 +23,17 @@
 - [ ] 调用 `fetch()` 发起 SSE 请求（`Accept: text/event-stream`，参考 `interpreter.ts` 的流式处理）
 - [ ] 使用 `eventsource-parser` 解析 SSE chunks（替代 `interpreter.ts` 的原生解析方式）
 - [ ] 通过 `chrome.runtime.sendMessage` / `chrome.runtime.connect` 长连接转发 delta 到 Side Panel（参考 `background.ts` 的消息转发）
+- [ ] ✅ **`chrome.runtime.connect` 长连接适合流式转发**（避免反复创建消息端口，参考 `background.ts` 的消息转发）
+- [ ] ⚠️ **`onMessage` 监听器中 `return true` 保持通道开放**（参考 chrome-extensions 规则 #5）：
+  ```ts
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    (async () => {
+      // 异步处理流式 chunk
+      sendResponse({ chunk: data });
+    })();
+    return true; // 关键！
+  });
+  ```
 - [ ] 处理连接断开、超时（30s）、错误码（参考 `interpreter.ts` 的错误处理）
 
 ### 4. 流式消息渲染
@@ -50,10 +61,19 @@
 - [ ] 支持清空当前对话历史（参考 `storage-utils.ts` 的数据清理模式）
 
 ### 7. 对话状态管理
-- [ ] 使用状态管理管理当前对话状态（参考 `storage-utils.ts` 的 `generalSettings` 模式）
+- [ ] ✅ **使用 `chrome.storage.session` 存储 Background 中的对话状态**（参考 chrome-extensions 规则 #7：SW 是 ephemeral，绝对不能使用全局变量）：
+  ```ts
+  // ❌ 错误：SW 终止后丢失
+  // let isStreaming = false;
+
+  // ✅ 正确：持久化在 chrome.storage.session（SW 重启后保留，浏览器关闭后清除）
+  const { isStreaming = false } = await chrome.storage.session.get('isStreaming');
+  await chrome.storage.session.set({ isStreaming: true });
+  ```
 - [ ] 状态：idle / loading / streaming / error（参考 `interpreter.ts` 的请求状态）
 - [ ] 中断/停止生成按钮（AbortController，参考 `interpreter.ts` 的请求控制）
 - [ ] 重试失败消息（参考 `interpreter.ts` 的错误重试逻辑）
+- [ ] ⚠️ **`onMessage` 异步响应必须 `return true`**（参考 chrome-extensions 规则 #5）
 
 ---
 

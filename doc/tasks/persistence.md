@@ -71,7 +71,12 @@
 - [ ] 冲突时提示"远端将覆盖本地"，需用户确认（参考 `import-export.ts` 的确认弹窗）
 
 ### 8. 同步状态管理
-- [ ] 使用状态管理管理同步状态（参考 `storage-utils.ts` 的 `generalSettings` 模式）
+- [ ] ✅ **使用 `chrome.storage.session` 存储 Background 中的同步状态**（参考 chrome-extensions 规则 #7）：
+  ```ts
+  // SW 是 ephemeral，不能使用全局变量
+  const { syncState = 'idle' } = await chrome.storage.session.get('syncState');
+  await chrome.storage.session.set({ syncState: 'syncing' });
+  ```
 - [ ] 状态：idle / syncing / success / error（参考 `interpreter.ts` 的请求状态）
 - [ ] 上次同步时间展示（参考 `storage-utils.ts` 的时间戳显示）
 - [ ] 自动同步（可选：启动时检测，参考 `background.ts` 的启动逻辑）
@@ -89,3 +94,9 @@
 - `db/dexie.ts`（所有表，参考 `storage-utils.ts` 的存储模式）
 - `workers/search.worker.ts`（同步后重建索引，参考 `search.md`）
 - `entrypoints/options/`（配置页面，参考 `settings.html` 和 `managers/`）
+
+## 参考资料
+- [chrome-extensions] skill - Storage 规范
+- `obsidian-clipper/storage-utils.ts` - 存储封装
+- `obsidian-clipper/import-export.ts` - 导入导出
+- 选型表：CompressionStream('gzip') 原生 API

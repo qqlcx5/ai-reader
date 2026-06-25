@@ -24,12 +24,19 @@
 
 ### 3. API Key 安全存储
 - [ ] 实现 `shared/crypto/secret-store.ts`（参考 `storage-utils.ts` 的 `browser.storage.local` 存储模式）
-- [ ] 使用 `chrome.storage.local` 存储 API Key（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage`）
+- [ ] ✅ **使用 `chrome.storage.local` 存储 API Key**（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage`，比 IndexedDB 更适合存小密钥）
+  - ⚠️ 不要在 `chrome.storage.sync` 中存储（避免跨设备同步泄露）
+  - 可选：使用 `crypto.subtle` 进行简单加密（额外保护层）
 - [ ] 界面输入框类型为 `password`，支持显示/隐藏切换（参考 `settings.html` 的表单样式）
 
 ### 4. 测试连接（Ping）
 - [ ] 实现 `openai-compat.adapter.ts` 的 `ping()` 方法（参考 `interpreter.ts` 的 `sendToLLM` 函数）
 - [ ] 发送最小请求（如 `max_tokens: 1` 的 chat completion，参考 `interpreter.ts` 的请求体构造）
+- [ ] ✅ **使用 AbortController 设置超时控制**（30s，参考 `interpreter.ts` 的错误处理）：
+  ```ts
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 30000);
+  ```
 - [ ] 处理成功/失败/超时（30s）状态（参考 `interpreter.ts` 的错误处理）
 - [ ] UI 展示连接状态指示灯（绿/红/黄，参考 `settings.html` 的样式系统）
 
@@ -58,3 +65,8 @@
 - `db/dexie.ts`（settings 表，参考 `storage-utils.ts` 的存储模式）
 - `core/models/openai-compat.adapter.ts`（Ping 实现，参考 `interpreter.ts`）
 - `entrypoints/options/`（配置页面，参考 `settings.html` 和 `managers/`）
+
+## 参考资料
+- [chrome-extensions] skill - API 调用模式
+- `obsidian-clipper/interpreter.ts` - 多 provider 实现
+- `obsidian-clipper/managers/interpreter-settings.ts` - 设置页结构

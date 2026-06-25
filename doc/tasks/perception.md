@@ -3,13 +3,20 @@
 ## 目标
 用户点击插件后，通过 defuddle 自动从任意网页提取正文 Markdown、元数据，并持久化到 IndexedDB。
 
+> ⚠️ **关键约束**：本任务文件已通过 [chrome-extensions] skill 技术评审（详见 `tech-review_2026-06-25.md`）
+> 涉及规则：`world: 'MAIN'` 风险、`tab.url` 权限、Content Script DOM 批处理
+
 ## 最小可执行任务
 
 ### 1. Content Script 入口搭建
 - [ ] 创建 `entrypoints/content.ts`（WXT content script entrypoint）
-- [ ] 配置 `matches: ['<all_urls>']` 和 `world: 'MAIN'`（defuddle 需完整 DOM 访问）
+- [ ] ✅ **使用默认 `world: 'ISOLATED'`**（参考 chrome-extensions 风险评估：不要使用 `world: 'MAIN'`，会大幅增加 Store 审核风险）
+  - defuddle 只需要读取 DOM（DOM 在 ISOLATED world 中完全可访问）
+  - ISOLATED world 已能满足"不污染页面 JS 上下文"的需求
+  - 配置：`matches: ['<all_urls>']`（依赖 `host_permissions: <all_urls>`，参考 `foundation.md` 章节 1）
 - [ ] 注入悬浮捕获按钮（`CaptureButton.vue` 或纯 DOM 按钮）
 - [ ] 绑定点击事件 → 触发捕获流程（参考 `content.ts` 的 `toggleIframe` 点击处理）
+- [ ] ⚠️ **不要在 `chrome.runtime.onMessage` 中存储全局变量**（参考 chrome-extensions 规则 #7：使用 `chrome.storage.session`）
 
 ### 2. defuddle 集成与正文提取
 - [ ] 安装 `defuddle` 依赖（参考 `obsidian-clipper` 的 `package.json`）
@@ -41,6 +48,16 @@
 ### 5. 跨上下文通信
 - [ ] Content Script 通过 `chrome.runtime.sendMessage` 发送 `CAPTURE_PAGE` 消息（参考 `content.ts` 的 `sendMessage` 模式）
 - [ ] Background Service Worker 接收消息并转发到 Side Panel（参考 `background.ts` 的消息路由）
+- [ ] ⚠️ **异步响应必须 `return true`**（参考 chrome-extensions 规则 #5，参考 `foundation.md` 章节 5）：
+  ```ts
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    (async () => {
+      const result = await handleCapture(message.payload);
+      sendResponse({ success: true, data: result });
+    })();
+    return true; // 关键！
+  });
+  ```
 - [ ] 定义消息类型（参考 `types.ts` 的接口定义风格）
 
 ### 6. 持久化到 IndexedDB
@@ -53,9 +70,32 @@
 - [ ] Worker 执行 `MiniSearch.addDocument()` 增量更新
 
 ### 8. 打开 Side Panel 展示
-- [ ] Background 调用 `chrome.sidePanel.open({ tabId })`
+- [ ] Background 调用 `chrome.sidePanel.open({ tabId })`（参考 chrome-extensions 规则 #2，参考 `foundation.md` 章节 1）
 - [ ] Side Panel 接收 `documentId` 并读取文档
 - [ ] UI 展示 Markdown 内容、元数据摘要、对话入口
+
+---
+
+## ⚠️ 大规模 DOM 修改规范
+
+未来扩展（如阅读模式高亮、笔记标注）需要修改大量 DOM 元素时，**必须使用 `requestAnimationFrame` 批处理**（参考 chrome-extensions 规则 #6）：
+
+```ts
+// ✅ 正确：分批处理
+async function highlightAll(elements: Element[]) {
+  const BATCH = 20;
+  for (let i = 0; i < elements.length; i += BATCH) {
+    await new Promise(r => requestAnimationFrame(() => {
+      elements.slice(i, i + BATCH).forEach(el => el.classList.add('highlighted'));
+      r();
+    }));
+    if (globalThis.scheduler?.yield) await scheduler.yield();
+  }
+}
+
+// ❌ 错误：一次性修改，阻塞主线程
+elements.forEach(el => el.classList.add('highlighted'));
+```
 
 ---
 
@@ -64,9 +104,16 @@
 - [ ] 元数据提取完整度 ≥ 80%（主流新闻/博客/文档站点，参考 `content-extractor.ts` 的测试固件 `fixtures/`）
 - [ ] 解析失败时有降级，不阻塞流程（参考 `content-extractor.ts` 的 fallback 逻辑）
 - [ ] 捕获后搜索索引自动更新，可立即检索到（参考 `background.ts` 的消息通知机制）
+- [ ] ✅ **ISOLATED world 工作正常**（不污染页面 JS 上下文，参考 chrome-extensions 风险评估）
 
 ## 依赖模块
 - `db/dexie.ts`（IndexedDB 表定义）
 - `workers/search.worker.ts`（索引更新）
-- `entrypoints/background.ts`（消息中转）
+- `entrypoints/background.ts`（消息中转，参考 `foundation.md` 章节 1 Side Panel 触发器）
 - `entrypoints/sidepanel/`（展示界面）
+
+## 参考资料
+- [chrome-extensions] skill - Content Scripts & DOM (规则 #6)
+- `obsidian-clipper/content-extractor.ts` - defuddle 集成
+- `obsidian-clipper/content.ts` - 按钮注入模式
+- `obsidian-clipper/background.ts` - 消息路由
