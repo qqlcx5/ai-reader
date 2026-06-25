@@ -56,7 +56,16 @@ export default defineConfig({
       },
     },
   },
-
+  webExt: {
+    // 持久化 profile 到项目目录下
+    // 需要重置时，删除 .wxt/chrome-data 目录即可
+    // 第一次启动需要手动加载扩展（chrome://extensions → 开发者模式 → 加载已解压 → 选 .output/chrome-mv3-dev）
+    // 之后 dev 重启会保留
+    chromiumProfile: './.wxt/chrome-data',
+    keepProfileChanges: true,
+    // 启动时自动在浏览器中打开以下页面
+    openUrls: ['chrome://extensions', 'about:blank'],
+  },
   vite: () => ({
     plugins: [
       UnoCSS(),
