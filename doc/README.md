@@ -1,9 +1,9 @@
 ## 1. 总体架构
 
 1. **捕获层 Perception**
-   - 网页正文提取
-   - 元数据抓取
-   - Markdown 结构化输出
+   - 网页正文提取（defuddle）
+   - 元数据抓取（defuddle 内置）
+   - Markdown 结构化输出（defuddle 内置 `createMarkdownContent()`）
 
 2. **处理层 Thinking**
    - 多模型配置管理
@@ -25,7 +25,7 @@
    - Dexie + IndexedDB
    - Web Worker
    - MiniSearch
-   - SSE / Fetch 流式通信
+   - SSE 流式通信（eventsource-parser，仅 OpenAI 兼容格式）
 
 ---
 
@@ -33,20 +33,19 @@
 
 ## 2.1 捕获层：网页解析与数据提取
 ### 目标
-用户点击插件后，自动从任意网页提取：
-- 正文 Markdown
-- 标题
-- URL
-- 作者
-- 发布时间
-- favicon
+用户点击插件后，通过 **defuddle** 自动从任意网页提取：
+- 正文 Markdown（`defuddle` 内置 `createMarkdownContent()`）
+- 标题、URL、作者、发布时间
+- favicon、image
 - SEO description/keywords
+- wordCount、language
+- schema.org 结构化数据
 
 ---
 
 ## 2.2 处理层：多模型配置管理
 ### 目标
-支持 OpenAI / Anthropic / Gemini 等多供应商模型，允许：
+统一采用 **OpenAI 兼容格式**（`/v1/chat/completions`），通过自定义 Base URL 接入不同供应商（DeepSeek / 通义 / OpenRouter 等均兼容），允许：
 - 单独启用/禁用
 - 自定义 Base URL
 - 测试连接 Ping
@@ -71,9 +70,10 @@
 
 ### 手动导出
 导出为单个：
-- `auramind_backup.json`
+- `ReadChat_backup.json`
 
 内容包含：
+- `schemaVersion`（用于未来数据迁移）
 - documents
 - chatHistories
 - settings
@@ -85,15 +85,15 @@
 
 #### 同步逻辑
 1. 本地打包所有数据
-2. 写入 `auramind_data.json`
+2. 写入 `ReadChat_data.json`
 3. 写入 `metadata.json`
-4. JSZip 进行 Gzip 压缩 后再上传
+4. 使用原生 `CompressionStream('gzip')` 压缩后再上传
 5. PUT 到 WebDAV
 
 #### 拉取逻辑
 1. 先读远端 `metadata.json`
 2. 比较远端 `updatedAt` 和本地 `updatedAt`
-3. 若远端更大，则拉取 `auramind_data.json`
+3. 若远端更大，则拉取 `ReadChat_data.json`
 4. 覆盖本地 IndexedDB
 
 边界情况
@@ -110,10 +110,11 @@
 - `title` 权重 3
 - `markdownContent` 权重 1
 
-### Worker 机制
-- `documents` 表变更后通知 Worker
-- Worker 异步构建/更新索引
+### Worker 机制（混合策略）
+- **启动时全量重建**：Worker 初始化时从 Dexie 读取全部 documents，一次性 `addDocuments()` 构建完整索引（万级文档 < 1s）
+- **运行时增量更新**：捕获/删除文档后通过 `postMessage` 通知 Worker，Worker 执行 `addDocument()` / `remove()` 局部更新，无需重建
 - 主线程只负责查询结果展示
+- Worker 内部独立创建 Dexie 实例读取 documents 表
 
 ---
 
@@ -131,3 +132,24 @@
 - 贡献热力图
 - 时间范围筛选
 - 点击某一天查看文档列表
+
+
+4.1 技术栈
+
+| 层级 | 技术选型 |
+|------|---------|
+| 样式 | SCSS |
+| 测试 | Vitest + jsdom |
+| 内容提取 | defuddle |
+| 日期处理 | dayjs |
+| 本地存储压缩 | lz-string（大字段压缩，如 rawHtml） |
+| 图标 | Lucide |
+| HTML 净化 | DOMPurify |
+| 代码高亮 | highlight.js |
+| 技术维度 | 选型方案 | 引入理由与技术优势 |
+| **样式与 UI 库** | `UnoCSS` + `Reka UI` | UnoCSS 极致的按需编译，零 runtime 开销；Reka UI 提供无样式原语，便于像素级还原冷淡风视觉。 |
+| **状态跨端同步** | `Pinia` + `PersistedState` | 基于 `chrome.storage.local` 实现 Pinia 序列化器，保障 Popup 与 Side Panel 的状态秒级互通。 |
+| **流式解析(核心)** | `eventsource-parser` | 替代不稳定原生解析，彻底解决多字节字符（中文）在网络 Chunks 截断时产生的乱码与格式断裂问题。仅需支持 OpenAI 兼容格式（`/v1/chat/completions`）。 |
+| **备份压缩** | `CompressionStream('gzip')` | 原生 API（Chrome 80+），零依赖，替代 JSZip/pako。 |
+| **海量数据库** | `Dexie.js` / `idb-keyval` | 规避 5MB 限制，完美承载 **百万 Token 级别 (1M+ Tokens)** 的超长文本与上万条历史记录检索，支持 GB 级存储。 |
+| **客户端防御** | `DOMPurify` | 在渲染大段模型输出及 RSS 抓取的外部 HTML 时，强制在内存中净化 DOM，彻底阻断跨站脚本攻击 (XSS)。 |

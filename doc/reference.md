@@ -8,94 +8,36 @@
 | 测试 | Vitest + jsdom |
 | 内容提取 | defuddle |
 | 日期处理 | dayjs |
-| 存储压缩 | lz-string |
+| 本地存储压缩 | lz-string（大字段压缩，如 rawHtml） |
 | 图标 | Lucide |
 | HTML 净化 | DOMPurify |
 | 代码高亮 | highlight.js |
-
+| 技术维度 | 选型方案 | 引入理由与技术优势 |
+| **样式与 UI 库** | `UnoCSS` + `Reka UI` | UnoCSS 极致的按需编译，零 runtime 开销；Reka UI 提供无样式原语，便于像素级还原冷淡风视觉。 |
+| **状态跨端同步** | `Pinia` + `PersistedState` | 基于 `chrome.storage.local` 实现 Pinia 序列化器，保障 Popup 与 Side Panel 的状态秒级互通。 |
+| **流式解析(核心)** | `eventsource-parser` | 替代不稳定原生解析，彻底解决多字节字符（中文）在网络 Chunks 截断时产生的乱码与格式断裂问题。仅需支持 OpenAI 兼容格式（`/v1/chat/completions`）。 |
+| **备份压缩** | `CompressionStream('gzip')` | 原生 API（Chrome 80+），零依赖，替代 JSZip/pako。 |
+| **海量数据库** | `Dexie.js` / `idb-keyval` | 规避 5MB 限制，完美承载 **百万 Token 级别 (1M+ Tokens)** 的超长文本与上万条历史记录检索，支持 GB 级存储。 |
+| **客户端防御** | `DOMPurify` | 在渲染大段模型输出及 RSS 抓取的外部 HTML 时，强制在内存中净化 DOM，彻底阻断跨站脚本攻击 (XSS)。 |
+| **浏览器兼容** | `webextension-polyfill` | 统一 Chrome / Firefox 的 `browser.*` API 差异，WXT 内置支持。 |
 ---
 
 ## 5. 文件路径规范
 
-### 5.1 源代码目录结构
+> ReadChat 的目录结构遵循 **WXT 框架约定**，详见 `detail.md` 第 11 节。
+> 以下为 obsidian-clipper 的参考目录结构（仅作借鉴，非 ReadChat 结构）。
 
 ```
-src/
-├── core/                           # UI 入口文件
-│   ├── popup.ts                    # 弹窗入口
-│   ├── settings.ts                 # 设置页面入口
-│   ├── highlights.ts               # 高亮功能入口
-│   └── reader-view.ts              # 阅读视图入口
-│
-├── utils/                          # 工具函数（~80 个模块）
-│   ├── content-extraction.ts       # 内容提取
-│   ├── template-compilation.ts     # 模板编译
-│   ├── storage.ts                  # 存储管理
-│   ├── browser-detection.ts        # 浏览器检测
-│   ├── i18n.ts                     # 国际化
-│   │
-│   ├── filters/                    # 50+ 过滤器实现
-│   │   ├── date.ts                 # 日期过滤器
-│   │   ├── date.test.ts            # 日期过滤器测试
-│   │   ├── camel.ts                # 驼峰命名过滤器
-│   │   ├── kebab.ts                # 短横线命名过滤器
-│   │   ├── join.ts                 # 数组连接过滤器
-│   │   ├── split.ts                # 字符串分割过滤器
-│   │   ├── replace.ts              # 替换过滤器
-│   │   ├── markdown.ts             # Markdown 处理过滤器
-│   │   ├── table.ts                # 表格过滤器
-│   │   └── ...                     # 其他过滤器
-│   │
-│   ├── variables/                  # 变量解析器
-│   │   ├── prompt.ts               # Prompt 变量（AI 驱动）
-│   │   ├── schema.ts               # Schema.org 变量
-│   │   ├── selector.ts             # CSS 选择器变量
-│   │   └── simple.ts               # 预设变量
-│   │
-│   └── fixtures/                   # 测试固件
-│       ├── youtube/                # YouTube 测试用例
-│       ├── imdb/                   # IMDB 测试用例
-│       └── goodreads/              # Goodreads 测试用例
-│
-├── managers/                       # UI 管理器
-│   ├── template-manager.ts         # 模板管理
-│   ├── highlights-manager.ts       # 高亮管理
-│   ├── reader-manager.ts           # 阅读视图管理
-│   ├── interpreter-manager.ts      # AI 解释器管理
-│   ├── general-settings-manager.ts # 通用设置管理
-│   ├── property-types-manager.ts   # 属性类型管理
-│   └── menu-manager.ts            # 菜单管理
-│
-├── types/                          # 类型定义
-│   └── types.ts                    # 核心类型
-│
-├── icons/                          # 图标资源
-│   ├── icon-16.png
-│   ├── icon-48.png
-│   └── icon-128.png
-│
-├── styles/                         # SCSS 样式
-│   ├── popup.scss                  # 弹窗样式
-│   ├── settings.scss               # 设置页面样式
-│   ├── reader.scss                 # 阅读视图样式
-│   ├── side-panel.scss             # 侧边栏样式
-│   ├── mobile.scss                 # 移动端样式
-│   ├── modals.scss                 # 弹窗样式
-│   ├── rtl.scss                    # RTL 布局样式
-│   └── safari.scss                 # Safari 特定样式
-│
-├── _locales/                       # 国际化资源（35 种语言）
-│   ├── en/
-│   │   └── messages.json
-│   ├── zh-CN/
-│   │   └── messages.json
-│   ├── zh-TW/
-│   │   └── messages.json
-│   ├── ja/
-│   │   └── messages.json
-│   └── ...                         # 其他语言
-│
-├── manifest.chrome.json            # Chrome 扩展清单
-├── manifest.firefox.json           # Firefox 扩展清单
-└── manifest.safari.json            # Safari 扩展清单
+obsidian-clipper/src/              # 参考：obsidian-clipper 目录结构
+├── content.ts                     # Content Script（defuddle 用法参考）
+├── background.ts                  # Background Service Worker
+├── utils/
+│   ├── content-extractor.ts       # 内容提取封装（extractPageContent）
+│   ├── date-utils.ts              # 日期工具（dayjs）
+│   └── filters/                   # Markdown 过滤器
+├── managers/
+│   ├── template-manager.ts        # 模板管理
+│   └── highlights-manager.ts      # 高亮管理
+└── types/
+    └── types.ts                   # 核心类型定义
 ```

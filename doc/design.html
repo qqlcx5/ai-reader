@@ -223,7 +223,7 @@
           <div id="capture-loading" class="flex-1 flex flex-col items-center justify-center p-8 hidden">
             <div class="inline-block animate-spin ease-linear rounded-full border-2 border-t-2 border-slate-200 border-t-brand-500 h-8 w-8 mb-4"></div>
             <h3 class="text-sm font-medium text-slate-700 mb-1" id="loading-status">正在解析 DOM...</h3>
-            <p class="text-xs text-slate-400" id="loading-sub">使用 Readability.js 构建极简正文</p>
+            <p class="text-xs text-slate-400" id="loading-sub">使用 defuddle.js 构建极简正文</p>
           </div>
 
           <!-- 聊天对话区域 -->
@@ -511,7 +511,7 @@
       const status = document.getElementById('loading-status');
       const subText = document.getElementById('loading-sub');
 
-      // 模拟 Readability.js 解析步骤
+      // 模拟 defuddle.js 解析步骤
       setTimeout(() => {
         status.innerText = "提取元数据及 HTML DOM...";
         subText.innerText = "找到 Title: Vector DB 101, 作者: Alex Rivera";

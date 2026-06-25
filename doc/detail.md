@@ -15,23 +15,16 @@ flowchart TB
 
   subgraph Perception[捕获层 Perception]
     ContentScript --> DOMReader[DOM 快照读取]
-    DOMReader --> Readability[@mozilla/readability<br/>正文抽取]
-    Readability --> Turndown[Turndown<br/>HTML to Markdown]
-    DOMReader --> MetadataExtractor[元数据提取引擎<br/>Title / URL / Author / Date / SEO / Favicon]
-    Turndown --> CaptureResult[标准化捕获结果<br/>Markdown + Metadata]
-    MetadataExtractor --> CaptureResult
+    DOMReader --> defuddle[defuddle<br/>正文抽取 + 元数据 + Markdown]
+    defuddle --> CaptureResult[标准化捕获结果<br/>Markdown + Metadata]
   end
 
   subgraph Thinking[处理层 Thinking]
     SidePanel --> ChatUI[Chat with Doc UI]
     ChatUI --> PromptBuilder[Prompt 构建器<br/>System Prompt + Doc Context + User Question]
-    PromptBuilder --> ModelRouter[多模型路由器]
-    ModelRouter --> OpenAI[OpenAI Adapter]
-    ModelRouter --> Anthropic[Anthropic Adapter]
-    ModelRouter --> Gemini[Gemini Adapter]
-    OpenAI --> StreamParser[SSE / Fetch Stream Parser]
-    Anthropic --> StreamParser
-    Gemini --> StreamParser
+    PromptBuilder --> ModelRouter[OpenAI 兼容模型路由器]
+    ModelRouter --> OpenAI[OpenAI 兼容 Adapter<br/>Chat Completions API]
+    OpenAI --> StreamParser[eventsource-parser<br/>SSE 流式解析]
     StreamParser --> MarkdownRenderer[Markdown 渲染<br/>代码高亮 / 公式]
     MarkdownRenderer --> ChatUI
   end
@@ -49,7 +42,7 @@ flowchart TB
 
     Exporter[手动导出器<br/>ReadChat_backup.json]
     BackupPackager[整包备份打包器<br/>ReadChat_data.json]
-    Compressor[压缩模块<br/>Gzip / Zip]
+    Compressor[压缩模块<br/>CompressionStream('gzip')]
     WebDAVClient[WebDAV Client<br/>PUT / GET / PROPFIND]
     RemoteWebDAV[(WebDAV Server<br/>坚果云 / Nextcloud / NAS)]
 
@@ -98,8 +91,8 @@ flowchart LR
   subgraph Extension[Chrome Extension MV3]
     ContentScript[content-script.ts<br/>读取 DOM / 注入悬浮按钮]
     Background[background.ts<br/>Service Worker]
-    SidePanel[sidepanel.tsx<br/>主交互界面]
-    Options[options.tsx<br/>模型与同步配置]
+    SidePanel[sidepanel.vue<br/>主交互界面]
+    Options[options.vue<br/>模型与同步配置]
     Worker[search.worker.ts<br/>MiniSearch 索引]
   end
 
@@ -109,7 +102,7 @@ flowchart LR
   end
 
   subgraph External[外部服务]
-    LLM[LLM APIs<br/>OpenAI / Anthropic / Gemini]
+    LLM[LLM APIs<br/>OpenAI 兼容格式<br/>DeepSeek / 通义 / OpenRouter]
     WebDAV[WebDAV Server]
   end
 
@@ -133,12 +126,12 @@ flowchart LR
 
 ## 关键职责划分
 
-- `content-script.ts`
+- `content.ts`（WXT entrypoint）
   - 访问当前页面 DOM
-  - 执行 Readability 解析
-  - 提取 metadata
+  - 执行 defuddle 解析（需 `world: 'MAIN'`，defuddle 需完整 DOM 访问）
+  - 提取 metadata（author / published / favicon / image / wordCount / language / schemaOrgData）
   - 触发捕获事件
-  - 可注入悬浮按钮
+  - 注入悬浮捕获按钮
 
 - `background.ts`
   - MV3 Service Worker 调度中心
@@ -147,14 +140,14 @@ flowchart LR
   - 执行 WebDAV 同步
   - 处理右键菜单、快捷键、side panel 打开
 
-- `sidepanel.tsx`
+- `sidepanel.vue`
   - Chat with Doc 主界面
   - 展示当前文档
   - 展示 AI 流式回复
   - 搜索入口
   - 时间轴入口
 
-- `options.tsx`
+- `options.vue`
   - 模型配置
   - API Key 管理
   - Base URL 配置
@@ -181,9 +174,9 @@ sequenceDiagram
 
   U->>CS: 点击悬浮按钮 / 快捷键捕获
   CS->>CS: clone 当前 document
-  CS->>CS: Readability.parse()
-  CS->>CS: Turndown 转 Markdown
-  CS->>CS: 提取 Title / URL / Author / Date / SEO / Favicon
+  CS->>CS: defuddle.parseAsync()
+  CS->>CS: createMarkdownContent() 转 Markdown
+  CS->>CS: 自动提取 Title / URL / Author / Date / SEO / Favicon / wordCount / language
   CS->>BG: sendMessage CAPTURE_PAGE
   BG->>DB: documents.put(document)
   DB-->>BG: 返回 documentId
@@ -210,14 +203,20 @@ interface CapturedDocument {
   markdownContent: string;
   rawHtml?: string;
   siteName?: string;
+  image?: string;
+  wordCount?: number;
+  language?: string;
+  schemaOrgData?: any;        // defuddle 提取的 JSON-LD / Schema.org
   createdAt: number;
   updatedAt: number;
 }
 ```
 
+> **defuddle 用法提示：** `createMarkdownContent` 从 `defuddle/full` 导入（非 `defuddle` 主入口）。
+
 ---
 
-# 4. Thinking 层：多模型与流式对话架构
+# 4. Thinking 层：OpenAI 兼容流式对话架构
 
 ```mermaid
 flowchart TB
@@ -230,30 +229,24 @@ flowchart TB
   PromptBuilder --> ModelSelector[Model Selector<br/>选择默认启用模型]
   ModelSelector --> ModelRouter[Model Router]
 
-  subgraph Adapters[LLM Provider Adapters]
-    OpenAIAdapter[OpenAI Adapter<br/>Chat Completions / Responses API]
-    AnthropicAdapter[Anthropic Adapter<br/>Messages API]
-    GeminiAdapter[Gemini Adapter<br/>Generate Content API]
+  subgraph Adapters[OpenAI 兼容 Adapter]
+    OpenAIAdapter[Chat Completions Adapter<br/>/v1/chat/completions]
   end
 
   ModelRouter --> OpenAIAdapter
-  ModelRouter --> AnthropicAdapter
-  ModelRouter --> GeminiAdapter
 
-  OpenAIAdapter --> StreamNormalizer[Stream Normalizer<br/>统一 delta 格式]
-  AnthropicAdapter --> StreamNormalizer
-  GeminiAdapter --> StreamNormalizer
+  OpenAIAdapter --> StreamParser[eventsource-parser<br/>SSE 流式解析]
 
-  StreamNormalizer --> ChatState[Chat State]
+  StreamParser --> ChatState[Chat State]
   ChatState --> MarkdownView[Markdown Renderer]
   MarkdownView --> SidePanel[Side Panel UI]
 
   ChatState --> ChatHistoryStore[chatHistories 表]
 ```
 
-## 统一流式输出格式
+## 流式输出格式
 
-不同模型的 SSE chunk 格式不一致，建议统一归一化：
+统一使用 OpenAI 兼容的 SSE 格式，通过 `eventsource-parser` 解析：
 
 ```ts
 interface StreamDelta {
@@ -269,10 +262,10 @@ interface StreamDelta {
 interface ModelProviderConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'gemini';
+  provider: 'openai-compatible';  // 统一 OpenAI 兼容格式
   enabled: boolean;
   apiKey: string;
-  baseUrl?: string;
+  baseUrl: string;                // DeepSeek / 通义 / OpenRouter 等
   model: string;
   systemPrompt?: string;
   createdAt: number;
@@ -305,7 +298,7 @@ sequenceDiagram
 
   loop Streaming
     LLM-->>MR: SSE / chunk delta
-    MR-->>BG: 标准化 StreamDelta
+    MR-->>BG: eventsource-parser 解析 delta
     BG-->>UI: 转发 delta
     UI-->>UI: 追加渲染 Markdown
   end
@@ -339,7 +332,7 @@ erDiagram
   chatHistories {
     string id PK
     string documentId FK
-    string provider
+    string modelId        # 关联 ModelProviderConfig.id
     string model
     array messages
     number createdAt
@@ -377,7 +370,7 @@ flowchart TB
     Packager[Backup Packager]
     DataJSON[ReadChat_data.json]
     MetadataLocal[metadata.json<br/>updatedAt]
-    Compressor[Compression<br/>Gzip / Zip]
+    Compressor[压缩<br/>CompressionStream('gzip')]
   end
 
   subgraph Remote[WebDAV 远端]
@@ -451,15 +444,21 @@ sequenceDiagram
   end
 ```
 
-## 压缩说明
+## 压缩方案
 
-你写的是“JSZip 进行 Gzip 压缩”，这里建议稍微区分：
+使用原生 `CompressionStream('gzip')` API（Chrome 80+ 支持，零依赖）：
 
-- 如果要生成 `.zip`：使用 `JSZip`
-- 如果要生成 `.gz`：使用 `CompressionStream('gzip')` 或 `pako`
-- 如果目标是“单文件整包备份”，两者都可以，推荐命名保持一致：
-  - `ReadChat_data.json.gz`
-  - 或 `ReadChat_backup.zip`
+```ts
+async function gzipCompress(data: string): Promise<Blob> {
+  const encoder = new TextEncoder();
+  const stream = new Blob([encoder.encode(data)])
+    .stream()
+    .pipeThrough(new CompressionStream('gzip'));
+  return new Response(stream).blob();
+}
+```
+
+备份文件统一命名为 `ReadChat_data.json.gz`。
 
 ---
 
@@ -467,12 +466,19 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-  Documents[(documents 表)] --> ChangeNotifier[Document Change Notifier]
-  ChangeNotifier --> SearchWorker[search.worker.ts]
+  Documents[(documents 表)] --> SearchWorker[search.worker.ts]
 
-  SearchWorker --> LoadDocs[读取新增 / 更新文档]
-  LoadDocs --> Normalize[文本清洗与字段标准化]
-  Normalize --> MiniSearchIndex[MiniSearch Index]
+  subgraph Startup[启动时：全量重建]
+    SearchWorker --> LoadAll[Dexie 读取全部 documents]
+    LoadAll --> FullIndex[MiniSearch.addDocuments()]
+  end
+
+  subgraph Runtime[运行时：增量更新]
+    ChangeNotifier[postMessage 通知] --> SingleOp[addDocument / remove]
+    SingleOp --> MiniSearchIndex[MiniSearch Index]
+  end
+
+  FullIndex --> MiniSearchIndex
 
   MiniSearchIndex --> SearchQuery[search(query)]
   SearchQuery --> Ranking[字段权重排序<br/>title x3<br/>markdownContent x1]
@@ -482,17 +488,26 @@ flowchart TB
   SearchResult --> SidePanel
 ```
 
+## 索引策略：混合模式
+
+| 阶段 | 策略 | 触发时机 | 性能 |
+|------|------|---------|------|
+| Worker 启动 | 全量重建 `addDocuments()` | 首次打开 Side Panel / Service Worker 唤醒 | 万级文档 < 1s |
+| 运行时 | 增量 `addDocument()` / `remove()` | 捕获新文档 / 删除文档 | < 10ms |
+
+全量重建保证索引一致性（无漂移），增量更新保证运行时响应速度。
+
 ## Worker 消息协议
 
 ```ts
 type SearchWorkerRequest =
-  | { type: 'INIT_INDEX' }
-  | { type: 'UPSERT_DOCUMENT'; documentId: string }
-  | { type: 'REMOVE_DOCUMENT'; documentId: string }
+  | { type: 'INIT_INDEX' }                              // 启动全量重建
+  | { type: 'UPSERT_DOCUMENT'; documentId: string }     // 增量更新单篇
+  | { type: 'REMOVE_DOCUMENT'; documentId: string }     // 增量删除单篇
   | { type: 'SEARCH'; query: string; requestId: string };
 
 type SearchWorkerResponse =
-  | { type: 'INDEX_READY' }
+  | { type: 'INDEX_READY' }                             // 全量重建完成
   | { type: 'SEARCH_RESULT'; requestId: string; results: SearchResult[] }
   | { type: 'ERROR'; message: string };
 ```
@@ -585,9 +600,8 @@ flowchart TB
   end
 
   subgraph Infra_Modules[Infrastructure Adapters]
-    ReadabilityAdapter[Readability Adapter]
-    MarkdownAdapter[Turndown Adapter]
-    LLMAdapters[LLM Adapters]
+    defuddleAdapter[defuddle Adapter<br/>正文 + Markdown + 元数据]
+    LLMAdapter[OpenAI 兼容 Adapter<br/>eventsource-parser]
     WebDAVAdapter[WebDAV Adapter]
     DexieRepository[Dexie Repository]
     SearchIndexAdapter[MiniSearch Adapter]
@@ -599,86 +613,79 @@ flowchart TB
 
 ---
 
-# 11. 推荐目录结构
+# 11. 推荐目录结构（WXT 框架约定）
 
 ```text
-src/
-  manifest.json
-
-  background/
-    index.ts
-    message-router.ts
-    commands.ts
-    side-panel.ts
-
-  content/
-    index.ts
-    floating-button.ts
-    capture-page.ts
-    metadata-extractor.ts
-
+entrypoints/
+  background.ts              # MV3 Service Worker（WXT 自动生成 manifest）
+  content.ts                 # Content Script（defuddle 捕获）
   sidepanel/
-    App.tsx
+    index.html               # Side Panel 入口 HTML
+    main.ts                  # Vue 入口
+    App.vue                  # 主布局（Tab 导航）
     pages/
-      ChatPage.tsx
-      SearchPage.tsx
-      TimelinePage.tsx
+      ChatPage.vue           # 沉浸式对话
+      SearchPage.vue         # 全文检索
+      TimelinePage.vue       # 时间轴
     components/
-      MarkdownRenderer.tsx
-      ChatInput.tsx
-      StreamMessage.tsx
-
+      MarkdownRenderer.vue   # Markdown 渲染（代码高亮 + 公式）
+      ChatInput.vue          # 对话输入框
+      StreamMessage.vue      # SSE 流式消息气泡
   options/
-    App.tsx
-    ModelSettings.tsx
-    WebDAVSettings.tsx
-    PromptSettings.tsx
+    index.html               # 设置页入口 HTML
+    main.ts
+    App.vue
+    ModelSettings.vue        # 模型配置
+    WebDAVSettings.vue       # WebDAV 同步配置
+    PromptSettings.vue       # 系统提示词配置
 
-  workers/
-    search.worker.ts
+components/                  # 共享组件
+  CaptureButton.vue          # 悬浮捕获按钮
 
-  core/
-    documents/
-      document.types.ts
-      document.service.ts
-      document.repository.ts
-    chat/
-      chat.types.ts
-      chat.service.ts
-      prompt-builder.ts
-    models/
-      model.types.ts
-      model-router.ts
-      adapters/
-        openai.adapter.ts
-        anthropic.adapter.ts
-        gemini.adapter.ts
-    sync/
-      sync.types.ts
-      backup-packager.ts
-      webdav-client.ts
-      sync.service.ts
-    search/
-      search.types.ts
-      search.client.ts
-    timeline/
-      timeline.service.ts
+core/                        # 业务逻辑层（无 UI 依赖）
+  documents/
+    document.types.ts
+    document.service.ts
+    document.repository.ts
+  chat/
+    chat.types.ts
+    chat.service.ts
+    prompt-builder.ts
+  models/
+    model.types.ts
+    model-router.ts
+    openai-compat.adapter.ts # 统一 OpenAI 兼容 Adapter
+  sync/
+    sync.types.ts
+    backup-packager.ts
+    webdav-client.ts
+    sync.service.ts
+  search/
+    search.types.ts
+    search.client.ts
+  timeline/
+    timeline.service.ts
 
-  db/
-    dexie.ts
-    schema.ts
-    migrations.ts
+workers/
+  search.worker.ts           # MiniSearch Web Worker
 
-  shared/
-    messaging/
-      messages.ts
-      runtime-client.ts
-    crypto/
-      secret-store.ts
-    utils/
-      time.ts
-      id.ts
-      json.ts
+db/
+  dexie.ts                   # Dexie 实例 + 表定义
+  schema.ts                  # 类型 schema
+  migrations.ts              # 版本迁移
+
+shared/
+  messaging/
+    messages.ts              # 消息类型定义
+    runtime-client.ts        # chrome.runtime 封装
+  crypto/
+    secret-store.ts          # API Key 加密存储
+  utils/
+    time.ts
+    id.ts
+    json.ts
+
+wxt.config.ts                # WXT 配置（modules, manifest 补充, content script world）
 ```
 
 ---
@@ -690,10 +697,9 @@ src/
 ```mermaid
 flowchart LR
   A[用户点击捕获] --> B[Content Script 解析页面]
-  B --> C[Readability 提取正文]
-  C --> D[Turndown 转 Markdown]
-  D --> E[提取元数据]
-  E --> F[写入 IndexedDB]
+  B --> C[defuddle 提取正文 + 元数据]
+  C --> D[createMarkdownContent() 转 Markdown]
+  D --> F[写入 IndexedDB]
   F --> G[通知 MiniSearch Worker 建索引]
   F --> H[打开 Side Panel]
   H --> I[构建 Prompt]
@@ -727,9 +733,45 @@ flowchart LR
 
 - **Local-First**：documents、chatHistories、settings 都以 IndexedDB 为主存储。
 - **Extension-First**：捕获、对话、搜索都在扩展内闭环完成。
-- **Adapter-Based LLM**：不同模型供应商只实现 adapter，UI 和 ChatService 不感知供应商差异。
+- **OpenAI-Compatible LLM**：统一 OpenAI 兼容格式（`/v1/chat/completions`），通过 Base URL 区分供应商，无需多 adapter。
 - **Cold Sync Only**：WebDAV 使用整包覆盖，避免复杂增量合并。
 - **Worker-Based Search**：MiniSearch 索引构建放入 Worker，避免阻塞侧边栏 UI。
 - **Schema-Versioned Backup**：备份文件需要带 `schemaVersion`，方便未来迁移。
+
+---
+
+# 14. WXT 框架关键配置
+
+```ts
+// wxt.config.ts
+export default defineConfig({
+  modules: ['@wxt-dev/module-vue'],
+  manifest: {
+    permissions: ['sidePanel', 'storage', 'activeTab'],
+    side_panel: { default_path: 'entrypoints/sidepanel/index.html' },
+  },
+  // Content Script 需要 main world 以访问完整 DOM（defuddle 要求）
+  // WXT 中通过 entrypoint 配置：
+  // export default defineContentScript({
+  //   matches: ['<all_urls>'],
+  //   world: 'MAIN',
+  //   main() { /* defuddle 解析 */ }
+  // })
+});
+```
+
+---
+
+# 15. 错误处理策略
+
+| 场景 | 处理方式 |
+|------|---------|
+| defuddle 解析失败 | 回退到 `document.body.innerText` + 简单 Markdown 转换 |
+| LLM 请求超时（30s） | 展示超时提示，允许重试 |
+| LLM SSE 连接断开 | 保留已接收内容，标记"回复中断" |
+| WebDAV 上传失败 | 展示错误码，保留本地数据不变 |
+| WebDAV 拉取解压失败 | 保留本地快照，提示"远端数据损坏" |
+| IndexedDB 写入失败 | 捕获 QuotaExceededError，提示用户清理数据 |
+| MiniSearch 索引构建失败 | 不影响主流程，搜索功能降级为 Dexie `where().startsWith()` |
 
 ---
