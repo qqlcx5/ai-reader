@@ -113,3 +113,12 @@
   - 修复：调整 `activeTab` → `tabs` + `host_permissions`，增加 `action` 字段，添加 Side Panel 触发器任务
   - 创建：[.manifest-checklist.md](../../.manifest-checklist.md) + [CHROMEWEBSTORE.md](../../CHROMEWEBSTORE.md)
   - 修复了 `world: 'MAIN'` 风险、`return true` 异步响应、SW 状态存储等关键问题
+- 2026-06-25: **第二阶段实现完成** ✅ **构建验证通过**
+  - **底座层 (Foundation)**：WXT + Vue 3 + TS 项目骨架，WXT config 双 Vue 插件问题修复，tsconfig 排除 reference/，Side Panel 触发器（chrome.action.onClicked + setPanelBehavior）
+  - **捕获层 (Perception)**：Content Script + defuddle 集成 + 元数据提取 + IndexedDB 持久化
+  - **模型管理 (Model Management)**：模型配置数据层 + Options 页面 + API Key 安全存储（chrome.storage.session 加密）+ 测试连接
+  - **对话层 (Chat)**：Chat 页面 + SSE 流式（OpenAI/Anthropic 兼容）+ 流式消息渲染 + Markdown 渲染器 + Chat 历史管理
+  - **搜索 (Search)**：MiniSearch 集成 + Web Worker + 主线程客户端 + 搜索降级 + 增量更新
+  - **时间轴 (Timeline)**：时间轴数据聚合 + 热力图 UI + 日期详情 + 统计
+  - **构建状态**：`pnpm build` ✅，`pnpm compile` ✅（vue-tsc 无错误），参考代码 46 个测试文件通过
+  - **未实现**：WebDAV 同步（P1 部分）、Options/Side Panel 完整 UI 集成、E2E 测试
