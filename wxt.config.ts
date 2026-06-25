@@ -77,6 +77,23 @@ export default defineConfig({
     },
   },
   vite: () => ({
+    server: {
+      hmr: {
+        // 强制 HMR 使用与 server 相同的端口（避免 WXT 把 HMR 端口放在另一个随机端口）
+        port: 5180,
+        clientPort: 5180,
+      },
+    },
+    plugins: [
+      UnoCSS(),
+    ],
+    resolve: {
+      alias: {
+        '@': '/',
+      },
+    },
+  }),
+  vite: () => ({
     plugins: [
       UnoCSS(),
     ],
