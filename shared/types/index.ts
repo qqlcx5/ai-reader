@@ -88,6 +88,8 @@ export interface AppSettings {
   webdavUsername?: string;
   webdavPassword?: string;
   webdavRemoteDir?: string;
+  // 自动同步（保存文档后触发）
+  autoSync?: boolean;
 }
 
 /**

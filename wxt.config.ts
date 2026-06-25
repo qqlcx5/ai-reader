@@ -40,10 +40,6 @@ export default defineConfig({
       default_path: 'sidepanel.html',
     },
 
-    options_page: {
-      open_in_tab: true,
-    },
-
     web_accessible_resources: [
       {
         resources: ['icon/*.png'],

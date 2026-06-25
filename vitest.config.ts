@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./', import..url)),
-    },meta
+      '@': fileURLToPath(new URL('./', import.meta.url)),
+    },
   },
   test: {
     include: ['**/*.{test,spec}.{ts,tsx,js,jsx}'],
