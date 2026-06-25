@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuraMind - 交互式 UI 设计原型</title>
+  <!-- Tailwind CSS 官方 Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#6366f1', // 极简现代靛蓝
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            slate: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- 引入 Inter 字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    /* 隐藏滚动条但保留滚动能力 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* 打字机光标效果 */
+    .cursor-blink::after {
+      content: '|';
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden flex flex-col">
+
+  <!-- 顶部状态栏：展示架构分层指引 -->
+  <header class="bg-white border-b border-slate-200/80 px-6 py-3 flex justify-between items-center z-10">
+    <div class="flex items-center space-x-3">
+      <div class="h-8 w-8 rounded-lg bg-gradient-to-tr from-brand-500 to-violet-500 flex items-center justify-center shadow-sm shadow-brand-500/20">
+        <span class="text-white font-bold text-lg">A</span>
+      </div>
+      <div>
+        <h1 class="text-base font-semibold text-slate-800">AuraMind Prototype</h1>
+        <p class="text-xs text-slate-400">本地优先 (Local-First) 的个人第二大脑</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2 text-xs">
+      <span class="px-2 py-1 bg-slate-100 rounded text-slate-500 border border-slate-200">捕获层 Perception</span>
+      <span class="text-slate-300">→</span>
+      <span class="px-2 py-1 bg-brand-50 text-brand-500 rounded border border-brand-100">处理层 Thinking</span>
+      <span class="text-slate-300">→</span>
+      <span class="px-2 py-1 bg-slate-100 rounded text-slate-500 border border-slate-200">记忆层 Persistence</span>
+      <span class="text-slate-300">→</span>
+      <span class="px-2 py-1 bg-slate-100 rounded text-slate-500 border border-slate-200">唤醒层 Awakening</span>
+    </div>
+  </header>
+
+  <!-- 主体工作区 -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- 模拟左侧浏览器窗口（占 60% 宽度） -->
+    <section class="flex-1 flex flex-col bg-slate-100 border-r border-slate-200 relative overflow-hidden">
+      <!-- 浏览器地址栏 -->
+      <div class="bg-white border-b border-slate-200 px-4 py-2 flex items-center space-x-3">
+        <div class="flex space-x-1.5">
+          <span class="w-3 h-3 rounded-full bg-red-400 block"></span>
+          <span class="w-3 h-3 rounded-full bg-yellow-400 block"></span>
+          <span class="w-3 h-3 rounded-full bg-green-400 block"></span>
+        </div>
+        <div class="flex-1 bg-slate-50 border border-slate-200 rounded-md px-3 py-1 text-xs text-slate-400 flex items-center justify-between shadow-inner">
+          <div class="flex items-center space-x-2 truncate">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <span class="text-slate-600">https://medium.com/tech-insights/vector-db-101-for-beginners-r1</span>
+          </div>
+          <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 16H20"/></svg>
+        </div>
+      </div>
+
+      <!-- 浏览器正文区 -->
+      <div class="flex-1 overflow-y-auto p-12 bg-white no-scrollbar">
+        <article class="max-w-2xl mx-auto prose prose-slate">
+          <div class="flex items-center space-x-2 text-xs text-slate-400 mb-3">
+            <span class="px-2 py-0.5 bg-slate-100 rounded">Technology</span>
+            <span>·</span>
+            <span>Updated March 28, 2024</span>
+            <span>·</span>
+            <span>Alex Rivera</span>
+          </div>
+          <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-4">Vector DB 101: 极简向量数据库原理与实战</h1>
+
+          <div class="flex items-center space-x-4 py-4 border-y border-slate-100 my-6">
+            <img class="w-10 h-10 rounded-full" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Author">
+            <div>
+              <p class="text-sm font-semibold text-slate-700">Alex Rivera</p>
+              <p class="text-xs text-slate-400">Principal Architect at AI-Nexus / Schema.org Verified Author</p>
+            </div>
+          </div>
+
+          <p class="text-slate-600 leading-relaxed mb-6">
+            在大模型（LLM）狂飙的时代，**RAG（检索增强生成）** 已经成为了几乎所有企业落地 AI 应用的标准架构。而 RAG 的背后，最核心的数据底座就是 **向量数据库 (Vector Database)**。那么，它为什么如此特殊？它是如何实现在亚毫秒级（Sub-millisecond）检索千万级高维向量的？
+          </p>
+
+          <h3 class="text-lg font-bold text-slate-800 mt-8 mb-3">1. 什么是向量嵌入 (Vector Embeddings)？</h3>
+          <p class="text-slate-600 leading-relaxed mb-4">
+            高维空间中，语义相近的内容，它们之间的几何距离也必然越近。向量化（Embedding）就是把现实中的文字、图像、语音，转变为一串包含几百到上千个维度的浮点数数组。例如，使用 OpenAI <code>text-embedding-3-small</code> 模型转换后：
+          </p>
+          <pre class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-500 font-mono overflow-x-auto mb-6">
+"Vector DB" -> [0.0152, -0.0821, 0.2341, ..., -0.0094] (1536 Dimensions)</pre>
+
+          <h3 class="text-lg font-bold text-slate-800 mt-8 mb-3">2. 核心挑战：高维索引</h3>
+          <p class="text-slate-600 leading-relaxed mb-4">
+            如果像传统关系型数据库（如 PostgreSQL B-Tree）那样进行逐一匹配，随着向量维度和数据量的增加，会陷入可怕的“维度灾难”，检索耗时呈指数上升。因此，主流的向量数据库（如 Milvus, Pinecone）采用的是 **ANN（近似最近邻）算法**，最著名的包括：
+          </p>
+          <ul class="list-disc list-inside text-slate-600 space-y-2 pl-4 mb-6">
+            <li><strong>HNSW (Hierarchical Navigable Small World)</strong>：基于多层跳表式图结构，检索极快（当前工业界首选）。</li>
+            <li><strong>IVF (Inverted File Index)</strong>：倒排索引倒排列表，节省内存，适合超大规模。</li>
+          </ul>
+
+          <p class="text-slate-600 leading-relaxed mb-4">
+            第三个实验的数据支撑说明：通过使用 HNSW 索引，我们在 **5000 篇文档** 级数据集上测试，检索响应时间控制在 **≤ 42ms**。与传统的线性扫描（耗时 1240ms）相比，查询性能提升了近 30 倍。
+          </p>
+        </article>
+      </div>
+
+      <!-- 悬浮捕获按钮 (Perception Trigger) -->
+      <button id="floating-btn" onclick="triggerCapture()" class="absolute bottom-8 right-8 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-500 to-indigo-600 text-white shadow-xl shadow-brand-500/30 hover:scale-105 hover:rotate-6 transition-all duration-300 flex items-center justify-center group">
+        <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        <span class="absolute right-16 scale-0 group-hover:scale-100 transition-all bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg shadow whitespace-nowrap">一键智能捕获 (P0)</span>
+      </button>
+    </section>
+
+    <!-- 右侧 AuraMind Chrome 扩展侧边栏 (占 40% 宽度，最小宽度 400px) -->
+    <section class="w-[420px] bg-white border-l border-slate-200/80 flex flex-col h-full shadow-lg">
+
+      <!-- 侧边栏头部：元数据展示、模型切换 -->
+      <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 block animate-pulse"></span>
+            <span class="text-xs font-semibold text-slate-500">AuraMind Side Panel</span>
+          </div>
+          <!-- 模型选择器及 Ping 测试 (P0) -->
+          <div class="flex items-center space-x-2">
+            <select id="model-select" onchange="testModelPing()" class="bg-white border border-slate-200 text-xs rounded-md px-2 py-1 outline-none text-slate-600 font-medium cursor-pointer shadow-sm hover:bg-slate-50">
+              <option value="deepseek-r1">DeepSeek-R1 (API Base)</option>
+              <option value="gpt-4o">OpenAI GPT-4o</option>
+              <option value="claude-3-opus">Claude 3.5 Sonnet</option>
+            </select>
+            <span id="ping-badge" class="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-mono border border-emerald-100">42ms</span>
+          </div>
+        </div>
+
+        <!-- 捕获到的当前网页元数据 (Perception Metadata) -->
+        <div id="captured-metadata" class="bg-white border border-slate-200/60 rounded-xl p-3 flex items-start space-x-3 shadow-sm hidden">
+          <div class="w-8 h-8 rounded bg-slate-50 border border-slate-200/50 flex items-center justify-center flex-shrink-0">
+            <img id="meta-favicon" class="w-4 h-4" src="https://favicon.im/medium.com" onerror="this.src='https://www.google.com/s2/favicons?domain=medium.com'" alt="Favicon">
+          </div>
+          <div class="flex-1 min-w-0">
+            <h4 id="meta-title" class="text-xs font-semibold text-slate-800 truncate leading-snug">Vector DB 101: 极简向量数据库原理与实战</h4>
+            <div class="flex flex-wrap gap-1.5 mt-1.5">
+              <span id="meta-author" class="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-100">👤 Alex Rivera</span>
+              <span id="meta-date" class="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-100">📅 2024-03-28</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 侧边栏功能导航栏 -->
+      <nav class="flex border-b border-slate-100 text-xs px-2 bg-slate-50/20">
+        <button id="tab-chat" onclick="switchTab('chat')" class="flex-1 py-3 text-center font-medium border-b-2 border-brand-500 text-brand-500 transition-colors">🧠 沉浸式对话</button>
+        <button id="tab-search" onclick="switchTab('search')" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">🔍 全文检索</button>
+        <button id="tab-timeline" onclick="switchTab('timeline')" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">📅 时间轴</button>
+        <button id="tab-settings" onclick="switchTab('settings')" class="flex-1 py-3 text-center font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition-colors">⚙️ 同步 & 设置</button>
+      </nav>
+
+      <!-- 侧边栏主内容区 -->
+      <div class="flex-1 overflow-y-auto no-scrollbar relative flex flex-col bg-white">
+
+        <!-- Tab 1: Chat with Doc -->
+        <div id="content-chat" class="flex-1 flex flex-col h-full">
+          <!-- 默认空白/引导状态 -->
+          <div id="chat-welcome" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-brand-50 flex items-center justify-center text-brand-500 mb-4 animate-bounce">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </div>
+            <h3 class="text-sm font-semibold text-slate-700 mb-1">网页未捕获</h3>
+            <p class="text-xs text-slate-400 max-w-xs mb-4">请点击左下角 AuraMind 浮空球，或点击下方按钮，我们将一键提取正文并开始深度消化。</p>
+            <button onclick="triggerCapture()" class="px-4 py-2 bg-brand-500 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-brand-600 transition">一键捕获并解析 (P0)</button>
+          </div>
+
+          <!-- 解析中 loading 状态 -->
+          <div id="capture-loading" class="flex-1 flex flex-col items-center justify-center p-8 hidden">
+            <div class="inline-block animate-spin ease-linear rounded-full border-2 border-t-2 border-slate-200 border-t-brand-500 h-8 w-8 mb-4"></div>
+            <h3 class="text-sm font-medium text-slate-700 mb-1" id="loading-status">正在解析 DOM...</h3>
+            <p class="text-xs text-slate-400" id="loading-sub">使用 Readability.js 构建极简正文</p>
+          </div>
+
+          <!-- 聊天对话区域 -->
+          <div id="chat-messages" class="flex-1 p-4 space-y-4 overflow-y-auto no-scrollbar hidden">
+            <!-- 系统：一句话简述 -->
+            <div class="flex items-start space-x-3">
+              <div class="w-7 h-7 rounded bg-brand-50 border border-brand-100 flex items-center justify-center text-xs text-brand-500 font-bold flex-shrink-0">🧠</div>
+              <div class="bg-brand-50/50 border border-brand-100/50 rounded-2xl px-4 py-2.5 max-w-[85%]">
+                <div class="flex items-center space-x-1 mb-1">
+                  <span class="text-[10px] font-bold text-brand-600 uppercase tracking-wider">AI Summary</span>
+                </div>
+                <p class="text-xs text-slate-700 leading-relaxed">
+                  本文是关于向量数据库原理的入门教程，重点介绍了高维文本向量化表示，以及 HNSW、IVF 等近似最近邻（ANN）索引算法。在 5000 篇文档的实际测试下，检索性能表现优秀，达到了 ≤42ms 的超低响应延迟。
+                </p>
+              </div>
+            </div>
+
+            <!-- 动态对话插入点 -->
+          </div>
+
+          <!-- 底部输入框区 -->
+          <div id="chat-input-container" class="p-4 border-t border-slate-100 bg-white hidden">
+            <div class="relative flex items-center bg-slate-50 border border-slate-200 rounded-xl p-2 focus-within:border-brand-500/80 focus-within:ring-1 focus-within:ring-brand-500/20 transition-all">
+              <input id="user-input" type="text" placeholder="向 AI 提问有关本文的任何问题..." onkeydown="if(event.key === 'Enter') handleSendMessage()" class="flex-1 bg-transparent text-xs outline-none px-2 text-slate-700 placeholder-slate-400">
+              <button onclick="handleSendMessage()" class="h-8 w-8 rounded-lg bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center justify-between mt-2 px-1">
+              <span class="text-[10px] text-slate-400">Context Window: 包含当前网页全文 Markdown</span>
+              <span class="text-[10px] text-brand-500 hover:underline cursor-pointer">查看上下文</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Local Search (Awakening MiniSearch) -->
+        <div id="content-search" class="flex-1 p-4 flex flex-col h-full hidden">
+          <!-- 检索框 -->
+          <div class="relative flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mb-4 focus-within:border-brand-500 transition-all">
+            <svg class="w-4 h-4 text-slate-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="search-input" oninput="simulateSearch()" type="text" placeholder="基于 MiniSearch 的全文本地检索..." class="bg-transparent text-xs outline-none w-full text-slate-700 placeholder-slate-400">
+          </div>
+
+          <!-- 检索响应时间指示器 -->
+          <div class="flex items-center justify-between text-[10px] text-slate-400 px-1 mb-3">
+            <span>支持 Title (权重: 3), Content (权重: 1) 联合检索</span>
+            <span id="search-time" class="font-mono">响应时间: 0ms (0 篇)</span>
+          </div>
+
+          <!-- 检索结果列表 -->
+          <div id="search-results" class="flex-1 space-y-3 overflow-y-auto no-scrollbar">
+            <!-- 空状态 -->
+            <div class="h-48 flex flex-col items-center justify-center text-slate-400">
+              <svg class="w-8 h-8 stroke-1.5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+              <p class="text-xs">暂无本地捕获数据，请先捕获文章</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Timeline (Awakening Timeline) -->
+        <div id="content-timeline" class="flex-1 p-5 flex flex-col h-full hidden">
+          <div class="mb-5">
+            <h3 class="text-xs font-semibold text-slate-800 mb-1">足迹热力图 (Footprint Graph)</h3>
+            <p class="text-[10px] text-slate-400">按日/周/月聚合您的知识捕获行为</p>
+          </div>
+
+          <!-- GitHub Style Contribution Grid (Mockup) -->
+          <div class="bg-white border border-slate-200/60 p-4 rounded-xl shadow-sm mb-5">
+            <div class="grid grid-flow-col gap-[3px] overflow-x-auto justify-start no-scrollbar" id="timeline-grid">
+              <!-- 这里由 JS 循环渲染一个 24列 x 7行 模拟足迹热力图 -->
+            </div>
+            <div class="flex justify-between items-center text-[9px] text-slate-400 mt-3 px-1">
+              <span>2024年 近 6 个月足迹</span>
+              <div class="flex items-center space-x-1">
+                <span>少</span>
+                <span class="w-2.5 h-2.5 rounded-sm bg-slate-100"></span>
+                <span class="w-2.5 h-2.5 rounded-sm bg-brand-200"></span>
+                <span class="w-2.5 h-2.5 rounded-sm bg-brand-400"></span>
+                <span class="w-2.5 h-2.5 rounded-sm bg-brand-600"></span>
+                <span>多</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 捕获轨迹列表 -->
+          <div class="flex-1">
+            <h4 class="text-xs font-bold text-slate-700 mb-3 flex items-center">
+              <span class="w-1 h-3.5 bg-brand-500 rounded-full mr-1.5"></span>
+              今日捕获
+            </h4>
+            <div class="space-y-3" id="timeline-list">
+              <!-- 未捕获时的空状态 -->
+              <p class="text-xs text-slate-400 italic">今日尚未捕获任何文档...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Sync & Settings (Persistence & Thinking Setup) -->
+        <div id="content-settings" class="flex-1 p-5 space-y-6 hidden">
+
+          <!-- WebDAV 配置模块 (Persistence P0) -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-bold text-slate-700 flex items-center">
+                <span class="w-1.5 h-3.5 bg-indigo-500 rounded-full mr-2"></span>
+                WebDAV 私有云同步 (LWW 覆盖)
+              </h3>
+              <span class="text-[9px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-500 border border-slate-200">Gzip 压缩传输</span>
+            </div>
+            <div class="bg-slate-50/50 border border-slate-200/60 rounded-xl p-4 space-y-3">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">WebDAV 端点 (如：坚果云)</label>
+                <input type="text" value="https://dav.jianguoyun.com/dav/" class="w-full bg-white border border-slate-200 text-xs px-2.5 py-1.5 rounded-lg outline-none text-slate-700 focus:border-brand-500">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">用户名</label>
+                  <input type="text" value="auramind_user@gmail.com" class="w-full bg-white border border-slate-200 text-xs px-2.5 py-1.5 rounded-lg outline-none text-slate-700 focus:border-brand-500">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 mb-1">应用密码</label>
+                  <input type="password" value="••••••••••••••••" class="w-full bg-white border border-slate-200 text-xs px-2.5 py-1.5 rounded-lg outline-none text-slate-700 focus:border-brand-500">
+                </div>
+              </div>
+              <div class="flex space-x-2 pt-2">
+                <button onclick="testWebDAVPing()" class="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 shadow-sm transition flex items-center justify-center space-x-1">
+                  <span>⚡ 连接测试</span>
+                  <span id="dav-ping-status" class="text-[10px] text-emerald-500 hidden">(200 OK)</span>
+                </button>
+                <button onclick="triggerSync()" class="flex-1 py-1.5 bg-brand-500 text-white rounded-lg text-xs font-medium hover:bg-brand-600 shadow-sm shadow-brand-500/10 transition flex items-center justify-center space-x-1">
+                  <span>🔄 同步到云端</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 模型接入配置模块 (Thinking P0) -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-bold text-slate-700 flex items-center">
+                <span class="w-1.5 h-3.5 bg-violet-500 rounded-full mr-2"></span>
+                AI 模型接入配置
+              </h3>
+            </div>
+            <div class="bg-slate-50/50 border border-slate-200/60 rounded-xl p-4 space-y-3">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">API Base URL</label>
+                <input type="text" value="https://api.deepseek.com/v1" class="w-full bg-white border border-slate-200 text-xs px-2.5 py-1.5 rounded-lg outline-none text-slate-700 focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">API Key</label>
+                <input type="password" value="sk-••••••••••••••••••••••••" class="w-full bg-white border border-slate-200 text-xs px-2.5 py-1.5 rounded-lg outline-none text-slate-700 focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">System Prompt</label>
+                <textarea rows="3" class="w-full bg-white border border-slate-200 text-xs p-2.5 rounded-lg outline-none text-slate-700 focus:border-brand-500 leading-relaxed resize-none">你是一个基于当前网页内容回答问题的助手。请给出结构化，逻辑严密的答案。</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- 备份与导出 (Persistence P0) -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-bold text-slate-700">冷备数据导入/导出</h3>
+            </div>
+            <div class="flex space-x-2">
+              <button onclick="mockExport()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition flex items-center justify-center space-x-1">
+                <span>📤 导出本地 JSON 备份</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 全局 Toast 提示 -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center space-x-2 opacity-0 pointer-events-none transition-all duration-300">
+    <span id="toast-icon">⚡</span>
+    <span id="toast-text">消息提示</span>
+  </div>
+
+  <!-- 模拟数据和前端逻辑交互 -->
+  <script>
+    // 存储当前应用状态
+    const state = {
+      isCaptured: false,
+      documents: [
+        {
+          id: 'doc_1',
+          title: 'Vector DB 101: 极简向量数据库原理与实战',
+          url: 'https://medium.com/tech-insights/vector-db-101-for-beginners-r1',
+          author: 'Alex Rivera',
+          date: '2024-03-28',
+          createdAt: Date.now(),
+          markdownContent: '高维空间中，语义相近的内容...'
+        }
+      ],
+      chatHistories: []
+    };
+
+    // 页面初始化：构建 Contribution Graph
+    window.onload = function() {
+      renderContributionGrid();
+    };
+
+    // Tab 导航切换逻辑
+    function switchTab(tabName) {
+      const tabs = ['chat', 'search', 'timeline', 'settings'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const content = document.getElementById(`content-${t}`);
+        if (t === tabName) {
+          btn.classList.add('border-brand-500', 'text-brand-500');
+          btn.classList.remove('border-transparent', 'text-slate-400');
+          content.classList.remove('hidden');
+        } else {
+          btn.classList.remove('border-brand-500', 'text-brand-500');
+          btn.classList.add('border-transparent', 'text-slate-400');
+          content.classList.add('hidden');
+        }
+      });
+
+      // 如果进入检索，刷新模拟数据
+      if (tabName === 'search') {
+        simulateSearch();
+      }
+    }
+
+    // 弹窗提示函数
+    function showToast(text, icon = '⚡') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-icon').innerText = icon;
+      document.getElementById('toast-text').innerText = text;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 3000);
+    }
+
+    // P0：网络连接 Ping 测试模拟
+    function testModelPing() {
+      const pingBadge = document.getElementById('ping-badge');
+      const model = document.getElementById('model-select').value;
+      pingBadge.innerText = 'Testing...';
+      pingBadge.className = "px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono border border-slate-200";
+
+      const randomLatency = Math.floor(Math.random() * 80) + 30; // 模拟 30~110ms 的网络延迟
+      setTimeout(() => {
+        pingBadge.innerText = `${randomLatency}ms`;
+        pingBadge.className = "px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[10px] font-mono border border-emerald-100";
+        showToast(`多模型测试：${model} 连接成功！延迟: ${randomLatency}ms`, '🔋');
+      }, 600);
+    }
+
+    function testWebDAVPing() {
+      const badge = document.getElementById('dav-ping-status');
+      badge.classList.remove('hidden');
+      badge.innerText = '(测试中...)';
+      setTimeout(() => {
+        badge.innerText = '(42ms OK)';
+        showToast('WebDAV 服务器连接成功，SSL 验证通过。', '✅');
+      }, 800);
+    }
+
+    // P0: 捕获与解析流程
+    function triggerCapture() {
+      if (state.isCaptured) {
+        showToast('该文章已被解析，正在打开沉浸式对话。', '📄');
+        switchTab('chat');
+        return;
+      }
+
+      // 进入解析中状态
+      document.getElementById('chat-welcome').classList.add('hidden');
+      const loadingSection = document.getElementById('capture-loading');
+      loadingSection.classList.remove('hidden');
+
+      const status = document.getElementById('loading-status');
+      const subText = document.getElementById('loading-sub');
+
+      // 模拟 Readability.js 解析步骤
+      setTimeout(() => {
+        status.innerText = "提取元数据及 HTML DOM...";
+        subText.innerText = "找到 Title: Vector DB 101, 作者: Alex Rivera";
+      }, 1000);
+
+      setTimeout(() => {
+        status.innerText = "HTML 转换为结构化 Markdown...";
+        subText.innerText = "解析 GFM 表格和高维代码块中...";
+      }, 2000);
+
+      setTimeout(() => {
+        status.innerText = "Web Worker 异步加载与索引重构...";
+        subText.innerText = "MiniSearch 本地多字段权重建立...";
+      }, 3000);
+
+      // 解析成功
+      setTimeout(() => {
+        state.isCaptured = true;
+        loadingSection.classList.add('hidden');
+
+        // 展示顶部元数据块
+        document.getElementById('captured-metadata').classList.remove('hidden');
+
+        // 展示对话主模块及底部输入框
+        document.getElementById('chat-messages').classList.remove('hidden');
+        document.getElementById('chat-input-container').classList.remove('hidden');
+
+        // 浮空球形态改变
+        const floatBtn = document.getElementById('floating-btn');
+        floatBtn.className = "absolute bottom-8 right-8 h-14 w-14 rounded-full bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:scale-105 transition-all duration-300 flex items-center justify-center";
+        floatBtn.innerHTML = `
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        `;
+
+        showToast('AuraMind 成功捕获并建立了高维检索索引！', '🎉');
+        updateTimelineList();
+      }, 4000);
+    }
+
+    // P1: SSE 沉浸式流式回答与思维链（Thinking Process）
+    function handleSendMessage() {
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const chatContainer = document.getElementById('chat-messages');
+
+      // 1. 插入用户问题气泡
+      const userBubble = document.createElement('div');
+      userBubble.className = "flex items-start space-x-3 justify-end";
+      userBubble.innerHTML = `
+        <div class="bg-brand-500 text-white rounded-2xl px-4 py-2.5 max-w-[85%] text-xs shadow-sm">
+          <p class="leading-relaxed">${escapeHtml(text)}</p>
+        </div>
+        <div class="w-7 h-7 rounded bg-slate-200 flex items-center justify-center text-xs text-slate-600 font-medium flex-shrink-0">ME</div>
+      `;
+      chatContainer.appendChild(userBubble);
+      input.value = '';
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      // 2. 插入 AI 的 SSE 流式回复骨架
+      const aiBubble = document.createElement('div');
+      aiBubble.className = "flex items-start space-x-3";
+
+      const responseId = 'stream_' + Date.now();
+      aiBubble.innerHTML = `
+        <div class="w-7 h-7 rounded bg-brand-50 border border-brand-100 flex items-center justify-center text-xs text-brand-500 font-bold flex-shrink-0">🧠</div>
+        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl px-4 py-2.5 max-w-[85%]">
+          <div class="flex items-center space-x-1.5 mb-1.5">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI Streaming</span>
+            <span class="w-1.5 h-1.5 bg-brand-500 rounded-full animate-ping"></span>
+          </div>
+
+          <!-- 深度思考（Thinking Chain） -->
+          <div id="${responseId}_thought" class="border-l-2 border-slate-200 pl-2 py-1 mb-2 text-[11px] text-slate-400 italic hidden">
+            正在思考...
+          </div>
+
+          <!-- Markdown 内容输出 -->
+          <div id="${responseId}_body" class="text-xs text-slate-700 leading-relaxed cursor-blink"></div>
+        </div>
+      `;
+      chatContainer.appendChild(aiBubble);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      // 模拟 SSE 打字机流式输出
+      simulateSSEStream(text, responseId);
+    }
+
+    function simulateSSEStream(question, id) {
+      const thoughtEl = document.getElementById(`${id}_thought`);
+      const bodyEl = document.getElementById(`${id}_body`);
+
+      thoughtEl.classList.remove('hidden');
+
+      // 模拟思维链（Thinking Block）
+      let thoughtTicks = 0;
+      const thoughtInterval = setInterval(() => {
+        thoughtTicks++;
+        if (thoughtTicks === 1) thoughtEl.innerText = "正在梳理当前文档上下文...";
+        if (thoughtTicks === 2) thoughtEl.innerText = "定位到关于：实验数据、HNSW 和查询响应耗时、5000篇文档测试的描述...";
+        if (thoughtTicks === 3) {
+          clearInterval(thoughtInterval);
+          thoughtEl.innerText = "思考过程：基于文章中第2大点的末尾段，明确提到了第三个实验的测试，表明 HNSW 能在 5000 篇文档上将检索时间优化至 ≤42ms。";
+          startTextStream();
+        }
+      }, 1000);
+
+      // 模拟主体回答流式输出
+      function startTextStream() {
+        let textResult = "";
+        let tokens = [];
+
+        if (question.includes("实验") || question.includes("数据")) {
+          tokens = [
+            "根据", "文章中", "提供的", "第三个", "实验", "数据支撑，",
+            "在 **5000 篇文档**", "的数据集", "测试中：\n\n",
+            "1. **检索响应延迟**：控制在 **≤42ms**。\n",
+            "2. **性能对比**：传统线性扫描需要 **1240ms**，HNSW 带来了接近 **30 倍** 的超高查询性能提升。\n",
+            "3. **底层索引原理**：这是通过建立 **HNSW 层次图结构** 实现的，极大规避了传统查询的“高维维度灾难”。"
+          ];
+        } else {
+          tokens = [
+            "我已收到", "您的提问：", `"${escapeHtml(question)}"。\n\n`,
+            "基于当前捕获的文档，本文着重阐述了高维向量检索在亚毫秒级（Sub-millisecond）内如何依靠 ANN 算法突破性能限制。",
+            " 这是一个利用 **Local-First** 闭环建立的 AI 问答演示，您可以提问类似于「里面的第三个实验数据是什么？」来获得精准的语义定位。"
+          ];
+        }
+
+        let index = 0;
+        const textInterval = setInterval(() => {
+          if (index < tokens.length) {
+            textResult += tokens[index];
+            bodyEl.innerHTML = textResult.replace(/\n/g, '<br/>'); // 简单转义换行
+            index++;
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+          } else {
+            clearInterval(textInterval);
+            bodyEl.classList.remove('cursor-blink'); // 关闭闪烁光标
+          }
+        }, 120);
+      }
+    }
+
+    // P0: MiniSearch 本地多权重模糊匹配检索模拟
+    function simulateSearch() {
+      const query = document.getElementById('search-input').value.trim().toLowerCase();
+      const resultsEl = document.getElementById('search-results');
+      const timeEl = document.getElementById('search-time');
+
+      if (!state.isCaptured) {
+        resultsEl.innerHTML = `
+          <div class="h-48 flex flex-col items-center justify-center text-slate-400">
+            <svg class="w-8 h-8 stroke-1.5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+            <p class="text-xs">暂无本地捕获数据，请先捕获文章</p>
+          </div>
+        `;
+        timeEl.innerText = "响应时间: 0ms (0 篇)";
+        return;
+      }
+
+      // 模拟 5 个预置的文档集作为检索背景
+      const mockDatabase = [
+        { id: 'doc_1', title: 'Vector DB 101: 极简向量数据库原理与实战', snippet: '高维空间中，语义相近的内容，它们之间的几何距离也必然越近。测试响应延迟达到≤42ms...', url: 'medium.com' },
+        { id: 'doc_2', title: 'HNSW 图结构索引算法深入剖析', snippet: 'Hierarchical Navigable Small World 是高维向量最近邻检索的突破性算法，检索耗时优化至毫秒级...', url: 'github.com' },
+        { id: 'doc_3', title: 'RAG 架构下 Prompt 与大上下文窗口管理', snippet: '探讨在大模型 RAG 系统构建中，如何通过上下文路由和召回切片来精简 LLM 的 Context Window 成本...', url: 'csdn.net' },
+        { id: 'doc_4', title: 'MySQL 与 PostgreSQL 在向量检索上的插件拓展对比', snippet: 'PostgreSQL pgvector 作为经典的关系型生态扩展，如何在千级维度的相似性检索上对抗专业向量数据库...', url: 'juejin.cn' }
+      ];
+
+      // 过滤匹配
+      const filtered = mockDatabase.filter(doc =>
+        doc.title.toLowerCase().includes(query) || doc.snippet.toLowerCase().includes(query)
+      );
+
+      // 模拟 MiniSearch 毫秒级返回
+      const searchMs = query ? (Math.random() * 3 + 1).toFixed(1) : 0;
+      timeEl.innerText = `响应时间: ${searchMs}ms (基于 ${mockDatabase.length} 篇本地索引)`;
+
+      if (filtered.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="h-48 flex flex-col items-center justify-center text-slate-400">
+            <p class="text-xs">未匹配到相关文档</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 渲染列表
+      resultsEl.innerHTML = filtered.map(doc => `
+        <div class="p-3 border border-slate-200/60 rounded-xl hover:border-brand-500/50 hover:bg-slate-50/40 transition cursor-pointer">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded font-mono">${doc.url}</span>
+            <span class="text-[9px] text-slate-400">Score: 0.98</span>
+          </div>
+          <h4 class="text-xs font-semibold text-slate-800 mb-1 hover:text-brand-500 transition">${doc.title}</h4>
+          <p class="text-[10px] text-slate-400 line-clamp-2">${doc.snippet}</p>
+        </div>
+      `).join('');
+    }
+
+    // P1: 时间轴 (Timeline Contribution Grid) 模拟渲染
+    function renderContributionGrid() {
+      const grid = document.getElementById('timeline-grid');
+      grid.innerHTML = '';
+
+      // 渲染一个 24 列 x 7 行的极简小格子图 (代表约168天的历史足迹)
+      const cols = 24;
+      const rows = 7;
+
+      for (let c = 0; c < cols; c++) {
+        const colDiv = document.createElement('div');
+        colDiv.className = "grid grid-rows-7 gap-[3px]";
+
+        for (let r = 0; r < rows; r++) {
+          const square = document.createElement('span');
+          // 随机渲染格子的绿色足迹深度
+          const rand = Math.random();
+          let bgClass = "bg-slate-100";
+          if (rand > 0.9) bgClass = "bg-brand-600";
+          else if (rand > 0.75) bgClass = "bg-brand-400";
+          else if (rand > 0.6) bgClass = "bg-brand-200";
+
+          square.className = `w-[11px] h-[11px] rounded-[2px] ${bgClass} cursor-pointer hover:ring-1 hover:ring-brand-500 hover:ring-offset-1 transition-all`;
+          square.setAttribute('title', `2024年某日 捕获 ${Math.floor(rand*5)} 篇`);
+          colDiv.appendChild(square);
+        }
+        grid.appendChild(colDiv);
+      }
+    }
+
+    function updateTimelineList() {
+      const list = document.getElementById('timeline-list');
+      if (state.isCaptured) {
+        list.innerHTML = `
+          <div class="relative pl-6 pb-2 border-l border-slate-100 last:border-0 last:pb-0">
+            <!-- 骨架节点 -->
+            <span class="absolute left-[-4.5px] top-1 w-2.5 h-2.5 bg-brand-500 rounded-full border-2 border-white ring-2 ring-brand-100 animate-ping"></span>
+            <span class="absolute left-[-4.5px] top-1 w-2.5 h-2.5 bg-brand-500 rounded-full border-2 border-white"></span>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+              <span>刚刚 捕获</span>
+              <span>12:35</span>
+            </div>
+            <h5 class="text-xs font-semibold text-slate-800 hover:text-brand-500 transition cursor-pointer">Vector DB 101: 极简向量数据库原理与实战</h5>
+            <p class="text-[10px] text-slate-400 mt-1">Medium · 👤 Alex Rivera · 📝 3500 字 Markdown</p>
+          </div>
+        `;
+      }
+    }
+
+    // P0: WebDAV 远端冷同步 (手动触发压缩 + LWW 覆盖机制)
+    function triggerSync() {
+      showToast('正在准备对本地数据进行 Gzip 打包...', '📦');
+      setTimeout(() => {
+        showToast('正在往 WebDAV 服务器上传 auramind_data.json.gz', '☁️');
+      }, 1000);
+
+      setTimeout(() => {
+        showToast('正在推送元数据 metadata.json (LWW 机制)...', '⏱️');
+      }, 2000);
+
+      setTimeout(() => {
+        showToast('多设备冷同步完成。本地数据已完全对齐云端。', '🎉');
+      }, 3000);
+    }
+
+    // P0: 备份导出模拟
+    function mockExport() {
+      const backupData = {
+        version: "1.0.0",
+        updatedAt: Date.now(),
+        data: {
+          documents: state.documents,
+          chatHistories: state.chatHistories,
+          settings: {
+            theme: "light",
+            defaultModel: "deepseek-r1"
+          }
+        }
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "auramind_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast('JSON 备份数据序列化成功，已启动浏览器下载！', '💾');
+    }
+
+    // 辅助防注入转义函数
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
