@@ -1,87 +1,146 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
-import SectionHead from '../common/SectionHead.vue'
+import { ref } from 'vue'
+import { SwitchRoot, SwitchThumb } from 'reka-ui'
 
 const emit = defineEmits<{
   showToast: [title: string, desc: string]
 }>()
 
-const settings = ref({
-  autoSave: true,
-  toast: true,
-  frontmatter: true,
-  readerStyle: true,
-})
+const byokEndpoint = ref('https://api.deepseek.com/v1')
+const byokKey = ref('')
+const byokKeyVisible = ref(false)
 
-type SettingKey = keyof typeof settings.value
+const webdavEnabled = ref(true)
+const webdavAccount = ref('')
+const webdavPassword = ref('')
 
-const labels: Record<SettingKey, { title: string; desc: string }> = {
-  autoSave: { title: '自动保存到 IndexedDB', desc: '提取成功后直接写入本地数据库。' },
-  toast: { title: '保存后显示 Toast', desc: '完成、复制、删除等动作给出轻提示。' },
-  frontmatter: { title: '生成 Markdown 元数据', desc: '在 Markdown 顶部写入标题、作者、来源和时间。' },
-  readerStyle: { title: '阅读器高级排版', desc: '使用 Apple 风格间距、浅色卡片和细边框。' },
+function toggleKeyVisible() {
+  byokKeyVisible.value = !byokKeyVisible.value
 }
 
-const settingKeys = computed(() => Object.keys(settings.value) as SettingKey[])
-
-function toggle(key: SettingKey) {
-  settings.value[key] = !settings.value[key]
-  emit('showToast', settings.value[key] ? '设置已开启' : '设置已关闭', '偏好已保存到本地配置')
+function exportJSON() {
+  emit('showToast', '导出 JSON 备份', '正在打包本地数据，即将开始下载...')
 }
 
-function reset() {
-  settings.value = { autoSave: true, toast: true, frontmatter: true, readerStyle: true }
-  emit('showToast', '已恢复默认设置', '所有插件偏好已重置为推荐状态')
+function importJSON() {
+  emit('showToast', '导入恢复数据', '请上传 SuperBrain JSON 或 ZIP 归档文件，系统将自动执行分流合并机制')
+}
+
+function exportObsidian() {
+  emit('showToast', '导出 Obsidian 归档', '正在组装 JSZip 压缩包，转换为 Obsidian YAML 格式 Markdown...')
 }
 </script>
 
 <template>
-  <section class="h-full overflow-auto pb-3.5">
-    <!-- Settings Card -->
-    <div
-      class="p-3.5 rounded-20px"
-      style="border: 1px solid rgba(29,29,31,0.08); background: rgba(255,255,255,0.78); backdrop-filter: blur(24px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 1px 2px rgba(0,0,0,0.04)"
-    >
-      <SectionHead title="Settings" action="恢复默认" @action="reset" />
-
-      <div
-        v-for="key in settingKeys"
-        :key="key"
-        class="py-3 flex items-center justify-between gap-4"
-        style="border-bottom: 1px solid rgba(29,29,31,0.08)"
-        :class="{ 'border-b-0!': key === 'readerStyle' }"
-      >
+  <section class="p-4 space-y-5">
+    <!-- BYOK 模型配置区 -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+        <span class="text-xs font-bold text-gray-900 flex items-center">
+          <svg class="w-4 h-4 mr-1.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          LLM 模型服务商配置 (BYOK)
+        </span>
+        <span class="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded flex items-center">
+          <svg class="w-2.5 h-2.5 mr-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          AES-GCM 本地加密
+        </span>
+      </div>
+      <div class="space-y-2">
         <div>
-          <div class="text-13px font-bold">{{ labels[key].title }}</div>
-          <div class="mt-1 text-11px text-#6e6e73 leading-snug">{{ labels[key].desc }}</div>
+          <label class="text-[10px] font-bold text-gray-400 block mb-1">API ENDPOINT (Base URL)</label>
+          <input
+            v-model="byokEndpoint"
+            type="text"
+            class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+          >
         </div>
-        <button
-          class="w-44px h-26px p-0.75 rounded-full cursor-pointer transition-all duration-150 flex-shrink-0"
-          :class="settings[key] ? 'bg-#111' : 'bg-#d4d4d8'"
-          @click="toggle(key)"
-        >
-          <span
-            class="block w-20px h-20px rounded-full bg-white transition-all duration-150"
-            :class="settings[key] ? 'translate-x-4.5' : 'translate-x-0'"
-            style="box-shadow: 0 2px 6px rgba(0,0,0,0.16)"
-          />
-        </button>
+        <div>
+          <label class="text-[10px] font-bold text-gray-400 block mb-1">API KEY (加密存储)</label>
+          <div class="relative flex items-center">
+            <input
+              v-model="byokKey"
+              :type="byokKeyVisible ? 'text' : 'password'"
+              class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-10 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              placeholder="••••••••••••••••••••••••••••••••"
+            >
+            <button
+              class="absolute right-3 text-gray-400 hover:text-gray-600 bg-transparent border-0 cursor-pointer p-0 transition"
+              @click="toggleKeyVisible"
+            >
+              <svg v-if="!byokKeyVisible" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+              <svg v-else class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Storage Info -->
-    <div
-      class="mt-3 p-3.5 rounded-20px"
-      style="border: 1px solid rgba(29,29,31,0.08); background: rgba(255,255,255,0.78); backdrop-filter: blur(24px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.72), 0 1px 2px rgba(0,0,0,0.04)"
-    >
-      <SectionHead title="Storage" action="Local-first" />
-      <div class="p-3 rounded-16px border border-rgba(29,29,31,0.08) bg-rgba(250,250,250,0.74)">
-        <div class="mb-2 text-13px font-bold tracking-tight">本地优先架构</div>
-        <div class="text-#52525b text-12px leading-relaxed">
-          插件只负责采集当前网页，文章、Markdown、元数据和阅读状态都保存在 IndexedDB。
-          后续可以扩展 WebDAV、导出 Markdown、全文搜索和 AI 总结。
+    <!-- WebDAV 云端同步 -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+        <span class="text-xs font-bold text-gray-900 flex items-center">
+          <svg class="w-4 h-4 mr-1.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+          WebDAV 每日静默同步 (坚果云/Nextcloud)
+        </span>
+        <SwitchRoot
+          v-model:checked="webdavEnabled"
+          class="w-9 h-5 bg-gray-200 rounded-full relative cursor-pointer transition-colors data-[state=checked]:bg-blue-600 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          <SwitchThumb
+            class="block w-4 h-4 bg-white rounded-full transition-transform duration-150 translate-x-[-4px] data-[state=checked]:translate-x-[12px]"
+            style="box-shadow: 0 2px 6px rgba(0,0,0,0.16)"
+          />
+        </SwitchRoot>
+      </div>
+      <div class="space-y-2">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[10px] font-bold text-gray-400 block mb-1">WEBDAV 账号</label>
+            <input
+              v-model="webdavAccount"
+              type="text"
+              class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              placeholder="user@jianguoyun.com"
+            >
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-gray-400 block mb-1">同步校验密码</label>
+            <input
+              v-model="webdavPassword"
+              type="password"
+              class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            >
+          </div>
         </div>
       </div>
+    </div>
+
+    <!-- 本地存储持久化与流转 -->
+    <div class="space-y-3">
+      <span class="text-xs font-bold text-gray-900 block border-b border-gray-100 pb-1.5">本地存储持久化与流转</span>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1.5 cursor-pointer border-0"
+          @click="exportJSON"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span>导出 JSON 备份</span>
+        </button>
+        <button
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1.5 cursor-pointer border-0"
+          @click="importJSON"
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>导入恢复数据</span>
+        </button>
+      </div>
+      <button
+        class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 border border-blue-200 shadow-sm shadow-blue-50 cursor-pointer"
+        @click="exportObsidian"
+      >
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span>一键打包导出 Obsidian 兼容 .ZIP 归档</span>
+      </button>
     </div>
   </section>
 </template>

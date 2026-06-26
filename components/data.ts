@@ -10,6 +10,7 @@ export const currentPage: Article = {
   publishedAt: '2025-02-18',
   createdAt: '刚刚',
   excerpt: '现代 AI 应用不再只是包裹模型 API 的表单，而是由网页提取、上下文整理、模型调用、本地存储和阅读界面组成的连续工作流。',
+  tags: ['AI', 'Web'],
   markdown: `## Overview
 
 Modern AI-native applications are no longer simple forms wrapped around a model API. They are multi-layer systems where extraction, memory, reasoning and user interface are connected as one continuous workflow.
@@ -38,6 +39,7 @@ export const demoArticles: Article[] = [
     publishedAt: '2025-01-28',
     createdAt: '今天 09:18',
     excerpt: 'Local-first 产品应该让用户感到数据可控、交互即时，并且在离线状态下仍然可靠。',
+    tags: ['知识管理', 'Productivity'],
     markdown: `## Local-first
 
 Local-first software gives users ownership of data while preserving a fast and responsive experience.
@@ -58,6 +60,7 @@ Local-first software gives users ownership of data while preserving a fast and r
     publishedAt: '2024-12-16',
     createdAt: '昨天',
     excerpt: '清晰、层级、留白和动效共同决定了一个界面的高级感。',
+    tags: ['Design', 'Apple'],
     markdown: `## Clarity
 
 Apple interface design favors clarity, deference and depth.
@@ -78,6 +81,7 @@ Apple interface design favors clarity, deference and depth.
     publishedAt: '2024-11-02',
     createdAt: '2 天前',
     excerpt: '真正快的界面不仅依赖性能，也依赖反馈、过渡、乐观更新和信息密度。',
+    tags: ['UI', 'Engineering'],
     markdown: `## Fast-feeling Interfaces
 
 Interfaces feel fast when users receive immediate feedback.

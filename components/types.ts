@@ -9,4 +9,5 @@ export interface Article {
   createdAt: string
   excerpt: string
   markdown: string
+  tags: string[]
 }

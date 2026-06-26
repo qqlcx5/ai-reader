@@ -86,6 +86,20 @@ const infoItems = (a: Article) => [
         {{ article.title }}
       </h1>
 
+      <!-- YAML Frontmatter -->
+      <div
+        class="mt-4 p-3 rounded-16px text-11px font-mono leading-relaxed overflow-x-auto"
+        style="background: #1a1a2e; color: #98c379; border: 1px solid rgba(29,29,31,0.12)"
+      >
+        <div style="color: #56b6c2">---</div>
+        <div><span style="color: #e5c07b">title</span>: "{{ article.title }}"</div>
+        <div><span style="color: #e5c07b">url</span>: "{{ article.url }}"</div>
+        <div><span style="color: #e5c07b">author</span>: "{{ article.author }}"</div>
+        <div><span style="color: #e5c07b">clipped_at</span>: "{{ article.createdAt }}"</div>
+        <div><span style="color: #e5c07b">tags</span>: [{{ article.tags?.map(t => `"#${t}"`).join(', ') }}]</div>
+        <div style="color: #56b6c2">---</div>
+      </div>
+
       <!-- Info Grid -->
       <div
         class="mt-4 grid grid-cols-2 rounded-18px overflow-hidden"

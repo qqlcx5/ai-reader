@@ -26,6 +26,16 @@ defineEmits<{
       <div class="mt-px text-11px text-#a1a1aa">
         {{ article.siteName }} · {{ article.createdAt }}
       </div>
+      <div v-if="article.tags?.length" class="mt-1 flex flex-wrap gap-1">
+        <span
+          v-for="tag in article.tags"
+          :key="tag"
+          class="h-18px px-1.5 rounded text-9px font-medium inline-flex items-center"
+          style="background: rgba(37,99,235,0.07); color: #2563eb"
+        >
+          #{{ tag }}
+        </span>
+      </div>
     </div>
     <button
       class="w-28px h-28px rounded-10px bg-transparent text-#a1a1aa cursor-pointer transition-all duration-150 hover:text-#dc2626 hover:bg-rgba(220,38,38,0.08)"

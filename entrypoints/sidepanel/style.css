@@ -9,8 +9,8 @@ html, body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif;
-  color: #1d1d1f;
-  background: #f6f6f4;
+  color: #1f2937;
+  background: #f9fafb;
 }
 
 #app {
@@ -18,18 +18,35 @@ html, body {
   height: 100%;
 }
 
-button, input {
+button, input, select {
   font: inherit;
 }
 
 button {
   border: 0;
+  cursor: pointer;
 }
 
-::-webkit-scrollbar {
-  width: 7px;
+input, select {
+  cursor: text;
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(29,29,31,0.12);
-  border-radius: 999px;
+
+/* 隐藏滚动条但保持可用 */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 模拟流式打字动画的光标 */
+.cursor-blink::after {
+  content: '▌';
+  animation: blink 1s step-start infinite;
+  color: #3B82F6;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
 }

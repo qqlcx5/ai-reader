@@ -23,7 +23,7 @@ watch(() => [props.title, props.desc], () => {
   <Transition name="toast">
     <div
       v-if="visible"
-      class="absolute left-4 right-4 bottom-80px min-h-50px px-3.5 py-3 rounded-18px flex items-center gap-2.5 z-20"
+      class="absolute left-4 right-4 bottom-14 min-h-50px px-3.5 py-3 rounded-18px flex items-center gap-2.5 z-20"
       style="background: rgba(17,17,17,0.9); color: white; box-shadow: 0 24px 70px rgba(0,0,0,0.16); backdrop-filter: blur(20px)"
     >
       <div

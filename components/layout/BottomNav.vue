@@ -9,14 +9,15 @@ const emit = defineEmits<{
 
 const tabs = [
   { key: 'capture', label: '采集' },
+  { key: 'ai', label: 'AI' },
   { key: 'library', label: '文章库' },
-  { key: 'reader', label: '阅读' },
+  { key: 'settings', label: '设置' },
 ]
 </script>
 
 <template>
   <nav
-    class="h-68px px-3.5 pb-3.5 pt-2.5 grid grid-cols-3 gap-2 flex-shrink-0"
+    class="h-68px px-3.5 pb-3.5 pt-2.5 grid grid-cols-4 gap-2 flex-shrink-0"
     style="background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.72) 34%)"
   >
     <button
