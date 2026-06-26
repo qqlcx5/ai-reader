@@ -19,13 +19,13 @@ function reload() {
 <template>
   <div v-if="error" class="flex flex-col items-center justify-center h-full p-6 text-center" role="alert">
     <AlertCircle class="w-12 h-12 text-red-500 mb-4" />
-    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">出现错误</h2>
-    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 max-w-md">
+    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">出现错误</h2>
+    <p class="text-sm text-slate-600 dark:text-slate-400 mb-4 max-w-md">
       {{ error.message || '组件渲染时发生未知错误' }}
     </p>
     <button
       @click="reload"
-      class="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+      class="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-md hover:bg-brand-600 transition-colors"
     >
       <RotateCcw class="w-4 h-4" />
       重新加载

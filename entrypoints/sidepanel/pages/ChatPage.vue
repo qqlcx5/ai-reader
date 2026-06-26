@@ -10,12 +10,12 @@
     <!-- History rail -->
     <aside
       v-if="showHistory"
-      class="chat-page__history w-56 border-r border-surface-200 dark:border-surface-700 flex flex-col bg-white dark:bg-surface-800"
+      class="chat-page__history w-56 border-r border-slate-200 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-800"
     >
-      <div class="p-3 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
-        <span class="text-sm font-medium text-surface-700 dark:text-surface-200">会话历史</span>
+      <div class="p-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">会话历史</span>
         <button
-          class="text-xs text-primary-500 hover:text-primary-600"
+          class="text-xs text-brand-500 hover:text-brand-600"
           @click="newSession"
         >
           + 新建
@@ -24,21 +24,21 @@
       <div class="flex-1 overflow-y-auto">
         <div
           v-if="chatStore.sessions.length === 0"
-          class="p-3 text-xs text-surface-400"
+          class="p-3 text-xs text-slate-400"
         >
           还没有会话
         </div>
         <button
           v-for="s in chatStore.sessions"
           :key="s.id"
-          class="w-full text-left p-3 text-sm border-b border-surface-100 dark:border-surface-700 hover:bg-surface-50 dark:hover:bg-surface-700"
-          :class="s.id === chatStore.currentSessionId ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+          class="w-full text-left p-3 text-sm border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+          :class="s.id === chatStore.currentSessionId ? 'bg-brand-50 dark:bg-brand-900/30' : ''"
           @click="selectSession(s.id)"
         >
-          <div class="font-medium text-surface-800 dark:text-surface-100 truncate">
+          <div class="font-medium text-slate-800 dark:text-slate-100 truncate">
             {{ sessionTitle(s) }}
           </div>
-          <div class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {{ s.messages.length }} 条消息 · {{ formatRelativeTime(s.updatedAt) }}
           </div>
         </button>
@@ -49,10 +49,10 @@
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Top bar: model + document summary + actions -->
       <div
-        class="chat-page__topbar px-3 py-2 border-b border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 flex items-center gap-2"
+        class="chat-page__topbar px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2"
       >
         <button
-          class="p-1.5 rounded text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700"
+          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
           :title="showHistory ? '隐藏历史' : '显示历史'"
           @click="showHistory = !showHistory"
         >
@@ -68,17 +68,17 @@
         <div class="flex-1 min-w-0">
           <div
             v-if="chatStore.currentDocument"
-            class="text-xs text-surface-600 dark:text-surface-300 truncate"
+            class="text-xs text-slate-600 dark:text-slate-300 truncate"
             :title="chatStore.currentDocument.title"
           >
             {{ chatStore.currentDocument.title }}
           </div>
-          <div v-else class="text-xs text-surface-400">未选择文档</div>
+          <div v-else class="text-xs text-slate-400">未选择文档</div>
         </div>
 
         <button
           v-if="chatStore.currentSessionId"
-          class="p-1.5 rounded text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700"
+          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
           title="新建会话"
           @click="newSession"
         >
@@ -93,7 +93,7 @@
           <Trash2 class="w-4 h-4" />
         </button>
         <button
-          class="p-1.5 rounded text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700"
+          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
           :title="showSystemPrompt ? '隐藏系统提示词' : '查看系统提示词'"
           @click="showSystemPrompt = !showSystemPrompt"
         >
@@ -104,30 +104,30 @@
       <!-- Collapsible system prompt preview -->
       <details
         v-if="showSystemPrompt"
-        class="chat-page__system-prompt border-b border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800"
+        class="chat-page__system-prompt border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800"
         open
       >
-        <summary class="px-3 py-2 text-xs font-medium text-surface-600 dark:text-surface-300 cursor-pointer">
+        <summary class="px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer">
           系统提示词
         </summary>
-        <pre class="px-3 pb-3 text-xs text-surface-600 dark:text-surface-300 whitespace-pre-wrap font-mono leading-relaxed">{{ resolvedSystemPrompt || '(使用全局默认提示词)' }}</pre>
+        <pre class="px-3 pb-3 text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">{{ resolvedSystemPrompt || '(使用全局默认提示词)' }}</pre>
       </details>
 
       <!-- Messages -->
       <div
         ref="messagesContainer"
-        class="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-surface-50 dark:bg-surface-900"
+        class="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-slate-50 dark:bg-slate-900"
       >
         <div
           v-if="chatStore.currentMessages.length === 0 && chatStore.currentDocument"
-          class="text-center text-sm text-surface-400 py-8"
+          class="text-center text-sm text-slate-400 py-8"
         >
           <Sparkles class="w-6 h-6 mx-auto mb-2" />
           <p>问点什么吧 — 我已经读完了这篇文档。</p>
         </div>
         <div
           v-else-if="!chatStore.currentDocument"
-          class="text-center text-sm text-surface-400 py-8"
+          class="text-center text-sm text-slate-400 py-8"
         >
           请先在网页上点击浮动按钮捕获一篇文档。
         </div>
@@ -137,10 +137,10 @@
           :key="m.id"
           :message="m"
         />
-        <div v-if="chatStore.streaming" class="flex items-center gap-2 text-xs text-surface-400 px-2">
-          <span class="inline-block w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
-          <span class="inline-block w-2 h-2 bg-primary-500 rounded-full animate-pulse" style="animation-delay: 150ms" />
-          <span class="inline-block w-2 h-2 bg-primary-500 rounded-full animate-pulse" style="animation-delay: 300ms" />
+        <div v-if="chatStore.streaming" class="flex items-center gap-2 text-xs text-slate-400 px-2">
+          <span class="inline-block w-2 h-2 bg-brand-500 rounded-full animate-pulse" />
+          <span class="inline-block w-2 h-2 bg-brand-500 rounded-full animate-pulse" style="animation-delay: 150ms" />
+          <span class="inline-block w-2 h-2 bg-brand-500 rounded-full animate-pulse" style="animation-delay: 300ms" />
           <span>正在思考…</span>
         </div>
       </div>
@@ -155,7 +155,7 @@
       </div>
 
       <!-- Composer -->
-      <div class="border-t border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 p-3">
+      <div class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
         <div class="flex gap-2 items-end">
           <textarea
             ref="composerEl"
@@ -164,7 +164,7 @@
             :disabled="!chatStore.currentDocument"
             :maxlength="MAX_MESSAGE_LENGTH"
             rows="1"
-            class="chat-page__composer flex-1 resize-none max-h-32 px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-surface-50 dark:bg-surface-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+            class="chat-page__composer flex-1 resize-none max-h-32 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
             @keydown="onComposerKeydown"
             @input="autoGrow"
           />
@@ -178,13 +178,13 @@
           <button
             v-else
             :disabled="!canSend"
-            class="px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            class="px-3 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             @click="send"
           >
             <Send class="w-4 h-4" />
           </button>
         </div>
-        <div class="text-[10px] text-surface-400 mt-1 text-right">
+        <div class="text-[10px] text-slate-400 mt-1 text-right">
           {{ input.length }} / {{ MAX_MESSAGE_LENGTH }}
         </div>
       </div>

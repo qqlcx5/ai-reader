@@ -38,15 +38,15 @@ onMounted(loadTheme);
 </script>
 
 <template>
-  <div class="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-md p-0.5">
+  <div class="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-md p-0.5">
     <button
       v-for="t in themes"
       :key="t.value"
       @click="setTheme(t.value)"
       class="p-1 rounded transition-colors"
       :class="current === t.value
-        ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm'
-        : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'"
+        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 shadow-sm'
+        : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'"
       :aria-label="t.label"
       :title="t.label"
     >

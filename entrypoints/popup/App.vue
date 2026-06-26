@@ -1,15 +1,15 @@
 <template>
   <div class="p-4 min-w-[320px]">
     <div class="flex items-center gap-3 mb-4">
-      <div class="w-10 h-10 rounded-xl bg-primary-500 flex items-center justify-center text-white">
+      <div class="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
         </svg>
       </div>
       <div>
-        <h1 class="font-bold text-surface-800 dark:text-surface-100">AI Reader</h1>
-        <p class="text-xs text-surface-500 dark:text-surface-400">AI 驱动的网页阅读助手</p>
+        <h1 class="font-bold text-slate-800 dark:text-slate-100">AI Reader</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">AI 驱动的网页阅读助手</p>
       </div>
     </div>
 
@@ -17,7 +17,7 @@
       <button
         @click="captureAndOpen"
         :disabled="isCapturing"
-        class="w-full px-4 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        class="w-full px-4 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
       >
         <BookOpen class="w-4 h-4" />
         {{ isCapturing ? '捕获中...' : '捕获当前页面' }}
@@ -25,7 +25,7 @@
 
       <button
         @click="openSidePanel"
-        class="w-full px-4 py-2.5 border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
       >
         <MessageSquare class="w-4 h-4" />
         打开侧边栏
@@ -33,24 +33,24 @@
 
       <button
         @click="openOptions"
-        class="w-full px-4 py-2.5 border border-surface-300 dark:border-surface-600 text-surface-700 dark:text-surface-300 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
       >
         <Settings class="w-4 h-4" />
         设置
       </button>
     </div>
 
-    <div v-if="recentDocs.length > 0" class="mt-4 pt-4 border-t border-surface-200 dark:border-surface-700">
-      <h3 class="text-xs font-medium text-surface-500 dark:text-surface-400 mb-2">最近捕获</h3>
+    <div v-if="recentDocs.length > 0" class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+      <h3 class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">最近捕获</h3>
       <div class="space-y-1">
         <div
           v-for="doc in recentDocs.slice(0, 3)"
           :key="doc.id"
           @click="openDoc(doc)"
-          class="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 cursor-pointer"
+          class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
         >
-          <p class="text-sm text-surface-800 dark:text-surface-100 truncate">{{ doc.title }}</p>
-          <p class="text-xs text-surface-400 dark:text-surface-500">{{ doc.siteName }}</p>
+          <p class="text-sm text-slate-800 dark:text-slate-100 truncate">{{ doc.title }}</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500">{{ doc.siteName }}</p>
         </div>
       </div>
     </div>

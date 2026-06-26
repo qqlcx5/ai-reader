@@ -2,34 +2,34 @@
   <div class="h-full flex flex-col p-4">
     <!-- Stats -->
     <div class="grid grid-cols-3 gap-3 mb-4">
-      <div class="p-3 rounded-lg bg-surface-100 dark:bg-surface-800">
-        <p class="text-2xl font-semibold text-surface-800 dark:text-surface-100">{{ stats.totalDocuments }}</p>
-        <p class="text-xs text-surface-500 dark:text-surface-400">文档总数</p>
+      <div class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ stats.totalDocuments }}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">文档总数</p>
       </div>
-      <div class="p-3 rounded-lg bg-surface-100 dark:bg-surface-800">
-        <p class="text-2xl font-semibold text-surface-800 dark:text-surface-100">{{ formatNumber(stats.totalWords) }}</p>
-        <p class="text-xs text-surface-500 dark:text-surface-400">总字数</p>
+      <div class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ formatNumber(stats.totalWords) }}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">总字数</p>
       </div>
-      <div class="p-3 rounded-lg bg-surface-100 dark:bg-surface-800">
-        <p class="text-2xl font-semibold text-surface-800 dark:text-surface-100">{{ stats.averageReadingTime }}h</p>
-        <p class="text-xs text-surface-500 dark:text-surface-400">阅读时长</p>
+      <div class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <p class="text-2xl font-semibold text-slate-800 dark:text-slate-100">{{ stats.averageReadingTime }}h</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">阅读时长</p>
       </div>
     </div>
 
     <!-- Timeline -->
     <div class="flex-1 overflow-y-auto">
       <div v-if="documentStore.isLoading" class="flex items-center justify-center h-32">
-        <div class="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+        <div class="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full"></div>
       </div>
 
       <div v-else-if="timeline.length === 0" class="text-center py-12">
-        <Clock class="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
-        <p class="text-surface-500 dark:text-surface-400">暂无历史记录</p>
+        <Clock class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+        <p class="text-slate-500 dark:text-slate-400">暂无历史记录</p>
       </div>
 
       <div v-else class="space-y-6">
         <div v-for="entry in timeline" :key="entry.date">
-          <h3 class="text-sm font-medium text-surface-500 dark:text-surface-400 mb-2 sticky top-0 bg-surface-50 dark:bg-surface-900 py-1">
+          <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2 sticky top-0 bg-slate-50 dark:bg-slate-900 py-1">
             {{ formatDate(entry.date) }}
             <span class="ml-2 text-xs">{{ entry.count }} 篇</span>
           </h3>
@@ -38,7 +38,7 @@
               v-for="doc in entry.documents"
               :key="doc.id"
               @click="openDocument(doc)"
-              class="p-3 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+              class="p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               <div class="flex items-start gap-3">
                 <img
@@ -48,10 +48,10 @@
                   @error="$event.target.style.display='none'"
                 />
                 <div class="flex-1 min-w-0">
-                  <h3 class="font-medium text-sm text-surface-800 dark:text-surface-100 truncate">
+                  <h3 class="font-medium text-sm text-slate-800 dark:text-slate-100 truncate">
                     {{ doc.title }}
                   </h3>
-                  <p class="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {{ doc.siteName }} · {{ doc.readingTime }} 分钟阅读
                   </p>
                 </div>

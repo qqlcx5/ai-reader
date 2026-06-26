@@ -54,8 +54,8 @@ const props = defineProps<{ message: ChatMessage }>()
 
 const bubbleClass = computed(() =>
   props.message.role === 'user'
-    ? 'bg-primary-500 text-white'
-    : 'bg-white dark:bg-surface-800 text-surface-800 dark:text-surface-100 border border-surface-200 dark:border-surface-700'
+    ? 'bg-brand-500 text-white'
+    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700'
 )
 </script>
 

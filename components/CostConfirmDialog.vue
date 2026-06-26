@@ -33,16 +33,16 @@ function handleConfirm() {
     aria-label="费用确认"
     @click.self="emit('cancel')"
   >
-    <div class="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-[90vw] max-w-md overflow-hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-[90vw] max-w-md overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
         <div class="flex items-center gap-2">
           <AlertTriangle class="w-5 h-5 text-yellow-500" />
-          <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">费用确认</h3>
+          <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200">费用确认</h3>
         </div>
         <button
           @click="emit('cancel')"
-          class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
           aria-label="关闭"
         >
           <X class="w-4 h-4" />
@@ -51,47 +51,47 @@ function handleConfirm() {
 
       <!-- Body -->
       <div class="px-4 py-3">
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-          预估消耗约 <strong class="text-gray-800 dark:text-gray-200">~{{ tokenEstimate }}</strong> tokens，费用明细如下：
+        <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          预估消耗约 <strong class="text-slate-800 dark:text-slate-200">~{{ tokenEstimate }}</strong> tokens，费用明细如下：
         </p>
 
         <div class="space-y-2">
           <div
             v-for="m in models"
             :key="m.name"
-            class="flex items-center justify-between text-sm py-1.5 px-3 bg-gray-50 dark:bg-gray-800 rounded"
+            class="flex items-center justify-between text-sm py-1.5 px-3 bg-slate-50 dark:bg-slate-800 rounded"
           >
-            <span class="text-gray-700 dark:text-gray-300">{{ m.name }}</span>
-            <span class="font-medium text-gray-800 dark:text-gray-200">{{ formatCost(m.cost) }}</span>
+            <span class="text-slate-700 dark:text-slate-300">{{ m.name }}</span>
+            <span class="font-medium text-slate-800 dark:text-slate-200">{{ formatCost(m.cost) }}</span>
           </div>
         </div>
 
-        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">总计</span>
-          <span class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ formatCost(estimatedCost) }}</span>
+        <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+          <span class="text-sm font-medium text-slate-600 dark:text-slate-400">总计</span>
+          <span class="text-lg font-bold text-slate-800 dark:text-slate-100">{{ formatCost(estimatedCost) }}</span>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <label class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 cursor-pointer">
+      <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <label class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer">
           <input
             v-model="dontAskAgain"
             type="checkbox"
-            class="rounded border-gray-300 dark:border-gray-600"
+            class="rounded border-slate-300 dark:border-slate-600"
           />
           本次不再提示
         </label>
         <div class="flex items-center gap-2">
           <button
             @click="emit('cancel')"
-            class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+            class="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
           >
             取消
           </button>
           <button
             @click="handleConfirm"
-            class="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            class="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-brand-500 text-white rounded-md hover:bg-brand-600 transition-colors"
           >
             <Send class="w-3.5 h-3.5" />
             确认发送

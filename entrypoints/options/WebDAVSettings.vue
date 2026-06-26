@@ -6,13 +6,13 @@
         <input
           v-model="syncStore.config.enabled"
           type="checkbox"
-          class="rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+          class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
         />
-        <span class="text-sm text-surface-700 dark:text-surface-300">启用 WebDAV 同步</span>
+        <span class="text-sm text-slate-700 dark:text-slate-300">启用 WebDAV 同步</span>
       </label>
       <span
         v-if="syncStore.lastSyncAt"
-        class="text-xs text-surface-500 dark:text-surface-400"
+        class="text-xs text-slate-500 dark:text-slate-400"
       >
         上次同步：{{ syncStore.lastSyncText }}
         <span v-if="syncStore.lastDirection === 'up'" class="ml-1">↑</span>
@@ -22,7 +22,7 @@
 
     <!-- URL -->
     <div>
-      <label class="block text-sm text-surface-600 dark:text-surface-400 mb-1">
+      <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">
         WebDAV URL
       </label>
       <input
@@ -38,7 +38,7 @@
     <!-- Username / Password -->
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm text-surface-600 dark:text-surface-400 mb-1">用户名</label>
+        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">用户名</label>
         <input
           v-model="syncStore.config.username"
           type="text"
@@ -47,7 +47,7 @@
         />
       </div>
       <div>
-        <label class="block text-sm text-surface-600 dark:text-surface-400 mb-1">密码</label>
+        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">密码</label>
         <input
           v-model="syncStore.config.password"
           type="password"
@@ -60,7 +60,7 @@
     <!-- Remote dir / interval -->
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm text-surface-600 dark:text-surface-400 mb-1">远端目录</label>
+        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">远端目录</label>
         <input
           v-model="syncStore.config.remoteDir"
           type="text"
@@ -69,7 +69,7 @@
         />
       </div>
       <div>
-        <label class="block text-sm text-surface-600 dark:text-surface-400 mb-1">同步间隔（分钟）</label>
+        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">同步间隔（分钟）</label>
         <input
           v-model.number="syncStore.config.syncInterval"
           type="number"
@@ -78,7 +78,7 @@
           class="input"
           placeholder="30"
         />
-        <p class="text-xs text-surface-400 mt-1">0 = 仅手动</p>
+        <p class="text-xs text-slate-400 mt-1">0 = 仅手动</p>
       </div>
     </div>
 
@@ -87,29 +87,29 @@
       <button
         @click="onTestConnection"
         :disabled="isTesting"
-        class="px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-sm disabled:opacity-50"
+        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
       >
         {{ isTesting ? '测试中…' : '测试连接' }}
       </button>
       <button
         @click="onSyncUp"
         :disabled="!syncStore.canSync"
-        class="px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors text-sm disabled:opacity-50"
+        class="px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors text-sm disabled:opacity-50"
       >
         立即上传
       </button>
       <button
         @click="onSyncDown"
         :disabled="!syncStore.canSync"
-        class="px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-sm disabled:opacity-50"
+        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
       >
         立即下载
       </button>
     </div>
 
     <!-- Status / progress -->
-    <div v-if="syncStore.isSyncing" class="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400">
-      <div class="animate-spin w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+    <div v-if="syncStore.isSyncing" class="flex items-center gap-2 text-sm text-brand-600 dark:text-brand-400">
+      <div class="animate-spin w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full"></div>
       <span>{{ progressLabel }}</span>
     </div>
     <div
@@ -127,16 +127,16 @@
     </div>
 
     <!-- Divider + backup buttons (delegated to backup.service) -->
-    <div class="flex flex-wrap gap-3 pt-4 border-t border-surface-200 dark:border-surface-700">
+    <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
       <button
         @click="onExport"
         :disabled="isExporting"
-        class="px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-sm disabled:opacity-50"
+        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
       >
         {{ isExporting ? '导出中…' : '导出备份' }}
       </button>
       <label
-        class="px-4 py-2 rounded-lg border border-surface-300 dark:border-surface-600 hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors text-sm cursor-pointer"
+        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm cursor-pointer"
       >
         导入备份
         <input

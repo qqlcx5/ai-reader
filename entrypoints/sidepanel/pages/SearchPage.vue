@@ -3,25 +3,25 @@
     <!-- Search input + status -->
     <div class="mb-3">
       <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-surface-400 pointer-events-none" />
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
         <input
           v-model="searchQuery"
           @input="onInput"
           @keyup.enter="performSearch"
           type="text"
           placeholder="搜索文档..."
-          class="w-full pl-10 pr-10 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          class="w-full pl-10 pr-10 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <button
           v-if="searchQuery"
           @click="clearSearch"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
           aria-label="Clear"
         >
           <X class="w-4 h-4" />
         </button>
       </div>
-      <div class="mt-1.5 flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
+      <div class="mt-1.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
         <span data-testid="index-status">
           <template v-if="searchStore.indexStatus === 'indexing'">
             <Loader2 class="inline w-3 h-3 mr-1 animate-spin" />
@@ -35,7 +35,7 @@
           </template>
           <template v-else>索引未初始化</template>
         </span>
-        <span v-if="searchStore.isSearching" class="text-primary-500">
+        <span v-if="searchStore.isSearching" class="text-brand-500">
           搜索中…
         </span>
       </div>
@@ -43,13 +43,13 @@
 
     <!-- Search history -->
     <div v-if="searchStore.searchHistory.length > 0 && !searchQuery" class="mb-4">
-      <h3 class="text-sm font-medium text-surface-500 dark:text-surface-400 mb-2">最近搜索</h3>
+      <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">最近搜索</h3>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="query in searchStore.searchHistory"
           :key="query"
           @click="searchQuery = query; performSearch()"
-          class="px-3 py-1 text-sm rounded-full bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+          class="px-3 py-1 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
         >
           {{ query }}
         </button>
@@ -63,32 +63,32 @@
         v-if="searchStore.indexStatus === 'indexing' && !searchQuery"
         class="text-center py-12"
       >
-        <Loader2 class="w-10 h-10 mx-auto text-primary-400 mb-3 animate-spin" />
-        <p class="text-surface-500 dark:text-surface-400">正在建立索引…</p>
-        <p class="text-xs text-surface-400 dark:text-surface-500 mt-1">
+        <Loader2 class="w-10 h-10 mx-auto text-brand-400 mb-3 animate-spin" />
+        <p class="text-slate-500 dark:text-slate-400">正在建立索引…</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
           完成后将自动显示结果
         </p>
       </div>
 
       <!-- Loading a query -->
       <div v-else-if="searchStore.isSearching" class="flex items-center justify-center h-32">
-        <div class="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+        <div class="animate-spin w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full"></div>
       </div>
 
       <!-- Empty result for a real query -->
       <div v-else-if="searchStore.isEmpty" class="text-center py-12">
-        <Search class="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
-        <p class="text-surface-500 dark:text-surface-400">未找到相关文档</p>
-        <p class="text-xs text-surface-400 dark:text-surface-500 mt-1">
+        <Search class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+        <p class="text-slate-500 dark:text-slate-400">未找到相关文档</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
           试试其他关键词
         </p>
       </div>
 
       <!-- Initial state -->
       <div v-else-if="!searchQuery" class="text-center py-12">
-        <Search class="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
-        <p class="text-surface-500 dark:text-surface-400">输入关键词开始搜索</p>
-        <p class="text-xs text-surface-400 dark:text-surface-500 mt-1">
+        <Search class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+        <p class="text-slate-500 dark:text-slate-400">输入关键词开始搜索</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
           支持模糊匹配、字段权重（标题 3×，正文 1×）
         </p>
       </div>
@@ -99,7 +99,7 @@
           v-for="result in searchStore.results"
           :key="result.documentId"
           @click="openDocument(result)"
-          class="p-3 rounded-lg cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors group"
+          class="p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
           data-testid="search-result"
         >
           <div class="flex items-start gap-3">
@@ -111,22 +111,22 @@
             />
             <div class="flex-1 min-w-0">
               <h3
-                class="font-medium text-sm text-surface-800 dark:text-surface-100 truncate"
+                class="font-medium text-sm text-slate-800 dark:text-slate-100 truncate"
                 v-html="highlightText(result.document.title, searchQuery)"
               ></h3>
               <p
                 v-if="result.match"
-                class="text-xs text-surface-600 dark:text-surface-300 mt-0.5 line-clamp-2"
+                class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2"
                 v-html="result.match"
               ></p>
-              <p class="text-xs text-surface-400 dark:text-surface-500 mt-1 flex items-center gap-1.5">
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1.5">
                 <span v-if="result.document.siteName" class="truncate max-w-[160px]">
                   {{ result.document.siteName }}
                 </span>
                 <span v-if="result.document.siteName">·</span>
                 <span>{{ formatDate(result.document.createdAt) }}</span>
                 <span
-                  class="ml-auto px-1.5 py-0.5 text-[10px] rounded bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400"
+                  class="ml-auto px-1.5 py-0.5 text-[10px] rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
                   :title="`Score: ${result.score}`"
                 >
                   {{ Math.round(result.score * 10) / 10 }}
