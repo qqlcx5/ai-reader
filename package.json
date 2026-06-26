@@ -11,6 +11,8 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "compile": "vue-tsc --noEmit",
     "postinstall": "wxt prepare"
   },
@@ -22,6 +24,7 @@
     "dompurify": "^3.4.11",
     "eventsource-parser": "^3.1.0",
     "highlight.js": "^11.11.1",
+    "marked": "^15.0.6",
     "lz-string": "^1.5.0",
     "minisearch": "^7.2.0",
     "pinia": "^3.0.4",
@@ -29,11 +32,14 @@
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@types/chrome": "^0.0.268",
     "@wxt-dev/module-vue": "^1.0.3",
     "@wxt-dev/unocss": "^1.0.1",
+    "jsdom": "^26.0.0",
     "reka-ui": "^2.10.0",
     "typescript": "^5.9.3",
     "unocss": "^66.7.2",
+    "vitest": "^3.2.5",
     "vue-tsc": "^3.2.5",
     "wxt": "^0.20.27"
   }

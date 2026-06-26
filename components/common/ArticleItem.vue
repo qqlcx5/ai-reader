@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import Favicon from './Favicon.vue'
-import type { Article } from '../types'
+import type { Article } from '@/domain'
 
 defineProps<{
   article: Article
@@ -18,7 +18,7 @@ defineEmits<{
     style="grid-template-columns: 30px 1fr auto"
     @click="$emit('select')"
   >
-    <Favicon :letter="article.siteLetter" />
+    <Favicon :letter="article.siteLetter ?? (article.siteName?.[0] ?? '?').toUpperCase()" />
     <div class="min-w-0">
       <div class="max-w-225px text-12px font-semibold text-#27272a whitespace-nowrap overflow-hidden text-ellipsis">
         {{ article.title }}

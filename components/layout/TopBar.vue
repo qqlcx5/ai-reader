@@ -1,11 +1,24 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
+import { useArticleStore } from '@/stores/article.store'
+import type { PopupView } from '@/domain'
+
 defineProps<{
-  currentView: string
+  currentView: PopupView
 }>()
 
 const emit = defineEmits<{
-  navigate: [view: string]
+  navigate: [view: PopupView]
 }>()
+
+const articleStore = useArticleStore()
+
+const localStatus = computed(() => {
+  // IndexedDB 可用性：通过 store 是否成功加载判断
+  if (articleStore.loading) return { label: 'Loading', color: '#a1a1aa', bg: 'rgba(161,161,170,0.08)', border: 'rgba(161,161,170,0.15)', dot: '#a1a1aa' }
+  // Dexie 初始化成功即认为可用
+  return { label: 'Local', color: '#15803d', bg: 'rgba(22,163,74,0.08)', border: 'rgba(22,163,74,0.15)', dot: '#16a34a' }
+})
 </script>
 
 <template>
@@ -28,13 +41,13 @@ const emit = defineEmits<{
     <div class="flex items-center gap-2">
       <div
         class="h-28px inline-flex items-center gap-1.5 px-2.5 rounded-full text-11px font-semibold"
-        style="background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.15); color: #15803d"
+        :style="`background: ${localStatus.bg}; border: 1px solid ${localStatus.border}; color: ${localStatus.color}`"
       >
         <span
           class="w-7px h-7px rounded-full"
-          style="background: #16a34a; box-shadow: 0 0 0 4px rgba(22,163,74,0.12)"
+          :style="`background: ${localStatus.dot}; box-shadow: 0 0 0 4px ${localStatus.dot}20`"
         />
-        Local
+        {{ localStatus.label }}
       </div>
       <button
         class="w-32px h-32px rounded-12px border border-#e4e4e7 bg-white/72 color-#3f3f46 cursor-pointer transition-all duration-150 hover:bg-white hover:border-#d4d4d8 hover:-translate-y-px"

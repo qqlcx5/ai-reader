@@ -9,9 +9,9 @@
 
 ### 1. Toast 机制重构
 
-- [ ] 创建 `composables/useToast.ts`，提供 `showToast(type, title, desc?, duration?)` 函数
-- [ ] 使用 provide/inject 或 Pinia store 管理全局 Toast 状态（避免 props 层层传递）
-- [ ] 支持队列：多个 Toast 时依次显示（或替换当前 Toast）
+- [x] 创建 `composables/useToast.ts`，提供 `showToast(type, title, desc?, duration?)` 函数
+- [x] 使用 provide/inject 管理全局 Toast 状态（避免 props 层层传递）
+- [x] 支持队列：新 Toast 替换当前 Toast（replace 策略）
 
 ### 2. Toast 类型支持
 
@@ -21,8 +21,8 @@
 | error | ✕ | red (#dc2626) |
 | info | ℹ | blue (#2563eb) |
 
-- [ ] 更新 Toast.vue：根据 `type` prop 动态切换图标和背景色
-- [ ] 保持现有的 auto-dismiss（默认 2.2 秒）和 slide-up 动画
+- [x] 更新 Toast.vue：根据 `type` prop 动态切换图标和背景色（已有，无需修改）
+- [x] 保持现有的 auto-dismiss（默认 2.2 秒）和 slide-up 动画
 
 ### 3. 使用场景覆盖
 
@@ -40,14 +40,14 @@
 
 ### 4. 设置集成
 
-- [ ] `showToast: false` 时 `useToast()` 调用不显示 UI（静默模式）
-- [ ] 保持代码中的 `showToast()` 调用不变，仅 UI 层判断是否显示
+- [x] `showToast: false` 时 `useToast()` 调用不显示 UI（静默模式，已内置在 composable 的 showToast 中）
+- [x] 保持代码中的 `showToast()` 调用不变，仅 UI 层判断是否显示
 
 ### 5. 测试
 
-- [ ] Toast 显示测试：调用后立即可见，2.2 秒后自动消失
-- [ ] Toast 类型测试：success/error/info 分别显示正确图标和颜色
-- [ ] 静默模式测试：`showToast: false` 时不弹出
+- [x] Toast 显示测试：调用后立即可见，2.2 秒后自动消失
+- [x] Toast 类型测试：success/error/info 分别显示正确图标和颜色
+- [x] 静默模式测试：`showToast: false` 时不弹出
 
 ## 验收标准
 

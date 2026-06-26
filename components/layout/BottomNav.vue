@@ -1,17 +1,32 @@
 <script lang="ts" setup>
-defineProps<{
-  currentView: string
+import type { PopupView } from '@/domain'
+
+const { articleCount } = defineProps<{
+  currentView: PopupView
+  articleCount: number
 }>()
 
 const emit = defineEmits<{
-  navigate: [view: string]
+  navigate: [view: PopupView]
+  showToast: [type: 'info', title: string, description?: string]
 }>()
 
-const tabs = [
+const tabs: { key: PopupView; label: string }[] = [
   { key: 'capture', label: '采集' },
   { key: 'library', label: '文章库' },
   { key: 'reader', label: '阅读' },
 ]
+
+function handleTabClick(key: PopupView) {
+  if (key === 'reader') {
+    // 阅读 tab：无文章时提示
+    if (articleCount === 0) {
+      emit('showToast', 'info', '先保存一篇文章', '暂无文章可阅读，请先在采集页保存网页')
+      return
+    }
+  }
+  emit('navigate', key)
+}
 </script>
 
 <template>
@@ -25,7 +40,7 @@ const tabs = [
       :class="currentView === tab.key
         ? 'bg-#111 border border-#111 text-white shadow-lg shadow-black/16'
         : 'border border-rgba(29,29,31,0.08) bg-white/68 text-#52525b'"
-      @click="emit('navigate', tab.key)"
+      @click="handleTabClick(tab.key)"
     >
       {{ tab.label }}
     </button>

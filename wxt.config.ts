@@ -10,4 +10,11 @@ export default defineConfig({
     chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
     openDevtools: true,
   },
+  manifest: {
+    name: 'PageMind',
+    description: '一键提取网页正文，保存为 Markdown。本地存储，离线可用。',
+    version: '1.0.0',
+    permissions: ['activeTab', 'scripting', 'storage', 'sidePanel'],
+    optional_host_permissions: ['<all_urls>'],
+  },
 });

@@ -10,33 +10,33 @@
 
 ### 1. Dexie 数据库初始化
 
-- [ ] 创建 `db/index.ts`，实例化 Dexie `PageMindDB`，版本 1，定义 `articles` store schema（`++id, url, createdAt, updatedAt, siteName, title`）
-- [ ] 确保 Dexie 仅在 Popup 上下文中初始化（Service Worker 无法访问 IndexedDB）
+- [x] 创建 `db/index.ts`，实例化 Dexie `PageMindDB`，版本 1，定义 `articles` store schema（`++id, url, createdAt, updatedAt, siteName, title`）
+- [x] 确保 Dexie 仅在 Popup 上下文中初始化（Service Worker 无法访问 IndexedDB）
 
 ### 2. ArticleRepository
 
-- [ ] 创建 `db/article.repository.ts`
-- [ ] 实现 `saveArticle(article)` —— 同 URL 覆盖更新，保留 `createdAt`，更新 `updatedAt`
-- [ ] 实现 `getArticle(id)` —— 按主键查询
-- [ ] 实现 `getArticleByUrl(url)` —— 利用 `url` 索引查询
-- [ ] 实现 `listArticles()` —— 按 `createdAt` 降序排列
-- [ ] 实现 `searchArticles(keyword)` —— Phase 1 对 title + siteName + author + excerpt 做内存 `includes()` 过滤
-- [ ] 实现 `deleteArticle(id)` —— 按主键删除
-- [ ] 实现 `getRecentArticles(limit = 3)` —— 取最近 N 篇
+- [x] 创建 `db/article.repository.ts`
+- [x] 实现 `saveArticle(article)` —— 同 URL 覆盖更新，保留 `createdAt`，更新 `updatedAt`
+- [x] 实现 `getArticle(id)` —— 按主键查询
+- [x] 实现 `getArticleByUrl(url)` —— 利用 `url` 索引查询
+- [x] 实现 `listArticles()` —— 按 `createdAt` 降序排列
+- [x] 实现 `searchArticles(keyword)` —— Phase 1 对 title + siteName + author + excerpt 做内存 `includes()` 过滤
+- [x] 实现 `deleteArticle(id)` —— 按主键删除
+- [x] 实现 `getRecentArticles(limit = 3)` —— 取最近 N 篇
 
 ### 3. SettingsRepository (chrome.storage.sync)
 
-- [ ] 创建 `db/settings.repository.ts`
-- [ ] 实现 `getSettings()` —— 读取 `pagemind_settings` key，不存在时返回 `DEFAULT_SETTINGS`
-- [ ] 实现 `updateSettings(partial)` —— merge 更新后写回
-- [ ] 实现 `resetSettings()` —— 写回 `DEFAULT_SETTINGS`
+- [x] 创建 `db/settings.repository.ts`
+- [x] 实现 `getSettings()` —— 读取 `pagemind_settings` key，不存在时返回 `DEFAULT_SETTINGS`
+- [x] 实现 `updateSettings(partial)` —— merge 更新后写回
+- [x] 实现 `resetSettings()` —— 写回 `DEFAULT_SETTINGS`
 
 ### 4. Pinia Store 接入
 
-- [ ] 创建 `stores/article.store.ts`（Pinia store），状态：`articles: Article[]`, `activeArticleId: string | null`
-- [ ] 实现 actions：`loadArticles()`, `saveArticle()`, `deleteArticle()`, `getRecentArticles()`
-- [ ] 创建 `stores/settings.store.ts`（Pinia store），状态：`settings: AppSettings`
-- [ ] 实现 actions：`loadSettings()`, `updateSettings()`, `resetSettings()`
+- [x] 创建 `stores/article.store.ts`（Pinia store），状态：`articles: Article[]`, `activeArticleId: string | null`
+- [x] 实现 actions：`loadArticles()`, `saveArticle()`, `deleteArticle()`, `getRecentArticles()`
+- [x] 创建 `stores/settings.store.ts`（Pinia store），状态：`settings: AppSettings`
+- [x] 实现 actions：`loadSettings()`, `updateSettings()`, `resetSettings()`
 - [ ] Popup 打开时自动调用 `loadArticles()` 和 `loadSettings()`
 
 ### 5. 测试

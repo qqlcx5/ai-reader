@@ -2,8 +2,10 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps<{
+  type: 'success' | 'error' | 'info'
   title: string
   desc: string
+  duration?: number
 }>()
 
 const visible = ref(false)
@@ -14,9 +16,15 @@ watch(() => [props.title, props.desc], () => {
   if (props.title) {
     visible.value = true
     clearTimeout(timer)
-    timer = setTimeout(() => { visible.value = false }, 2200)
+    timer = setTimeout(() => { visible.value = false }, props.duration ?? 2200)
   }
 })
+
+const iconClass = {
+  success: 'bg-#16a34a',
+  error: 'bg-#dc2626',
+  info: 'bg-#2563eb',
+}
 </script>
 
 <template>
@@ -27,9 +35,10 @@ watch(() => [props.title, props.desc], () => {
       style="background: rgba(17,17,17,0.9); color: white; box-shadow: 0 24px 70px rgba(0,0,0,0.16); backdrop-filter: blur(20px)"
     >
       <div
-        class="w-26px h-26px rounded-full bg-#16a34a grid place-items-center text-13px flex-shrink-0"
+        class="w-26px h-26px rounded-full grid place-items-center text-13px flex-shrink-0"
+        :class="iconClass[type]"
       >
-        ✓
+        {{ type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ' }}
       </div>
       <div>
         <div class="text-12px font-bold">{{ title }}</div>
