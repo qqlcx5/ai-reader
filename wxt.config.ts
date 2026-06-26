@@ -45,7 +45,13 @@ export default defineConfig({
     ],
   },
   webExt: {
+    // chromiumProfile: './.wxt/chrome-data',
     chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
+    keepProfileChanges: true,
+    openConsole: true,
+    openDevtools: true,
+    // 启动时自动在浏览器中打开以下页面
+    // openUrls: ['chrome://extensions', 'https://www.bestblogs.dev/article/c963e649'],
   },
   vite: () => ({
     plugins: [UnoCSS()],

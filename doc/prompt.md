@@ -174,9 +174,19 @@ Step 7: Timeline       (P2, 依赖 Foundation + Perception)
    - `core/models/model.repository.ts`（CRUD + 查询启用列表）
 
 **D. 样式系统**
-1. 安装并配置 UnoCSS（`uno.config.ts`）
-2. 安装 Reka UI（无样式 UI 原语）
-3. 配置基础样式变量（颜色、间距、字体）
+1. 安装并配置 UnoCSS（`uno.config.ts`），颜色主题必须对齐 `doc/design.html` 设计稿：
+   - `brand` 色系（靛蓝 indigo）：`brand-50: #f5f3ff` ~ `brand-900: #312e81`，主色 `brand-500: #6366f1`
+   - `slate` 色系（标准 slate）：`slate-50: #f8fafc` ~ `slate-900: #0f172a`
+   - 字体：Inter（sans）、JetBrains Mono（mono）
+2. 安装 Reka UI（无样式 UI 原语）。**所有交互组件必须基于 Reka UI 原语二次封装**，禁止使用原生 HTML 标签（`<button>`、`<input>`、`<select>`、`<dialog>`、`<textarea>` 等）直接编写 UI：
+   - 按钮 → 封装 `BaseButton.vue`（基于 Reka UI `Button` 或自行封装可访问性属性）
+   - 输入框 → 封装 `BaseInput.vue`（基于 Reka UI 原语，统一 focus/error/disabled 样式）
+   - 下拉选择 → 使用已有的 `ModelSelector.vue` 模式（Reka UI `Select*` 系列原语）
+   - 弹窗/对话框 → 封装 `BaseDialog.vue`（基于 Reka UI `Dialog*` 系列原语）
+   - 标签页 → 封装 `BaseTabs.vue`（基于 Reka UI `Tabs*` 系列原语）
+   - 开关 → 封装 `BaseSwitch.vue`（基于 Reka UI `Switch` 原语）
+   - 所有封装组件放在 `components/ui/` 目录，通过 UnoCSS utility class + `card`/`input`/`btn-primary` 等 shortcuts 应用样式
+3. 配置基础样式变量（颜色、间距、字体），参考 `doc/design.html` 的视觉规范（圆角、阴影、边框、间距）
 4. 支持暗色/亮色模式切换
 
 **E. 状态管理**
@@ -580,13 +590,20 @@ Foundation、Perception 已完成，以下文件可用：
 - 组件使用 `<script setup lang="ts">`
 - 文件名：组件 PascalCase，工具/服务 kebab-case，类型文件 `*.types.ts`
 
-### 3.2 测试标准
+### 3.2 UI 组件规范
+- **设计稿参照**：所有 UI 必须对齐 `doc/design.html` 的视觉规范，不得自行发挥颜色、间距、圆角
+- **组件库**：交互元素（按钮、输入、选择、弹窗、开关、标签页等）必须基于 Reka UI 原语二次封装，封装组件统一放在 `components/ui/` 目录
+- **禁止原生标签写 UI**：不得直接使用 `<button>`、`<input>`、`<select>`、`<dialog>`、`<textarea>` 等原生标签作为交互入口，必须通过封装后的组件使用
+- **颜色体系**：只使用 UnoCSS 主题中定义的 `brand-*` 和 `slate-*` 色值，禁止使用 `gray-*`、`blue-*`、`sky-*` 等非主题色
+- **已有组件**：`ModelSelector.vue`（Reka UI Select）、`components/ui/` 下的基础组件。复用已有组件，不要重复造轮子
+
+### 3.3 测试标准
 - 每个模块的测试文件放在模块目录内或项目统一的 `tests/` 目录
 - 测试覆盖核心逻辑和边界条件
 - 使用 `vitest` 运行，配置中启用 `jsdom` 环境
 - mock `chrome.*` API 在 `vitest.setup.ts` 中统一配置
 
-### 3.3 错误处理
+### 3.4 错误处理
 遵循 `doc/detail.md` 第 15 节的错误处理策略表。关键场景：
 - defuddle 解析失败 → 回退 innerText
 - LLM 超时 → 展示超时提示，允许重试
@@ -594,7 +611,7 @@ Foundation、Perception 已完成，以下文件可用：
 - IndexedDB 满 → 捕获 QuotaExceededError，提示清理
 - 搜索索引失败 → 降级 Dexie 简单匹配
 
-### 3.4 禁止行为
+### 3.5 禁止行为
 - 不得复制粘贴参考项目代码，必须理解后自行实现
 - 不得跳过测试
 - 不得在验收标准未满足时报告完成
