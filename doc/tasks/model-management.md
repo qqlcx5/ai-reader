@@ -1,60 +1,75 @@
-# 处理层：多模型配置管理 (Model Management)
+# 处理层：多模型配置管理 (P0)
 
-## 目标
-统一采用 OpenAI 兼容格式（`/v1/chat/completions`），通过自定义 Base URL 接入不同供应商，支持多模型配置、启用/禁用、测试连接、系统提示词。
+> **模块名称**: model-management  
+> **优先级**: P0（AI 消化功能前置依赖）  
+> **依赖关系**: 依赖 foundation.md（chrome.storage 加密存储）  
+> **目标**: 实现 LLM 模型配置的数据层与 UI 层，支持 OpenAI 兼容格式的多模型管理和 API Key AES-GCM 本地加密
 
-## 最小可执行任务
+---
 
-### 1. 模型配置数据层
-- [ ] 定义 `ModelProviderConfig` 接口（参考 `types.ts` 的 `Provider` 和 `ModelConfig` 结构）
-  - `id`, `name`, `provider: 'openai-compatible'`
-  - `enabled`, `apiKey`, `baseUrl`, `model`
-  - `systemPrompt?`, `createdAt`, `updatedAt`
-- [ ] 创建 `models` 表（参考 `storage-utils.ts` 的 `generalSettings.models` 数组存储模式）
-- [ ] 实现 `modelRepository.ts`（CRUD + 查询启用列表，参考 `storage-utils.ts` 的设置读写模式）
+## 子任务
 
-### 2. Options 页面：模型配置 UI
-- [ ] 创建 `entrypoints/options/ModelSettings.vue`（参考 `settings.html` 和 `managers/general-settings.ts` 的设置页面结构）
-- [ ] 模型列表展示（名称、Base URL、模型 ID、启用状态，参考 `storage-utils.ts` 的 `models` 数组）
-- [ ] 添加模型表单（名称、Base URL、API Key、模型 ID，参考 `types.ts` 的 `Provider` 接口）
-- [ ] 编辑模型（回填表单，参考 `import-export.ts` 的数据回填逻辑）
-- [ ] 删除模型（确认弹窗，参考 `modal-utils.ts`）
-- [ ] 启用/禁用开关（`enabled` 字段，参考 `generalSettings` 的配置模式）
-- [ ] 设置默认模型（单选，参考 `interpreterModel` 的存储方式）
+### 模型配置数据层
+- [ ] 创建 `shared/domain/model.ts`：定义 `ModelProvider`、`ModelConfig` 接口
+- [ ] 定义 OpenAI 兼容格式：`baseUrl` + `apiKey` + `modelName`（对齐 detail.md 简述的 `/v1/chat/completions`）
+- [ ] 定义 `ModelProvider` 接口：`id / name / baseUrl / models[] / isEnabled`
+- [ ] 实现默认 Provider 配置：DeepSeek / Claude / GPT-4o / Ollama Local
+- [ ] 创建 `core/models/provider-registry.ts`：Provider 注册表，支持 CRUD
 
-### 3. API Key 安全存储
-- [ ] 实现 `shared/crypto/secret-store.ts`（参考 `storage-utils.ts` 的 `browser.storage.local` 存储模式）
-- [ ] 使用 `chrome.storage.local` 存储 API Key（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage`）
-- [ ] 界面输入框类型为 `password`，支持显示/隐藏切换（参考 `settings.html` 的表单样式）
+### API Key 加密存储
+- [ ] 创建 `core/crypto/aes-gcm.ts`：AES-GCM 加密/解密工具（对齐 detail.md §4.3）
+- [ ] 实现 `encryptApiKey(plaintext: string, key: CryptoKey): Promise<string>`
+- [ ] 实现 `decryptApiKey(ciphertext: string, key: CryptoKey): Promise<string>`
+- [ ] 实现 `deriveKey(masterPassword?: string): Promise<CryptoKey>` — 使用 PBKDF2 派生
+- [ ] 加密后的 API Key 存储到 `chrome.storage.local`（不存 sync，避免云端泄露）
+- [ ] 创建 `core/models/api-key-store.ts`：`saveApiKey(providerId, key)` / `getApiKey(providerId)` / `deleteApiKey(providerId)`
 
-### 4. 测试连接（Ping）
-- [ ] 实现 `openai-compat.adapter.ts` 的 `ping()` 方法（参考 `interpreter.ts` 的 `sendToLLM` 函数）
-- [ ] 发送最小请求（如 `max_tokens: 1` 的 chat completion，参考 `interpreter.ts` 的请求体构造）
-- [ ] 处理成功/失败/超时（30s）状态（参考 `interpreter.ts` 的错误处理）
-- [ ] UI 展示连接状态指示灯（绿/红/黄，参考 `settings.html` 的样式系统）
+### 模型配置 Repository
+- [ ] 创建 `db/model-config.repository.ts`：Provider 配置的持久化
+- [ ] 存储位置：`chrome.storage.sync`（不含 API Key，仅配置元数据）
+- [ ] 实现 `listProviders(): Promise<ModelProvider[]>`
+- [ ] 实现 `saveProvider(provider: ModelProvider): Promise<void>`
+- [ ] 实现 `getProvider(id: string): Promise<ModelProvider | undefined>`
+- [ ] 实现 `deleteProvider(id: string): Promise<void>`
 
-### 5. 系统提示词配置
-- [ ] 创建 `entrypoints/options/PromptSettings.vue`（参考 `settings.html` 和 `managers/interpreter-settings.ts`）
-- [ ] 全局默认系统提示词编辑（textarea，参考 `defaultPromptContext` 的存储方式）
-- [ ] 支持按模型单独配置系统提示词（覆盖全局，参考 `models` 数组中的模型配置）
-- [ ] 提示词模板变量（如 `{{date}}`、`{{url}}`，参考 `shared.ts` 的变量构建系统）
+### Options 页面 UI
+- [ ] 创建 `entrypoints/options/index.html` + `main.ts`（WXT options entry）
+- [ ] 创建 `views/OptionsView.vue`：整体布局
+- [ ] 实现 LLM 配置区（对齐 design.html Tab 4 Settings LLM 配置区）：
+  - API Endpoint 输入框（Base URL，默认填充 DeepSeek）
+  - API Key 输入框（密码类型，带显示/隐藏切换按钮）
+  - AES-GCM 加密状态指示
+  - 「测试连接」按钮（发送简单请求验证配置）
+- [ ] 实现 Provider 选择下拉框：DeepSeek / Claude / GPT-4o / Ollama / 自定义
+- [ ] 实现「添加自定义 Provider」：baseUrl + model name 输入
 
-### 6. 模型选择器组件
-- [ ] 创建共享组件 `ModelSelector.vue`
-- [ ] 下拉列表展示所有启用模型
-- [ ] 显示模型名称 + 提供商简称
-- [ ] 支持在 Chat 界面快速切换模型
+### SettingsView 集成
+- [ ] 在 Popup 的 SettingsView 中显示当前模型配置摘要（Provider 名称 + 连接状态）
+- [ ] 实现「打开完整设置」按钮 → 跳转到 Options 页面（`chrome.runtime.openOptionsPage()`）
+- [ ] 实现连接状态指示：绿色圆点（已配置可用）/ 灰色（未配置）
+
+### 安全措施
+- [ ] API Key 输入框使用 `<input type="password">`
+- [ ] 内存中 API Key 使用后立即从变量中清除（`key = null`）
+- [ ] 禁止 console.log 输出 API Key 相关内容
+- [ ] Options 页面关闭时清除未持久化的密钥缓存
 
 ---
 
 ## 验收标准
-- [ ] 可配置 ≥3 个不同供应商模型（DeepSeek / 通义 / OpenRouter，参考 `interpreter.ts` 的多 provider 支持）
-- [ ] API Key 不以明文暴露在 UI（参考 `interpreter.ts` 的 `apiKey` 使用方式）
-- [ ] Ping 测试 3 秒内返回结果（参考 `interpreter.ts` 的请求超时处理）
-- [ ] 禁用模型不出现在 Chat 模型选择器中（参考 `generalSettings.models` 的过滤逻辑）
-- [ ] 系统提示词修改后即时生效（新对话，参考 `storage-utils.ts` 的实时存储更新）
+
+- [x] 支持 DeepSeek / Claude / GPT-4o / Ollama 四种 Provider
+- [x] API Key 经 AES-GCM 加密后存储到 chrome.storage.local
+- [x] API Key 明文不在任何日志或调试输出中泄露
+- [x] Options 页面 UI 对齐 design.html LLM 配置区
+- [x] 「测试连接」可验证 API 连通性
+- [x] SettingsView 中显示当前模型配置状态
 
 ## 依赖模块
-- `db/dexie.ts`（settings 表，参考 `storage-utils.ts` 的存储模式）
-- `core/models/openai-compat.adapter.ts`（Ping 实现，参考 `interpreter.ts`）
-- `entrypoints/options/`（配置页面，参考 `settings.html` 和 `managers/`）
+
+- `foundation.md` — chrome.storage 封装、类型定义
+
+## 关联文件
+
+- `detail.md` §4.3 AES-GCM 本地加密简述
+- `design.html` Tab 4 Settings LLM 配置区

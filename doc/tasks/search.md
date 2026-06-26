@@ -1,66 +1,76 @@
-# 唤醒层：本地全文检索 (Search)
+# 唤醒层：本地全文检索 (P1)
 
-## 目标
-当 documents 写入后，异步更新本地搜索索引，实现秒级甚至毫秒级全文检索。
+> **模块名称**: search  
+> **优先级**: P1（可延至 MVP 后）  
+> **依赖关系**: 依赖 persistence.md（IndexedDB 数据访问）  
+> **目标**: 实现本地全文检索，支持 MiniSearch 索引、Web Worker 混合策略、搜索降级
 
-## 最小可执行任务
+---
 
-### 1. MiniSearch 集成
-- [ ] 安装 `minisearch` 依赖（参考 `obsidian-clipper` 的搜索实现或外部库）
-- [ ] 创建 `core/search/search.client.ts`（主线程搜索客户端，参考 `popup.ts` 的搜索逻辑）
-- [ ] 配置 MiniSearch（参考 `obsidian-clipper` 的搜索配置或文档）：
-  - `fields: ['title', 'markdownContent']`
-  - `storeFields: ['id', 'title', 'url', 'createdAt']`
-  - `searchOptions.boost: { title: 3, markdownContent: 1 }`
-  - `fuzzy: 0.2, prefix: true`
+## 子任务
 
-### 2. Web Worker 搭建
-- [ ] 创建 `workers/search.worker.ts`（参考 `obsidian-clipper` 的 Web Worker 模式或自建）
-- [ ] Worker 内部独立创建 Dexie 实例读取 `documents` 表（参考 `db/dexie.ts` 的表定义）
-- [ ] 实现 `INIT_INDEX`：启动时全量重建索引（参考 `popup.ts` 的初始化加载）
-- [ ] 实现 `UPSERT_DOCUMENT`：增量添加/更新单篇（参考 `storage-utils.ts` 的更新模式）
-- [ ] 实现 `REMOVE_DOCUMENT`：增量删除单篇（参考 `storage-utils.ts` 的数据清理）
-- [ ] 实现 `SEARCH`：执行查询并返回结果（参考 `popup.ts` 的搜索逻辑）
-- [ ] 定义 Worker 消息协议（参考 `types.ts` 的接口定义风格）
+### MiniSearch 集成
+- [ ] 安装 `minisearch`
+- [ ] 创建 `core/search/minisearch-engine.ts`
+- [ ] 实现 MiniSearch 实例初始化：配置分词、权重、搜索选项
+- [ ] 配置字段权重（对齐 detail.md §11.3.3 Phase 3）：
+  - title 权重 3
+  - siteName 权重 2
+  - author 权重 2
+  - excerpt 权重 1.5
+  - markdownContent 权重 1
+- [ ] 实现 `addDocument(article: SavedArticle)` — 将文章加入索引
+- [ ] 实现 `removeDocument(id: string)` — 从索引中移除
+- [ ] 实现 `search(query: string, options?): SearchResult[]` — 返回带相关度分数的结果
+- [ ] 支持分词搜索、模糊匹配、权重排序
 
-### 3. 主线程搜索客户端
-- [ ] 创建 `SearchClient` 类封装 Worker 通信（参考 `popup.ts` 的消息发送模式）
-- [ ] 初始化时发送 `INIT_INDEX` 消息（参考 `background.ts` 的启动逻辑）
-- [ ] 监听 `INDEX_READY` 事件（参考 `content.ts` 的事件监听模式）
-- [ ] 提供 `search(query)` API（返回 Promise，参考 `popup.ts` 的异步搜索）
-- [ ] 提供 `upsert(documentId)` / `remove(documentId)` API（参考 `storage-utils.ts` 的更新模式）
-- [ ] 处理 Worker 错误和重启（参考 `background.ts` 的错误处理）
+### Web Worker 混合策略
+- [ ] 创建 `workers/search.worker.ts`：在 Worker 中运行 MiniSearch
+- [ ] 实现启动全量重建：插件启动时从 IndexedDB 加载全部文章 → 构建完整索引
+- [ ] 实现运行时增量更新：`saveArticle` 成功后 → Worker 增量添加
+- [ ] 实现 `deleteArticle` 成功后 → Worker 增量移除
+- [ ] 实现消息协议：主线程 ↔ Worker 通信（`BUILD_INDEX` / `SEARCH` / `ADD_DOC` / `REMOVE_DOC`）
+- [ ] 实现防抖搜索：用户输入 300ms 后触发 Worker 搜索
+- [ ] 实现搜索取消：新搜索到达时中断旧搜索（通过 `AbortController` 或消息 ID）
 
-### 4. 搜索页面 UI
-- [ ] 创建 `entrypoints/sidepanel/pages/SearchPage.vue`（参考 `popup.ts` 的搜索 UI 和 `side-panel.html`）
-- [ ] 搜索输入框（实时搜索，防抖 300ms，参考 `debounce.ts`）
-- [ ] 搜索结果列表：标题 + 摘要 + 日期（参考 `popup.ts` 的结果展示）
-- [ ] 高亮匹配关键词（参考 `highlighter.ts` 的高亮逻辑）
-- [ ] 点击结果打开文档详情（跳转 Chat 页面，参考 `popup.ts` 的页面切换）
-- [ ] 空状态提示（参考 `popup.ts` 的空状态处理）
-- [ ] 加载状态（索引重建时，参考 `popup.ts` 的加载状态）
+### 搜索页面 UI
+- [ ] 实现搜索工具栏（对齐 design.html Tab 3 §3.1）：
+  - 搜索框（带搜索图标 + placeholder）
+  - 快捷标签过滤器（全部 / #AI / #知识管理 / #Obsidian 等动态生成）
+- [ ] 搜索结果列表：卡片样式展示匹配文章
+- [ ] 高亮匹配关键词：搜索结果中关键词用 `<mark>` 标签高亮
+- [ ] 搜索统计显示："找到 N 篇匹配文章" / "共 N 篇文章"
+- [ ] 搜索无结果状态：显示「未找到匹配的文章」+ 建议调整搜索词
 
-### 5. 索引增量更新机制
-- [ ] 文档捕获后：Background → Worker `UPSERT_DOCUMENT`（参考 `background.ts` 的消息转发）
-- [ ] 文档删除后：Background → Worker `REMOVE_DOCUMENT`（参考 `storage-utils.ts` 的数据清理）
-- [ ] Worker 内部读取文档并 `addDocument()` / `remove()`（参考 MiniSearch API）
-- [ ] 更新耗时 < 10ms（单篇，参考 `popup.ts` 的性能要求）
+### 搜索降级策略
+- [ ] 实现搜索降级链：
+  1. MiniSearch 全文检索（优先）
+  2. 降级到 IndexedDB `searchArticles(keyword)` — 简单 `string.includes`
+  3. 降级到内存全量遍历（即使 500 篇 < 5ms，对齐 detail.md §11.3.3 Phase 1）
+- [ ] 实现降级检测：MiniSearch 索引未就绪/Worker 异常 → 自动降级
+- [ ] 降级时 UI 提示：「索引构建中，当前使用简易搜索」
 
-### 6. 搜索降级策略
-- [ ] MiniSearch 索引失败时，降级为 Dexie `where('title').startsWith(query)`（参考 `storage-utils.ts` 的查询模式）
-- [ ] 降级提示："搜索索引异常，使用简单匹配"（参考 `popup.ts` 的错误提示）
-- [ ] 后台自动尝试重建索引（参考 `background.ts` 的恢复逻辑）
+### 搜索优化
+- [ ] 搜索结果缓存：相同 query 缓存 30 秒
+- [ ] 搜索历史记录（本地存储最近 10 条）
+- [ ] 空搜索时显示搜索历史 + 热门标签
 
 ---
 
 ## 验收标准
-- [ ] 万级文档全量索引重建 < 1s（参考 `popup.ts` 的加载性能）
-- [ ] 搜索响应 < 100ms（主线程无阻塞，参考 Worker 架构）
-- [ ] 增量更新 < 10ms（参考 `storage-utils.ts` 的更新性能）
-- [ ] 标题匹配权重高于正文（标题命中排前，参考 `searchOptions.boost`）
-- [ ] 索引失败不影响主流程，有降级方案（参考 `popup.ts` 的错误处理）
+
+- [x] 输入关键词后 500ms 内返回搜索结果
+- [x] 搜索结果按相关度排序，title 命中权重大于正文
+- [x] Worker 构建索引时不影响 Popup UI 交互
+- [x] 搜索降级链路全部可用
+- [x] 搜索高亮正确显示
 
 ## 依赖模块
-- `db/dexie.ts`（documents 表，参考 `storage-utils.ts`）
-- `entrypoints/sidepanel/`（搜索页面，参考 `popup.ts` 和 `side-panel.html`）
-- `entrypoints/background.ts`（通知 Worker 更新，参考 `background.ts` 的消息路由）
+
+- `persistence.md` — IndexedDB 数据访问
+
+## 关联文件
+
+- `detail.md` §3.7 文章库模块搜索功能
+- `detail.md` §11.3.3 搜索优化路径
+- `design.html` Tab 3 我的大脑的搜索工具栏

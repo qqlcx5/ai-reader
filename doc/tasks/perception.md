@@ -1,72 +1,111 @@
-# 捕获层：网页解析与数据提取 (Perception)
+# 捕获层：网页提取与 Markdown 生成 (P0)
 
-## 目标
-用户点击插件后，通过 defuddle 自动从任意网页提取正文 Markdown、元数据，并持久化到 IndexedDB。
+> **模块名称**: perception  
+> **优先级**: P0（MVP 核心闭环）  
+> **依赖关系**: 依赖 foundation.md（消息通信框架）  
+> **目标**: 实现 Content Script 中的网页正文提取与 Markdown 生成 Pipeline，对齐 detail.md §3.3 + §3.4 + §11.1-11.3
 
-## 最小可执行任务
+---
 
-### 1. Content Script 入口搭建
-- [ ] 创建 `entrypoints/content.ts`（WXT content script entrypoint）
-- [ ] 配置 `matches: ['<all_urls>']` 和 `world: 'MAIN'`（defuddle 需完整 DOM 访问）
-- [ ] 注入悬浮捕获按钮（`CaptureButton.vue` 或纯 DOM 按钮）
-- [ ] 绑定点击事件 → 触发捕获流程（参考 `content.ts` 的 `toggleIframe` 点击处理）
+## 子任务
 
-### 2. defuddle 集成与正文提取
-- [ ] 安装 `defuddle` 依赖（参考 `obsidian-clipper` 的 `package.json`）
-- [ ] 从 `defuddle/full` 导入 `createMarkdownContent()`（参考 `content-extractor.ts` 第 2 行）
-- [ ] 在 Content Script 中 `clone` 当前 `document` 并调用 `defuddle.parseAsync()`（参考 `content-extractor.ts` 的 `extractPageContent` 函数）
-- [ ] 获取 `markdownContent` 和元数据（参考 `content-extractor.ts` 返回的 `ContentResponse` 结构）
-- [ ] **降级处理**：defuddle 解析失败时回退到 `document.body.innerText` + 简单 Markdown 转换（参考 `content-extractor.ts` 的 fallback 逻辑）
+### Content Script 入口搭建
+- [ ] 创建 `entrypoints/content.ts`：WXT content script entrypoint，注册 `chrome.runtime.onMessage` 监听
+- [ ] 实现 `ping` 消息响应（对齐 detail.md §11.1.3a：Background ping 就绪检测）
+- [ ] 实现 Generation Counter 僵尸脚本处理（`window.__pageMindGeneration`，对齐 detail.md §11.1.3b）
+- [ ] 实现消息分发：根据 `action` 路由到 `handleExtract` / `handleMetadata`
 
-### 3. 元数据自动提取
-- [ ] 提取 `title`（`document.title`，参考 `shared.ts` 的 `buildVariables`）
-- [ ] 提取 `url`（`location.href`，参考 `shared.ts` 的 `currentUrl` 处理）
-- [ ] 提取 `author`（meta / schema.org / JSON-LD，参考 `content-extractor.ts` 的元数据提取逻辑）
-- [ ] 提取 `publishedAt`（meta / schema.org，参考 `content-extractor.ts` 的 `published` 字段）
-- [ ] 提取 `favicon`（`document.querySelector('link[rel*="icon"]')?.href`，参考 `shared.ts`）
-- [ ] 提取 `description`（`meta[name="description"]`，参考 `content-extractor.ts`）
-- [ ] 提取 `keywords`（`meta[name="keywords"]`，参考 `content-extractor.ts` 的 `metaTags` 处理）
-- [ ] 提取 `siteName`（`og:site_name` 或域名，参考 `shared.ts` 的 `{{site}}` 和 `{{domain}}`）
-- [ ] 提取 `image`（`og:image` 或首图，参考 `shared.ts` 的 `{{image}}`）
-- [ ] 提取 `wordCount`（Markdown 字数统计，参考 `content-extractor.ts` 的 `wordCount` 计算）
-- [ ] 提取 `language`（`document.documentElement.lang` 或自动检测，参考 `content-extractor.ts`）
-- [ ] 提取 `schemaOrgData`（页面内 JSON-LD / schema.org 脚本，参考 `content-extractor.ts` 的 `schemaOrgData` 提取）
+### Shadow DOM 扁平化
+- [ ] 创建 `core/extraction/shadow-dom.ts`
+- [ ] 实现 `flattenShadowDom(root: Document | Element): void`：递归遍历 Shadow DOM 边界，将内容扁平化到主文档树
+- [ ] 处理嵌套 Shadow DOM（多层 Web Components）
+- [ ] 编写单元测试：验证 Shadow DOM 内文本可被提取
 
-### 4. 捕获结果标准化
-- [ ] 定义 `CapturedDocument` 接口（参考 `types.ts` 的 `ExtractedContent` 和 `ContentResponse` 结构）
-- [ ] 生成唯一 `id`（参考 `import-export.ts` 的 `Date.now().toString() + Math.random().toString(36).slice(2, 9)`）
-- [ ] 填充 `createdAt` / `updatedAt` 时间戳（使用 `dayjs`，参考 `shared.ts`）
-- [ ] 组装完整 `CapturedDocument` 对象（参考 `content-extractor.ts` 返回的完整数据结构）
+### defuddle 集成
+- [ ] 安装 `defuddle` 依赖
+- [ ] 创建 `core/extraction/defuddle-adapter.ts`
+- [ ] 实现 `extractContent(document: Document, url: string): Promise<ExtractResult>`
+- [ ] 实现 `parseAsync()` 调用 + 8s 超时保护（`Promise.race`，对齐 detail.md §11.3.2）
+- [ ] 实现超时回退：`parseAsync` 超时 → `parse()` 同步提取
+- [ ] 提取结果结构映射：`title / content / author / description / domain / favicon / image / published / wordCount`
 
-### 5. 跨上下文通信
-- [ ] Content Script 通过 `chrome.runtime.sendMessage` 发送 `CAPTURE_PAGE` 消息（参考 `content.ts` 的 `sendMessage` 模式）
-- [ ] Background Service Worker 接收消息并转发到 Side Panel（参考 `background.ts` 的消息路由）
-- [ ] 定义消息类型（参考 `types.ts` 的接口定义风格）
+### Markdown 生成
+- [ ] 创建 `core/markdown/markdown-generator.ts`
+- [ ] 实现 `createMarkdownContent(contentHtml: string, url: string): string` — 在 Content Script 中调用（对齐 detail.md §11.2.2）
+- [ ] 实现 Frontmatter 生成：title / url / site / author / publishedAt / savedAt（对齐 detail.md §3.4 推荐结构）
+- [ ] 边界处理：无作者省略字段、无发布时间用 undefined、HTML 转 MD 失败回退纯文本、空标题用 hostname
 
-### 6. 持久化到 IndexedDB
-- [ ] Background 调用 `documentRepository.put(document)`（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage` 模式，迁移到 Dexie）
-- [ ] 写入 `documents` 表（Dexie，参考 `obsidian-clipper` 使用 `browser.storage.local` 的存储模式）
-- [ ] 返回 `documentId`（参考 `content-extractor.ts` 的 `sendExtractRequest` 返回结构）
+### 元数据自动提取
+- [ ] 创建 `core/metadata/metadata-parser.ts`
+- [ ] 实现 `extractPageMetadata(document: Document, url: string): PageMetadata`
+- [ ] 实现 title 优先级：`og:title` → `twitter:title` → `document.title`（对齐 detail.md §3.2 优先级表）
+- [ ] 实现 siteName 优先级：`og:site_name` → hostname
+- [ ] 实现 author 优先级：`article:author` → `meta[name=author]` → JSON-LD
+- [ ] 实现 publishedAt 优先级：`article:published_time` → JSON-LD → 页面时间标签
+- [ ] 实现 description 优先级：`og:description` → `meta[name=description]`
+- [ ] 实现 favicon 提取：`link[rel*=icon]` → 默认站点首字母
+- [ ] 实现 language 提取：`document.documentElement.lang`
+- [ ] 编写单元测试：验证各优先级回退逻辑
 
-### 7. 通知搜索索引更新
-- [ ] Background 通过 `postMessage` 通知 `search.worker.ts`
-- [ ] Worker 执行 `MiniSearch.addDocument()` 增量更新
+### 提取结果标准化
+- [ ] 定义 `CapturedDocument` 接口（对齐 detail.md §3.5 SavedArticle）
+- [ ] 实现 `normalizeResult(metadata, extractResult, markdown): CapturedDocument`
+- [ ] 生成 `id`（UUID v4）、`createdAt`（ISO 8601）、`updatedAt`
 
-### 8. 打开 Side Panel 展示
-- [ ] Background 调用 `chrome.sidePanel.open({ tabId })`
-- [ ] Side Panel 接收 `documentId` 并读取文档
-- [ ] UI 展示 Markdown 内容、元数据摘要、对话入口
+### 提取 Pipeline 状态流
+- [ ] 定义 `CaptureStep` 状态机：`idle → extracting → markdown → saving → success/error`
+- [ ] 实现 `runCapturePipeline(tabId, url): Promise<CapturedDocument>` — 在 Background 中协调
+- [ ] Background 通过 Port 向 Popup 推送 Pipeline 进度（对齐 detail.md §2.2）
+- [ ] Popup 端 `useCapture` composable：监听进度并更新 UI 状态
+
+### 跨上下文通信
+- [ ] 定义提取相关消息类型：`EXTRACT_PAGE`、`GET_PAGE_METADATA`、`CAPTURE_PROGRESS`
+- [ ] Background: 接收 `EXTRACT_PAGE` → inject Content Script → 转发提取请求 → 返回结果
+- [ ] Content Script: 接收提取请求 → 执行 Pipeline → `sendResponse(result)`
+- [ ] 所有异步监听器返回 `true`（保持 `sendResponse` 通道开启）
+
+### 提取结果缓存
+- [ ] 实现提取结果 Memoization（对齐 detail.md §11.1.5）
+- [ ] 缓存键：`tabId + url`
+- [ ] TTL：5 秒
+- [ ] 用户点击「复制 Markdown」或「仅预览」时优先使用缓存
+
+### Content Script Bundle 体积控制
+- [ ] 配置 webpack / WXT：Popup 用 Vue，Content Script 不包含 Vue 运行时（对齐 detail.md §11.3.7）
+- [ ] defuddle + markdown 模块实现动态 `import()`：仅在收到 `extract` 消息时加载（对齐 detail.md §11.3.5）
+- [ ] 验证 gzip 后 Content Script 体积 < 50KB
+- [ ] 若超过 50KB：改为 `chrome.scripting.executeScript` 按需注入提取脚本
+
+### 错误处理
+- [ ] 定义 9 种错误码对应的 Error 类：`CaptureError(code, message, recoverable)`
+- [ ] 实现错误码 → UI 状态映射（对齐 detail.md §8.2）
+  - `NO_ACTIVE_TAB` → Toast: 未找到当前页面
+  - `UNSUPPORTED_PAGE` → CurrentPageCard 显示不可提取状态
+  - `PERMISSION_DENIED` → Toast + 权限引导
+  - `EXTRACTION_FAILED` → Pipeline Step 1 标红，按钮变重试
+  - `MARKDOWN_FAILED` → Pipeline Step 2 标红，允许重试
+  - `INDEXEDDB_FAILED` → Pipeline Step 3 标红，提示存储不可用
+  - `CONTENT_SCRIPT_FAILED` → Toast 提示
+  - `CLIPBOARD_FAILED` → Toast: 复制失败
+  - `UNKNOWN_ERROR` → Toast 通用提示
 
 ---
 
 ## 验收标准
-- [ ] 任意网页点击悬浮按钮后，3 秒内完成捕获并展示在 Side Panel（参考 `content.ts` 的 `toggleIframe` 和 `popup.ts` 的初始化流程）
-- [ ] 元数据提取完整度 ≥ 80%（主流新闻/博客/文档站点，参考 `content-extractor.ts` 的测试固件 `fixtures/`）
-- [ ] 解析失败时有降级，不阻塞流程（参考 `content-extractor.ts` 的 fallback 逻辑）
-- [ ] 捕获后搜索索引自动更新，可立即检索到（参考 `background.ts` 的消息通知机制）
+
+- [x] 任意普通网页点击「提取正文并保存」可成功返回 Markdown
+- [x] Shadow DOM 内正文不被遗漏（验证 Web Components 页面）
+- [x] 8s 超时后自动回退同步提取，不卡死
+- [x] 提取结果缓存 5 秒内有效，点击复制不重复提取
+- [x] Content Script bundle gzip < 50KB
+- [x] 错误场景均有明确 UI 反馈
 
 ## 依赖模块
-- `db/dexie.ts`（IndexedDB 表定义）
-- `workers/search.worker.ts`（索引更新）
-- `entrypoints/background.ts`（消息中转）
-- `entrypoints/sidepanel/`（展示界面）
+
+- `foundation.md` — 消息通信框架、Background Service Worker
+
+## 关联文件
+
+- `detail.md` §3.2 当前页检测、§3.3 网页提取、§3.4 Markdown 生成
+- `detail.md` §11.1 Content Script 架构、§11.2 潜在冲突、§11.3 技术优化
+- `design.html` Tab 1 当前网页捕获 UI

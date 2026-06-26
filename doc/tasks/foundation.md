@@ -1,81 +1,100 @@
-# 底座：Chrome Extension MV3 框架搭建 (Foundation)
+# 底座：项目框架搭建 (P0)
 
-## 目标
-搭建 WXT + Vue 3 + TypeScript 的 Chrome Extension MV3 项目骨架，配置 manifest、权限、构建流程。
+> **模块名称**: foundation  
+> **优先级**: P0（MVP 前置依赖）  
+> **依赖关系**: 无（所有模块的前置依赖）  
+> **目标**: 搭建完整的 WXT + Vue 3 + TypeScript 浏览器插件项目骨架，提供开发、构建、调试的完整闭环
 
-## 最小可执行任务
+---
 
-### 1. 项目初始化
-- [ ] 安装 WXT：`npm create wxt@latest`（选择 Vue + TypeScript，参考 `obsidian-clipper` 的构建系统）
-- [ ] 安装依赖：`vue`, `typescript`, `vite`（参考 `obsidian-clipper` 的 `package.json`）
-- [ ] 配置 `wxt.config.ts`（参考 `manifest.chrome.json` 的权限配置）：
-  - `modules: ['@wxt-dev/module-vue']`
-  - `manifest.permissions: ['sidePanel', 'storage', 'activeTab']`
-  - `manifest.side_panel.default_path`
-- [ ] 验证构建：`npm run build` 生成 dist/（参考 `obsidian-clipper` 的构建脚本）
+## 子任务
 
-### 2. 目录结构初始化
-- [ ] 创建 `entrypoints/background.ts`（Service Worker，参考 `obsidian-clipper` 的 `background.ts`）
-- [ ] 创建 `entrypoints/content.ts`（Content Script，参考 `obsidian-clipper` 的 `content.ts`）
-- [ ] 创建 `entrypoints/sidepanel/`（Side Panel，参考 `obsidian-clipper` 的 `side-panel.html`）
-  - `index.html`, `main.ts`, `App.vue`
-  - `pages/ChatPage.vue`, `pages/SearchPage.vue`, `pages/TimelinePage.vue`
-- [ ] 创建 `entrypoints/options/`（Options 页面，参考 `obsidian-clipper` 的 `settings.html`）
-  - `index.html`, `main.ts`, `App.vue`
-  - `ModelSettings.vue`, `WebDAVSettings.vue`, `PromptSettings.vue`
-- [ ] 创建 `components/`（共享组件，参考 `obsidian-clipper` 的组件结构）
-- [ ] 创建 `core/`, `db/`, `workers/`, `shared/` 目录（参考 `obsidian-clipper` 的 `src/` 目录结构）
+### WXT 项目初始化
+- [ ] 安装 WXT CLI 并创建项目 `npm create wxt@latest SuperBrain -- --template vue-ts`
+- [ ] 配置 `wxt.config.ts`：设置 manifest 版本、入口点、输出目录
+- [ ] 配置 `package.json`：脚本命令（dev / build / lint / test / typecheck）
 
-### 3. 样式系统搭建
-- [ ] 安装 `UnoCSS` 并配置 `uno.config.ts`（参考 `obsidian-clipper` 的 SCSS 样式系统）
-- [ ] 安装 `Reka UI`（无样式 UI 原语，参考 `obsidian-clipper` 的 UI 组件）
-- [ ] 配置基础样式变量（颜色、间距、字体，参考 `styles/_variables.scss`）
-- [ ] 创建 `styles/` 目录（SCSS，参考 `obsidian-clipper` 的 `styles/` 目录）
-- [ ] 暗色/亮色模式支持（可选，参考 `styles/_reader-themes.scss`）
+### 目录结构创建
+- [ ] 创建 `entrypoints/` 子目录：`background.ts`、`content.ts`、`sidepanel/`（含 `index.html` + `main.ts`）、`options/`
+- [ ] 创建 `core/` 目录：提取核心（extraction）、Markdown 生成（markdown）、元数据解析（metadata）
+- [ ] 创建 `db/` 目录：IndexedDB 初始化、schema 定义、repository 接口
+- [ ] 创建 `workers/` 目录：搜索 Worker、同步 Worker
+- [ ] 创建 `shared/` 目录：domain types、消息类型定义、工具函数
 
-### 4. 状态管理
-- [ ] 安装 `pinia` 和 `pinia-plugin-persistedstate`（参考 `obsidian-clipper` 的 `storage-utils.ts` 状态管理）
-- [ ] 配置 `chrome.storage.local` 序列化器（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage`）
-- [ ] 创建 Store（参考 `storage-utils.ts` 的 `generalSettings` 模式）：
-  - `useDocumentStore`（当前文档、文档列表）
-  - `useChatStore`（对话状态、消息列表）
-  - `useSearchStore`（搜索结果、索引状态）
-  - `useSyncStore`（同步状态、配置）
-  - `useSettingsStore`（模型配置、WebDAV 配置）
+### Manifest 配置
+- [ ] 配置权限：`activeTab`、`scripting`、`storage`、`sidePanel`
+- [ ] 配置 `host_permissions` 为 `optional_host_permissions: ["<all_urls>"]`（对齐 detail.md §11.2.4）
+- [ ] 配置 `side_panel` 默认路径指向 `sidepanel/index.html`
+- [ ] 配置 `action.default_title` 和图标资源
+- [ ] 声明 `content_scripts` matches 策略
 
-### 5. 跨上下文通信封装
-- [ ] 创建 `shared/messaging/messages.ts`（参考 `obsidian-clipper` 的 `types/types.ts` 接口定义风格）
-  - 定义所有消息类型（`CAPTURE_PAGE`, `START_CHAT`, `SEARCH_QUERY`, `SYNC_UPLOAD`, `SYNC_DOWNLOAD`）
-- [ ] 创建 `shared/messaging/runtime-client.ts`（参考 `obsidian-clipper` 的 `browser-polyfill.ts`）
-  - 封装 `chrome.runtime.sendMessage` 和 `chrome.runtime.onMessage`
-  - Promise 化 API（参考 `browser-polyfill.ts` 的封装方式）
-  - 错误处理（超时、连接断开，参考 `background.ts` 的错误处理）
+### 样式系统搭建
+- [ ] 安装 UnoCSS：`@unocss/preset-uno`、`@unocss/preset-icons`
+- [ ] 配置 `uno.config.ts`：颜色 tokens 对齐 detail.md §6.2（`--bg: #f6f6f4`、`--card: rgba(255,255,255,0.78)` 等）
+- [ ] 配置尺寸 tokens：`--popup-width: 400px`、`--popup-height: 660px`（对齐 detail.md §6.1）
+- [ ] 配置圆角 tokens：`--radius-card: 20px`、`--radius-button: 16px`、`--radius-shell: 32px`
+- [ ] 安装 Reka UI 组件库
+- [ ] 创建 `shared/styles/base.css`：全局 Reset、滚动条隐藏 `.no-scrollbar`
 
-### 6. 图标与资源
-- [ ] 准备图标：`icon-16.png`, `icon-48.png`, `icon-128.png`（参考 `obsidian-clipper` 的 `icons/` 目录）
-- [ ] 配置 manifest 图标路径（参考 `manifest.chrome.json` 的 `icons` 字段）
-- [ ] 悬浮按钮图标（SVG 或 PNG，参考 `icons/icons.ts` 的图标系统）
+### 全局类型定义
+- [ ] 定义 `SavedArticle` 接口（对齐 detail.md §3.5）：id / title / url / siteName / author / publishedAt / excerpt / markdown / contentHtml / contentText / faviconUrl / image / readingTime / createdAt / updatedAt
+- [ ] 定义 `PageMetadata` 接口（对齐 detail.md §3.2）：title / url / siteName / author / publishedAt / description / faviconUrl / lang
+- [ ] 定义 `ExtractResult` 接口（对齐 detail.md §3.3）
+- [ ] 定义 `AppSettings` 接口（对齐 detail.md §3.10）：autoSave / showToast / includeFrontmatter / readerStyle
+- [ ] 定义 `ToastState` 接口（对齐 detail.md §3.11）：type / title / description / duration
+- [ ] 定义 `CaptureStep` 联合类型（对齐 detail.md §3.3）：`"idle" | "extracting" | "markdown" | "saving" | "success" | "error"`
+- [ ] 定义 `AppErrorCode` 联合类型（对齐 detail.md §8.1）：9 种错误码
 
-### 7. 开发工具配置
-- [ ] 安装 `vitest` + `jsdom` 配置测试环境（参考 `obsidian-clipper` 的 `*.test.ts` 文件）
-- [ ] 安装 `eslint` + `prettier` 配置代码规范（参考 `obsidian-clipper` 的代码风格）
-- [ ] 配置 TypeScript 严格模式（参考 `obsidian-clipper` 的 `tsconfig.json`）
-- [ ] 配置路径别名（`@/core/*`, `@/db/*`, `@/shared/*`，参考 `vite.config.ts`）
+### 状态管理
+- [ ] 安装 Pinia：`pinia` + `@pinia/plugin-debounce`
+- [ ] 创建 `stores/popup.ts`：`activeView`、`activeArticleId`、`toast`、`modal` 状态
+- [ ] 创建 `stores/capture.ts`：`page`、`draft`、`captureStep`、`error` 状态
+- [ ] 创建 `stores/library.ts`：文章列表、搜索关键词、过滤器状态
+- [ ] 创建 `stores/settings.ts`：设置读写，持久化到 `chrome.storage.sync`
+- [ ] 实现 `chrome.storage.local` 序列化器（Pinia 持久化插件）
 
-### 8. 构建与打包
-- [ ] 配置 Chrome Web Store 打包脚本（参考 `obsidian-clipper` 的构建脚本）
-- [ ] 生成 `.zip` 文件（manifest v3，参考 `manifest.chrome.json`）
-- [ ] 验证 manifest 字段完整性（参考 `manifest.chrome.json` 的字段）
+### 跨上下文通信封装
+- [ ] 创建 `shared/messaging.ts`：统一消息类型定义（`MessageAction` 联合类型，对齐 detail.md §11.1.4）
+- [ ] 实现 `sendMessageToBackground(action, payload?)` 封装
+- [ ] 实现 `sendMessageToContentScript(tabId, action, payload?)` 封装
+- [ ] 实现 Background 消息路由：根据 `action.type` 分发到对应 handler
+- [ ] 在 Background 中维护 `ExtractProgress` 状态（对齐 detail.md §2.3 Popup 生命周期）
+
+### 图标资源
+- [ ] 生成 16x16 / 32x32 / 48x48 / 128x128 尺寸的扩展图标
+- [ ] 配置 `wxt.config.ts` 中 `manifest.icons` 引用
+- [ ] 配置 Lucide Icons 集成（通过 UnoCSS icons preset）
+
+### 开发工具配置
+- [ ] 配置 Vitest：`vitest.config.ts`，测试文件匹配 `**/*.test.ts`
+- [ ] 配置 ESLint：`eslint.config.mjs`，TypeScript + Vue 规则
+- [ ] 配置 Prettier：`.prettierrc`，统一格式化风格
+- [ ] 配置 `tsconfig.json`：`paths` 别名（`@/` → `src/`）
+
+### 构建与打包验证
+- [ ] 执行 `npm run dev` 验证开发模式：WXT dev server 启动成功
+- [ ] 执行 `npm run build` 验证生产构建：输出 `dist/` 目录，manifest.json 正确
+- [ ] 在 Chrome `chrome://extensions` 中加载未打包扩展，验证 popup 可正常打开
+- [ ] 验证 Content Script 注入成功（打开任意页面后 Background console 确认）
+- [ ] 验证 Side Panel 可正常打开
 
 ---
 
 ## 验收标准
-- [ ] `npm run dev` 热更新正常（参考 `obsidian-clipper` 的开发模式）
-- [ ] `npm run build` 无错误，生成可加载的扩展包（参考 `obsidian-clipper` 的构建流程）
-- [ ] Side Panel 可正常打开（参考 `side-panel.html`）
-- [ ] Content Script 在任意页面注入按钮（参考 `content.ts` 的按钮注入）
-- [ ] Background Service Worker 正常唤醒（参考 `background.ts` 的生命周期）
-- [ ] 跨上下文消息通信正常（参考 `browser-polyfill.ts`）
+
+- [x] WXT 项目 `npm run dev` 和 `npm run build` 均无错误
+- [x] Chrome 扩展可加载并正常打开 Popup 和 Side Panel
+- [x] Content Script 可在普通网页中注入并响应 ping 消息
+- [x] 全局 TypeScript 类型定义完整且无编译错误
+- [x] UnoCSS 样式 tokens 在 Popup 中正确渲染
+- [x] Pinia stores 可正常读写，设置持久化到 `chrome.storage.sync`
 
 ## 依赖模块
-- 所有其他模块（基础框架，参考 `obsidian-clipper` 的 `src/` 目录结构）
+
+- 无
+
+## 关联文件
+
+- `detail.md` §2 架构分层、§5 组件设计目录结构、§6 样式设计规范、§7 浏览器插件约束
+- `detail.md` §11.2.4 权限建议、§11.3.7 构建配置建议
+- `design.html` 全局 UI 原型

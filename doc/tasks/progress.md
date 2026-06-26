@@ -1,110 +1,65 @@
-# 总体进度 (Project Progress)
+# SuperBrain 开发进度总览
 
-## 项目：AI Reader Chrome Extension MV3
-
----
-
-## 模块进度总览
-
-| 模块 | 状态 | 优先级 | 依赖 |
-|------|------|--------|------|
-| [底座：Chrome Extension MV3 框架搭建](./foundation.md) | ⬜ 未开始 | P0 | 无 |
-| [捕获层：网页解析与数据提取](./perception.md) | ⬜ 未开始 | P0 | 底座 |
-| [处理层：多模型配置管理](./model-management.md) | ⬜ 未开始 | P0 | 底座 |
-| [处理层：沉浸式侧边栏对话](./chat-with-doc.md) | ⬜ 未开始 | P0 | 底座、模型管理、捕获层 |
-| [记忆层：本地存储与同步](./persistence.md) | ⬜ 未开始 | P1 | 底座、捕获层 |
-| [唤醒层：本地全文检索](./search.md) | ⬜ 未开始 | P1 | 底座、捕获层 |
-| [唤醒层：历史时间轴](./timeline.md) | ⬜ 未开始 | P2 | 底座、捕获层 |
+> 最后更新：2026-06-26  
+> 项目路径：`/Users/another/Documents/OpenSource/SuperBrain/`
 
 ---
 
-## 模块详细检查清单
+## 模块进度表
 
-### 底座：Chrome Extension MV3 框架搭建 (Foundation)
-- [ ] 项目初始化（WXT + Vue + TS）
-- [ ] 目录结构初始化
-- [ ] 样式系统搭建（UnoCSS + Reka UI）
-- [ ] 状态管理（Pinia + chrome.storage.local）
-- [ ] 跨上下文通信封装
-- [ ] 图标与资源
-- [ ] 开发工具配置（Vitest + ESLint + Prettier）
-- [ ] 构建与打包
-
-### 捕获层：网页解析与数据提取 (Perception)
-- [ ] Content Script 入口搭建
-- [ ] defuddle 集成与正文提取
-- [ ] 元数据自动提取
-- [ ] 捕获结果标准化
-- [ ] 跨上下文通信
-- [ ] 持久化到 IndexedDB
-- [ ] 通知搜索索引更新
-- [ ] 打开 Side Panel 展示
-
-### 处理层：多模型配置管理 (Model Management)
-- [ ] 模型配置数据层
-- [ ] Options 页面：模型配置 UI
-- [ ] API Key 安全存储
-- [ ] 测试连接（Ping）
-- [ ] 系统提示词配置
-- [ ] 模型选择器组件
-
-### 处理层：沉浸式侧边栏对话 (Chat with Doc)
-- [ ] Chat 页面 UI 搭建
-- [ ] Prompt 构建器
-- [ ] SSE 流式通信
-- [ ] 流式消息渲染
-- [ ] Markdown 渲染器
-- [ ] Chat 历史管理
-- [ ] 对话状态管理
-
-### 记忆层：本地存储与同步 (Persistence)
-- [ ] IndexedDB 数据层搭建
-- [ ] 大字段压缩（rawHtml）
-- [ ] 手动导出
-- [ ] 手动导入
-- [ ] WebDAV 配置
-- [ ] WebDAV 上传（整包覆盖）
-- [ ] WebDAV 拉取（整包覆盖）
-- [ ] 同步状态管理
-
-### 唤醒层：本地全文检索 (Search)
-- [ ] MiniSearch 集成
-- [ ] Web Worker 搭建
-- [ ] 主线程搜索客户端
-- [ ] 搜索页面 UI
-- [ ] 索引增量更新机制
-- [ ] 搜索降级策略
-
-### 唤醒层：历史时间轴 (Timeline)
-- [ ] 时间轴数据聚合
-- [ ] 时间轴页面 UI
-- [ ] 日期详情弹窗
-- [ ] 统计信息展示
-- [ ] 数据刷新机制
+| # | 模块 | 文件 | 优先级 | 状态 | 依赖 |
+|---|---|---|---|---|---|
+| 1 | 底座：项目框架搭建 | `foundation.md` | P0 | [ ] 未开始 | — |
+| 2 | 捕获层：网页提取与 Markdown 生成 | `perception.md` | P0 | [ ] 未开始 | #1 |
+| 3 | 弹窗 UI 层：Popup Shell 与四大视图 | `popup-ui.md` | P0 | [ ] 未开始 | #1, #2 |
+| 4 | 处理层：多模型配置管理 | `model-management.md` | P0 | [ ] 未开始 | #1 |
+| 5 | 处理层：沉浸式侧边栏对话 | `chat-with-doc.md` | P0 | [ ] 未开始 | #1, #4, #2 |
+| 6 | 记忆层：本地存储与同步 | `persistence.md` | P1 | [ ] 未开始 | #1 |
+| 7 | 唤醒层：本地全文检索 | `search.md` | P1 | [ ] 未开始 | #6 |
+| 8 | 唤醒层：历史时间轴 | `timeline.md` | P2 | [ ] 未开始 | #6 |
 
 ---
 
 ## 里程碑
 
-### Milestone 1：MVP 可运行（P0 完成）
-- [ ] 底座搭建完成
-- [ ] 可捕获网页并展示
-- [ ] 可配置模型并对话
-- [ ] 数据持久化到 IndexedDB
+### M1 MVP（P0 全部完成）
+- [ ] #1 foundation — WXT 项目骨架可构建、可加载
+- [ ] #2 perception — 网页提取 + Markdown 生成 Pipeline 完整
+- [ ] #3 popup-ui — 四大视图 UI 完整，提取保存闭环可用
+- [ ] #4 model-management — 多模型配置可用
+- [ ] #5 chat-with-doc — AI 消化对话功能可用
+- **验证**：用户可打开 Popup → 提取当前网页 → 保存到 IndexedDB → 在阅读器中查看 → 用 AI 消化文章
 
-### Milestone 2：功能完整（P0 + P1 完成）
-- [ ] 搜索功能可用
-- [ ] WebDAV 同步可用
-- [ ] 导入导出可用
+### M2 功能完整（P0 + P1 全部完成）
+- [ ] #6 persistence — 数据导入/导出 + WebDAV 同步可用
+- [ ] #7 search — 全文检索 + 搜索高亮可用
+- **验证**：用户可搜索历史文章、导出/导入数据、跨设备同步
 
-### Milestone 3：体验优化（全部完成）
-- [ ] 时间轴可用
-- [ ] 性能优化（万级文档）
-- [ ] 错误处理完善
-- [ ] 打包发布
+### M3 体验优化（全部完成）
+- [ ] #8 timeline — 时间轴视图 + 贡献热力图 + 统计面板
+- **验证**：全部功能可用，UX 打磨完成，可发布 Chrome Web Store
 
 ---
 
-## 最近更新
+## 依赖关系图
 
-- 2026-06-25: 初始化任务列表
+```text
+foundation (#1)
+├── perception (#2)
+│   └── popup-ui (#3)
+├── model-management (#4)
+│   └── chat-with-doc (#5)
+├── persistence (#6)
+│   ├── search (#7)
+│   └── timeline (#8)
+└── (popup-ui 也依赖 perception)
+```
+
+---
+
+## 统计
+
+- P0 模块：5 个
+- P1 模块：2 个
+- P2 模块：1 个
+- 总计：8 个模块

@@ -1,91 +1,103 @@
-# 记忆层：本地存储与同步 (Persistence)
+# 记忆层：本地存储与同步 (P1)
 
-## 目标
-使用 Dexie.js + IndexedDB 本地存储文档、对话、设置，支持手动导出和 WebDAV 整包同步。
+> **模块名称**: persistence  
+> **优先级**: P1（数据持久化）  
+> **依赖关系**: 依赖 foundation.md（IndexedDB 框架、chrome.storage 封装）  
+> **目标**: 实现混合存储方案（IndexedDB 文章 + chrome.storage 设置），支持大字段压缩、手动导入/导出、WebDAV 同步
 
-## 最小可执行任务
+---
 
-### 1. IndexedDB 数据层搭建
-- [ ] 创建 `db/dexie.ts`：Dexie 实例 + 表定义（参考 `storage-utils.ts` 的 `browser.storage.local` 模式，迁移到 Dexie）
-  - `documents: 'id, url, title, createdAt, updatedAt'`
-  - `chatHistories: 'id, documentId, createdAt, updatedAt'`
-  - `settings: 'key, updatedAt'`
-- [ ] 创建 `db/schema.ts`：所有类型定义（参考 `types.ts` 的接口定义风格）
-- [ ] 创建 `db/migrations.ts`：版本迁移策略（`schemaVersion`，参考 `import-export.ts` 的 `SCHEMA_VERSION`）
-- [ ] 实现各表 Repository（参考 `storage-utils.ts` 的 `setLocalStorage` / `getLocalStorage` 模式）
+## 子任务
 
-### 2. 大字段压缩（rawHtml）
-- [ ] 安装 `lz-string` 依赖（参考 `import-export.ts` 第 8 行的导入）
-- [ ] 写入 `rawHtml` 时压缩（`LZString.compressToUTF16`，参考 `import-export.ts` 的用法）
-- [ ] 读取时解压（`LZString.decompressFromUTF16`，参考 `import-export.ts`）
-- [ ] 可选：Markdown 内容也压缩（评估性能后决定）
+### IndexedDB 数据层
+- [ ] 创建 `db/schema.ts`：定义 IndexedDB schema
+- [ ] 安装 Dexie.js：`dexie`
+- [ ] 实现 `IndexedDBManager` 类：数据库初始化 + 版本迁移
+- [ ] 创建 `documents` store（对齐 detail.md §3.5 articles store）：
+  - 主键：`id` (string)
+  - 索引：`url` (unique)、`createdAt`、`updatedAt`、`siteName`、`title`
+- [ ] 创建 `chatHistories` store：
+  - 主键：`id` (string)
+  - 索引：`articleId`、`createdAt`
+- [ ] 创建 `settings` store（本地缓存，主存储仍在 chrome.storage.sync）：
+  - 主键：`key` (string)
 
-### 3. 手动导出
-- [ ] 实现 `core/sync/backup-packager.ts`（参考 `import-export.ts` 的 `exportTemplate` 函数）
-- [ ] 读取 `documents` + `chatHistories` + `settings` 全量数据（参考 `storage-utils.ts` 的读取模式）
-- [ ] 打包为 `ReadChat_backup.json`（参考 `import-export.ts` 的 JSON 打包格式）：
-  - `schemaVersion`, `documents`, `chatHistories`, `settings`, `exportedAt`, `version`
-- [ ] 触发浏览器下载（参考 `file-utils.ts` 的 `saveFile` 函数）
-- [ ] Side Panel / Options 添加"导出备份"按钮（参考 `popup.ts` 的按钮创建）
+### ArticleRepository
+- [ ] 创建 `db/article.repository.ts`：封装 articles store CRUD
+- [ ] 实现 `saveArticle(article: SavedArticle): Promise<SavedArticle>`
+  - 重复 URL 检查：若已存在同一 URL → 覆盖更新，保留 `createdAt`，更新 `updatedAt`
+- [ ] 实现 `getArticle(id: string): Promise<SavedArticle | undefined>`
+- [ ] 实现 `getArticleByUrl(url: string): Promise<SavedArticle | undefined>`
+- [ ] 实现 `listArticles(): Promise<SavedArticle[]>` — 按 `createdAt` 降序
+- [ ] 实现 `searchArticles(keyword: string): Promise<SavedArticle[]>`
+- [ ] 实现 `deleteArticle(id: string): Promise<void>`
+- [ ] 实现 `getArticleCount(): Promise<number>`
 
-### 4. 手动导入
-- [ ] 实现文件选择（`<input type="file" accept=".json">`，参考 `import-export.ts` 的 `importTemplate`）
-- [ ] 解析 JSON 并校验 `schemaVersion`（参考 `import-export.ts` 的 `validateImportedTemplate`）
-- [ ] 版本不兼容时提示并拒绝导入（参考 `import-export.ts` 的错误处理）
-- [ ] 导入前提示"将覆盖本地数据，是否先导出备份？"（参考 `import-export.ts` 的确认逻辑）
-- [ ] 使用 `db.bulkPut()` 写入数据（参考 `storage-utils.ts` 的批量存储模式）
-- [ ] 导入完成后重建搜索索引（参考 `search.md` 的索引重建）
+### SettingsRepository
+- [ ] 创建 `db/settings.repository.ts`：封装 chrome.storage.sync 读写
+- [ ] 实现 `getSettings(): Promise<AppSettings>` — 带默认值回退
+- [ ] 实现 `updateSettings(partial: Partial<AppSettings>): Promise<AppSettings>`
+- [ ] 实现 `resetSettings(): Promise<AppSettings>` — 恢复默认值
+- [ ] 实现 schema version 检查：`pagemind_version` key，支持迁移
 
-### 5. WebDAV 配置
-- [ ] 创建 `entrypoints/options/WebDAVSettings.vue`（参考 `settings.html` 和 `managers/general-settings.ts` 的设置页面结构）
-- [ ] 表单：服务器地址、用户名、密码、远程目录（参考 `types.ts` 的接口定义）
-- [ ] 测试连接按钮（PROPFIND 根目录，参考 `interpreter.ts` 的 `ping` 逻辑）
-- [ ] 加密存储密码（参考 `secret-store.ts` 或 `storage-utils.ts` 的存储模式）
-- [ ] 保存配置到 `settings` 表（参考 `generalSettings` 的存储模式）
+### 大字段压缩
+- [ ] 安装 `lz-string`
+- [ ] 实现 `compressRawHtml(html: string): string` — lz-string 压缩
+- [ ] 实现 `decompressRawHtml(compressed: string): string` — lz-string 解压
+- [ ] `saveArticle` 时自动压缩 `contentHtml` 字段（若存在且 > 10KB）
+- [ ] `getArticle` 时自动解压 `contentHtml` 字段
 
-### 6. WebDAV 上传（整包覆盖）
-- [ ] 实现 `core/sync/webdav-client.ts`（参考 `obsidian-clipper` 的 `api.ts` 或外部 WebDAV 库）
-  - `mkcol(path)`, `put(path, data)`, `get(path)`, `propfind(path)`
-- [ ] 实现 `core/sync/sync.service.ts`：`syncUpload()`（参考 `import-export.ts` 的导出逻辑）
-- [ ] 读取 IndexedDB 全量数据（参考 `storage-utils.ts`）
-- [ ] 生成 `ReadChat_data.json`（含 schemaVersion，参考 `import-export.ts` 的 `SCHEMA_VERSION`）
-- [ ] 生成 `metadata.json`（`updatedAt` 时间戳）
-- [ ] 使用 `CompressionStream('gzip')` 压缩数据包（原生 API，零依赖）
-- [ ] `PUT` 到 `ReadChat_Backup/ReadChat_data.json.gz`
-- [ ] `PUT` `metadata.json`
-- [ ] UI 进度指示（可选，参考 `popup.ts` 的加载状态）
+### 手动导出
+- [ ] 创建 `core/sync/export.service.ts`
+- [ ] 实现 `exportToFile(): Promise<void>` — 导出 `ReadChat_backup.json`
+- [ ] JSON 结构：`{ schemaVersion: 1, exportedAt: string, articles: SavedArticle[], chatHistories: ChatSession[], settings: AppSettings }`
+- [ ] 触发浏览器下载：`Blob` + `URL.createObjectURL` + `<a>.click()`
+- [ ] 文件命名：`SuperBrain_backup_YYYYMMDD_HHmmss.json`
 
-### 7. WebDAV 拉取（整包覆盖）
-- [ ] 实现 `sync.service.ts`：`syncDownload()`（参考 `import-export.ts` 的导入逻辑）
-- [ ] `GET metadata.json`，读取远端 `updatedAt`（参考 `import-export.ts` 的时间戳比较）
-- [ ] 比较本地 `settings.lastSyncAt`（参考 `storage-utils.ts` 的时间戳存储）
-- [ ] 若远端更新：
-  - 保存本地快照（`ReadChat_snapshot_<timestamp>.json`，参考 `import-export.ts` 的备份逻辑）
-  - `GET ReadChat_data.json.gz`
-  - 解压（`DecompressionStream('gzip')`）
-  - 校验 schemaVersion（参考 `import-export.ts` 的 `validateImportedTemplate`）
-  - `clear()` 本地表 + `bulkPut()` 远端数据（参考 `storage-utils.ts` 的批量操作）
-  - 更新 `lastSyncAt`
-  - 重建搜索索引（参考 `search.md`）
-- [ ] 若本地更新：提示"本地已是最新"
-- [ ] 冲突时提示"远端将覆盖本地"，需用户确认（参考 `import-export.ts` 的确认弹窗）
+### 手动导入
+- [ ] 创建 `core/sync/import.service.ts`
+- [ ] 实现 `importFromFile(file: File): Promise<ImportResult>`
+- [ ] 导入验证：检查 `schemaVersion` 兼容性
+- [ ] 分流合并策略：按 `id` 判断新增/覆盖，保留最新 `updatedAt`
+- [ ] 导入进度报告：新增 N 篇 / 覆盖 M 篇 / 跳过 K 篇 / 错误 E 条
+- [ ] 导入后自动刷新 LibraryView
 
-### 8. 同步状态管理
-- [ ] 使用状态管理管理同步状态（参考 `storage-utils.ts` 的 `generalSettings` 模式）
-- [ ] 状态：idle / syncing / success / error（参考 `interpreter.ts` 的请求状态）
-- [ ] 上次同步时间展示（参考 `storage-utils.ts` 的时间戳显示）
-- [ ] 自动同步（可选：启动时检测，参考 `background.ts` 的启动逻辑）
+### WebDAV 同步
+- [ ] 创建 `core/sync/webdav.service.ts`
+- [ ] 安装 WebDAV 客户端库（`webdav` npm 包）
+- [ ] 实现 WebDAV 配置存储：`webdav_url` / `webdav_username` / `webdav_password`（密码 AES-GCM 加密）
+- [ ] 实现 `pushToWebDAV()`：整包上传（`SuperBrain_backup.json`）
+- [ ] 实现 `pullFromWebDAV()`：下载远程备份文件
+- [ ] 实现 LWW（Last-Writer-Wins）冲突策略：比较本地与远程 `exportedAt` 时间戳
+- [ ] 实现静默同步：每天自动执行一次（通过 `chrome.alarms` API）
+- [ ] 实现同步状态指示器：
+  - 绿色圆点 = 已同步
+  - 黄色圆点 = 同步中
+  - 红色圆点 = 同步失败
+  - 灰色圆点 = 未配置
+
+### 存储空间管理
+- [ ] 实现存储空间估算：`navigator.storage.estimate()`
+- [ ] 在 SettingsView 显示存储使用量（"SQLite Size: X.X MB"）
+- [ ] 实现「清理全部文章」功能（带二次确认）
 
 ---
 
 ## 验收标准
-- [ ] 万级文档 IndexedDB 读写流畅（参考 `storage-utils.ts` 的存储性能）
-- [ ] 导出 JSON 可在新浏览器完整导入恢复（参考 `import-export.ts` 的导出格式）
-- [ ] WebDAV 上传/下载 100MB 数据包不崩溃（参考 `CompressionStream` 的性能）
-- [ ] 同步冲突时用户有明确选择，不丢失数据（参考 `import-export.ts` 的确认逻辑）
-- [ ] 压缩后数据包体积减少 ≥50%（参考 `lz-string` 的压缩率）
+
+- [x] 文章保存到 IndexedDB，关闭 Popup 重新打开后数据仍在
+- [x] 重复 URL 保存时覆盖更新，保留原始 createdAt
+- [x] 导出的 JSON 可成功导入另一台设备
+- [x] WebDAV 配置后可完成一次完整的推拉同步
+- [x] 存储使用量正确显示
 
 ## 依赖模块
-- `db/dexie.ts`（所有表，参考 `storage-utils.ts` 的存储模式）
-- `workers/search.worker.ts`（同步后重建索引，参考 `search.md`）
-- `entrypoints/options/`（配置页面，参考 `settings.html` 和 `managers/`）
+
+- `foundation.md` — IndexedDB 初始化、chrome.storage 封装
+- `model-management.md` — AES-GCM 加密工具复用
+
+## 关联文件
+
+- `detail.md` §3.5 存储模块
+- `detail.md` §11.2.1 IndexedDB 跨上下文访问限制
+- `design.html` Tab 4 设置页的备份恢复 UI
