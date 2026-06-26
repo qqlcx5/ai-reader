@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
   spawn-sync: true
-  vue-demi: set this to true or false
+  vue-demi: true
