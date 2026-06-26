@@ -1,110 +1,108 @@
-# 总体进度 (Project Progress)
+# progress — 总体进度
 
-## 项目：AI Reader Chrome Extension MV3
-
----
-
-## 模块进度总览
-
-| 模块 | 状态 | 优先级 | 依赖 |
-|------|------|--------|------|
-| [底座：Chrome Extension MV3 框架搭建](./foundation.md) | ⬜ 未开始 | P0 | 无 |
-| [捕获层：网页解析与数据提取](./perception.md) | ⬜ 未开始 | P0 | 底座 |
-| [处理层：多模型配置管理](./model-management.md) | ⬜ 未开始 | P0 | 底座 |
-| [处理层：沉浸式侧边栏对话](./chat-with-doc.md) | ⬜ 未开始 | P0 | 底座、模型管理、捕获层 |
-| [记忆层：本地存储与同步](./persistence.md) | ⬜ 未开始 | P1 | 底座、捕获层 |
-| [唤醒层：本地全文检索](./search.md) | ⬜ 未开始 | P1 | 底座、捕获层 |
-| [唤醒层：历史时间轴](./timeline.md) | ⬜ 未开始 | P2 | 底座、捕获层 |
+> 基于 doc/detail.md v0.2 详细设计
+> 技术栈：WXT + Vue 3 + UnoCSS + Pinia + Dexie + defuddle + marked + DOMPurify + MiniSearch
 
 ---
 
-## 模块详细检查清单
+## 模块依赖关系
 
-### 底座：Chrome Extension MV3 框架搭建 (Foundation)
-- [ ] 项目初始化（WXT + Vue + TS）
-- [ ] 目录结构初始化
-- [ ] 样式系统搭建（UnoCSS + Reka UI）
-- [ ] 状态管理（Pinia + chrome.storage.local）
-- [ ] 跨上下文通信封装
-- [ ] 图标与资源
-- [ ] 开发工具配置（Vitest + ESLint + Prettier）
-- [ ] 构建与打包
+```
+domain (无依赖)
+  ├── storage (依赖 domain)
+  ├── content-script (依赖 domain)
+  ├── messaging (依赖 domain)
+  │     ├── popup-shell (依赖 messaging, storage)
+  │     │     ├── capture-view (依赖 popup-shell, messaging, storage)
+  │     │     ├── library-view (依赖 popup-shell, storage)
+  │     │     ├── reader-view (依赖 popup-shell, storage)
+  │     │     ├── delete (依赖 popup-shell, storage)
+  │     │     └── settings (依赖 popup-shell, storage)
+  │     └── toast (依赖 popup-shell, settings)
+```
 
-### 捕获层：网页解析与数据提取 (Perception)
-- [ ] Content Script 入口搭建
-- [ ] defuddle 集成与正文提取
-- [ ] 元数据自动提取
-- [ ] 捕获结果标准化
-- [ ] 跨上下文通信
-- [ ] 持久化到 IndexedDB
-- [ ] 通知搜索索引更新
-- [ ] 打开 Side Panel 展示
+---
 
-### 处理层：多模型配置管理 (Model Management)
-- [ ] 模型配置数据层
-- [ ] Options 页面：模型配置 UI
-- [ ] API Key 安全存储
-- [ ] 测试连接（Ping）
-- [ ] 系统提示词配置
-- [ ] 模型选择器组件
+## 模块状态
 
-### 处理层：沉浸式侧边栏对话 (Chat with Doc)
-- [ ] Chat 页面 UI 搭建
-- [ ] Prompt 构建器
-- [ ] SSE 流式通信
-- [ ] 流式消息渲染
-- [ ] Markdown 渲染器
-- [ ] Chat 历史管理
-- [ ] 对话状态管理
-
-### 记忆层：本地存储与同步 (Persistence)
-- [ ] IndexedDB 数据层搭建
-- [ ] 大字段压缩（rawHtml）
-- [ ] 手动导出
-- [ ] 手动导入
-- [ ] WebDAV 配置
-- [ ] WebDAV 上传（整包覆盖）
-- [ ] WebDAV 拉取（整包覆盖）
-- [ ] 同步状态管理
-
-### 唤醒层：本地全文检索 (Search)
-- [ ] MiniSearch 集成
-- [ ] Web Worker 搭建
-- [ ] 主线程搜索客户端
-- [ ] 搜索页面 UI
-- [ ] 索引增量更新机制
-- [ ] 搜索降级策略
-
-### 唤醒层：历史时间轴 (Timeline)
-- [ ] 时间轴数据聚合
-- [ ] 时间轴页面 UI
-- [ ] 日期详情弹窗
-- [ ] 统计信息展示
-- [ ] 数据刷新机制
+| 模块 | 文件 | 优先级 | 状态 |
+|---|---|---|---|
+| domain | [domain.md](domain.md) | P0 | - [x] 🔄 进行中 |
+| storage | [storage.md](storage.md) | P0 | - [x] 🔄 进行中 |
+| content-script | [content-script.md](content-script.md) | P0 | - [ ] 未开始 |
+| messaging | [messaging.md](messaging.md) | P0 | - [ ] 未开始 |
+| popup-shell | [popup-shell.md](popup-shell.md) | P0 | - [ ] 未开始 |
+| capture-view | [capture-view.md](capture-view.md) | P0 | - [ ] 未开始 |
+| library-view | [library-view.md](library-view.md) | P0 | - [ ] 未开始 |
+| reader-view | [reader-view.md](reader-view.md) | P1 | - [ ] 未开始 |
+| delete | [delete.md](delete.md) | P1 | - [ ] 未开始 |
+| settings | [settings.md](settings.md) | P1 | - [ ] 未开始 |
+| toast | [toast.md](toast.md) | P1 | - [ ] 未开始 |
 
 ---
 
 ## 里程碑
 
-### Milestone 1：MVP 可运行（P0 完成）
-- [ ] 底座搭建完成
-- [ ] 可捕获网页并展示
-- [ ] 可配置模型并对话
-- [ ] 数据持久化到 IndexedDB
+### Milestone 1 — MVP 采集闭环
 
-### Milestone 2：功能完整（P0 + P1 完成）
-- [ ] 搜索功能可用
-- [ ] WebDAV 同步可用
-- [ ] 导入导出可用
+> 目标：用户可在任意网页提取正文并保存到本地
 
-### Milestone 3：体验优化（全部完成）
-- [ ] 时间轴可用
-- [ ] 性能优化（万级文档）
-- [ ] 错误处理完善
-- [ ] 打包发布
+- [ ] domain
+- [ ] storage
+- [ ] content-script
+- [ ] messaging
+- [ ] popup-shell
+- [ ] capture-view（核心：提取 → 保存 → 显示）
+- [ ] toast（基础：success/error）
+
+### Milestone 2 — 文章管理
+
+> 目标：文章库浏览、搜索、阅读、删除
+
+- [ ] library-view
+- [ ] reader-view
+- [ ] delete
+- [ ] capture-view 完善（RecentSaves、复制、预览）
+
+### Milestone 3 — 设置与完善
+
+> 目标：设置持久化、交互细节打磨
+
+- [ ] settings
+- [ ] toast 完善（info 类型、静默模式）
+- [ ] reader-view 完善（代码高亮、frontmatter 设置联动）
+
+### Milestone 4 — 测试与打包
+
+> 目标：Chrome Web Store 可发布
+
+- [ ] 单元测试覆盖 domain、storage、content-script
+- [ ] 组件测试覆盖所有 View
+- [ ] Manifest V3 打包验证
+- [ ] Content Script bundle 体积审计（< 50KB gzip）
+- [ ] Chrome Web Store 提交准备（图标、截图、描述）
+
+---
+
+## 已有代码状态
+
+| 部件 | 状态 | 说明 |
+|---|---|---|
+| entrypoints/sidepanel/ | ✅ 已实现 | UI 壳完整，使用 demo data |
+| entrypoints/background.ts | 🔶 最小实现 | 仅 sidePanel 行为 |
+| entrypoints/content.ts | ❌ 桩代码 | WXT 模板，仅 console.log |
+| components/views/ | ✅ 已实现 | 四个 View 的 UI 已完成，需接入真实数据 |
+| components/common/ | ✅ 已实现 | ArticleItem, Favicon, SectionHead, SourceInfo, Toast, ConfirmModal |
+| components/layout/ | ✅ 已实现 | TopBar, BottomNav |
+| Pinia stores | ❌ 未创建 | 需新建 article.store 和 settings.store |
+| IndexedDB | ❌ 未创建 | 需新建 Dexie 实例和 Repository |
+| messaging | ❌ 未创建 | 需新建跨上下文消息通道 |
+| defuddle 接入 | ❌ 未接入 | content.ts 无提取逻辑 |
+| marked + DOMPurify | ❌ 未接入 | reader-view 使用自写简单 parser |
 
 ---
 
 ## 最近更新
 
+- 2026-06-26: 基于 detail.md v0.2 技术评审重构任务列表（PageMind Popup 架构）
 - 2026-06-25: 初始化任务列表

@@ -1,11 +1,11 @@
-下面是基于当前设计稿整理出的「浏览器插件详细设计文档 v0.1」。我会把不确定边界单独列为「待确认问题」，避免自行假设。
+下面是基于设计稿和技术评审整理的「浏览器插件详细设计文档 v0.2」。技术评审部分参考了 obsidian-clipper 项目的工程实践。
 
 **详细设计文档**
 
-- 产品形态：浏览器插件 Popup 内的轻量阅读采集工具
+- 产品形态：浏览器插件 SidePanel 内的轻量阅读采集工具
 - 视觉风格：Linear 的信息密度与克制边框 + Apple 的浅色玻璃感、圆角、柔和反馈
-- 核心闭环：检测当前页 → defuddle 提取正文 → `createMarkdownContent()` 生成 Markdown → IndexedDB 保存 → 文章库展示 → 阅读详情 → 删除
-- 设计原则：Popup 负责高频操作，不承载复杂管理；模块独立，方便后续开发、测试和替换
+- 核心闭环：检测当前页 → Content Script 中 defuddle 提取 + Markdown 生成 → SidePanel 中 IndexedDB 保存 → 文章库展示 → 阅读详情 → 删除
+- 设计原则：SidePanel 负责高频操作，不承载复杂管理；模块独立，方便后续开发、测试和替换
 
 ---
 
@@ -18,7 +18,7 @@
 | 当前页检测 | 识别当前 Tab 的标题、URL、站点名、作者、发布时间 |
 | 网页提取 | 使用 `defuddle` 从当前页面 DOM 中提取正文 |
 | Markdown 生成 | 调用 `createMarkdownContent()` 生成 Markdown 内容 |
-| 本地存储 | 使用 IndexedDB 保存文章、Markdown、元数据 |
+| 本地存储 | 使用 IndexedDB 保存文章，chrome.storage.sync 保存设置 |
 | 文章库 | 展示已保存文章，支持搜索 |
 | 阅读器 | 展示文章元数据与 Markdown 内容 |
 | 删除 | 支持删除文章，并有确认弹窗 |
@@ -45,7 +45,7 @@
 
 ```text
 Browser Extension
-├── Popup UI
+├── Popup UI（Vue，短生命周期）
 │   ├── 采集页
 │   ├── 文章库页
 │   ├── 阅读页
@@ -53,24 +53,22 @@ Browser Extension
 │
 ├── Background Service Worker
 │   ├── Tab 查询
-│   ├── 消息转发
-│   ├── 权限管理
-│   └── 跨上下文协调
+│   ├── 消息路由（Popup ↔ Content Script）
+│   ├── Content Script 注入管理
+│   └── 进度状态维护
 │
 ├── Content Script
-│   ├── 读取页面 DOM
-│   ├── 获取页面元数据
-│   └── 调用 defuddle 或返回 DOM 给处理层
+│   ├── 轻量部分（始终注入）：消息监听、DOM 读取、元数据提取
+│   ├── 按需加载部分：Shadow DOM 扁平化、defuddle 提取、Markdown 生成
+│   └── 返回结构化结果（不含原始 DOM）
 │
-├── Markdown Service
-│   ├── 标准化提取结果
-│   ├── 调用 createMarkdownContent()
-│   └── 输出 Markdown 字符串
+├── Markdown Service（Popup 侧）
+│   ├── frontmatter 生成
+│   └── 根据 includeFrontmatter 设置决定输出
 │
 ├── Storage Service
-│   ├── IndexedDB 初始化
-│   ├── 文章 CRUD
-│   ├── 设置读写
+│   ├── IndexedDB：文章 CRUD（仅 Popup 上下文）
+│   ├── chrome.storage.sync：设置读写（全上下文可达）
 │   └── 搜索查询
 │
 └── Shared Domain
@@ -351,7 +349,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 ### 流程状态
 
-设计稿中的三步 Pipeline：
+设计稿中的三步 Pipeline（前两步在 Content Script 中完成，第三步在 Popup 中完成）：
 
 ```text
 1. 网页提取
@@ -624,6 +622,7 @@ CaptureView
 interface CaptureViewState {
   page?: PageMetadata;
   draft?: ExtractResult;
+  draftExpiresAt?: number;       // 缓存过期时间（5 秒 TTL）
   captureStep: CaptureStep;
   error?: CaptureError;
 }
@@ -667,18 +666,24 @@ markdown
 
 ### 搜索方式
 
-第一阶段：
+```text
+Phase 1（MVP）：
+  全量加载文章元数据到内存（不含 markdown 正文）
+  对 title + siteName + author + excerpt 做 string.includes()
+  预计 < 5ms，即使 500 篇文章
 
-```ts
-string.includes(keyword)
+Phase 2（文章 > 500 篇）：
+  加载时只取 id + title + siteName + author + createdAt + excerpt
+  搜索时按需加载 markdown（延迟加载）
+  引入 Web Worker 避免阻塞 Popup UI
+
+Phase 3（文章 > 2000 篇）：
+  引入 MiniSearch（~10KB gzip，纯前端全文搜索）
+  支持分词、模糊匹配、权重排序
+  索引在 Background 中构建，通过消息传递结果
 ```
 
-后续可升级：
-
-- IndexedDB 索引优化
-- MiniSearch / FlexSearch
-- Web Worker 搜索
-- 分词搜索
+`ArticleRepository` 接口设计应预留 `searchArticles()` 的返回值可扩展性。
 
 ### ArticleListItem 数据
 
@@ -741,29 +746,21 @@ ReaderView
 ```text
 Markdown string
   ↓
-Markdown parser
+marked（解析为 HTML）
   ↓
-sanitize HTML
+DOMPurify（清理 XSS）
   ↓
-render
+innerHTML 渲染
 ```
-
-候选库：
-
-- `marked`
-- `markdown-it`
-- `micromark`
-- `sanitize-html`
-- `DOMPurify`
 
 ### 安全要求
 
 | 风险 | 处理 |
 |---|---|
-| XSS | Markdown 渲染后必须 sanitize |
+| XSS | Markdown 渲染后必须经 DOMPurify sanitize |
 | 外链 | 默认 `target="_blank"`，增加 `rel="noopener noreferrer"` |
-| 图片 | 限制协议为 `https:` / `http:` / `data:` 待确认 |
-| 脚本 | 禁止 `<script>`、事件属性、iframe |
+| 图片 | 仅允许 `https:` 和 `data:` 协议，禁止 `javascript:` 和 `file:` |
+| 脚本 | DOMPurify 默认禁止 `<script>`、事件属性、iframe |
 
 ### 用户动作
 
@@ -839,12 +836,15 @@ Toast 提示
 ### 接口
 
 ```ts
+// 通过 chrome.storage.sync 实现
 interface SettingsRepository {
   getSettings(): Promise<AppSettings>;
   updateSettings(partial: Partial<AppSettings>): Promise<AppSettings>;
   resetSettings(): Promise<AppSettings>;
 }
 ```
+
+使用 `chrome.storage.sync` API，数据自动同步到用户 Google 账号（如已登录）。所有扩展上下文均可直接读写，无需额外 polyfill。
 
 ### UI 行为
 
@@ -897,23 +897,17 @@ interface ToastState {
   ↓
 CaptureView 设置状态 extracting
   ↓
-ExtensionService.getActiveTab()
+Popup → Background → Content Script（EXTRACT_PAGE 消息）
   ↓
-ContentScript.extractReadableContent(tabId)
+Content Script：flattenShadowDom → defuddle → createMarkdownContent
   ↓
-返回 ExtractResult
+返回 { markdown, title, author, siteName, ... }
   ↓
-CaptureView 设置状态 markdown
-  ↓
-MarkdownService.createMarkdownContent(result)
-  ↓
-生成 Markdown
+CaptureView 设置状态 markdown（提取和 Markdown 已在 Content Script 中完成）
   ↓
 CaptureView 设置状态 saving
   ↓
-ArticleRepository.saveArticle(article)
-  ↓
-IndexedDB 写入成功
+ArticleRepository.saveArticle(article)  // IndexedDB 写入（< 100ms）
   ↓
 更新 activeArticleId
   ↓
@@ -922,27 +916,29 @@ IndexedDB 写入成功
 Toast success
 ```
 
+关键优化：提取和 Markdown 生成在 Content Script 中一次完成，Popup 仅接收最终结果并做存储写入。即使 Popup 在写入前意外关闭，用户重新打开后可重新触发保存（提取结果缓存 5 秒）。
+
 ### 4.2 仅预览流程
 
 ```text
 用户点击「仅预览」
   ↓
-检测是否已有 draft
+检测是否已有 draft（5 秒内缓存的提取结果）
   ↓
-如果没有，执行 extract + markdown
+如果没有，执行 Content Script 提取 + Markdown
   ↓
-生成临时 PreviewArticle
+生成临时 PreviewArticle（仅存 Popup 内存）
   ↓
 不写入 IndexedDB
   ↓
-切换 ReaderView
+切换 ReaderView（提供「保存」按钮）
 ```
 
-待确认点：
+预览策略：
 
-- 预览文章是否应该出现在文章库？
-- 预览文章关闭后是否丢弃？
-- 用户在预览页点击保存是否需要支持？
+- 预览文章不出现在文章库
+- 预览文章关闭后丢弃
+- 预览页提供「保存」按钮，点击后写入 IndexedDB 并跳转到文章库
 
 ### 4.3 删除流程
 
@@ -968,7 +964,7 @@ Toast success
 
 ```text
 src/
-├── popup/
+├── popup/                         # Popup UI（Vue）
 │   ├── PopupApp.vue
 │   ├── components/
 │   │   ├── PopupTopBar.vue
@@ -991,20 +987,22 @@ src/
 │       └── useSettings.ts
 │
 ├── extension/
-│   ├── background.ts
-│   ├── content.ts
-│   └── messaging.ts
+│   ├── background.ts              # Service Worker
+│   ├── content.ts                 # Content Script（轻量：消息监听、DOM 读取、元数据）
+│   ├── content-extract.ts         # 按需注入：defuddle 提取 + Markdown 生成
+│   ├── shadow-dom.ts              # Shadow DOM 扁平化工具
+│   └── messaging.ts               # 消息类型定义
 │
 ├── services/
-│   ├── extraction.service.ts
-│   ├── markdown.service.ts
-│   ├── article.repository.ts
-│   ├── settings.repository.ts
-│   └── browser.service.ts
+│   ├── extraction.service.ts      # 封装 Content Script 通信
+│   ├── markdown.service.ts        # frontmatter 生成（Popup 侧）
+│   ├── article.repository.ts      # IndexedDB 文章 CRUD
+│   ├── settings.repository.ts     # chrome.storage.sync 设置读写
+│   └── browser.service.ts         # Tab 查询、剪贴板等浏览器 API 封装
 │
 ├── db/
-│   ├── indexed-db.ts
-│   └── schema.ts
+│   ├── indexed-db.ts              # IndexedDB 初始化（仅 Popup 上下文）
+│   └── schema.ts                  # 数据结构定义
 │
 ├── domain/
 │   ├── article.ts
@@ -1099,8 +1097,6 @@ Chrome Extension 默认 CSP 较严格：
 
 ### 7.3 权限建议
 
-初步可能需要：
-
 ```json
 {
   "permissions": [
@@ -1108,17 +1104,25 @@ Chrome Extension 默认 CSP 较严格：
     "scripting",
     "storage"
   ],
-  "host_permissions": [
+  "optional_host_permissions": [
     "<all_urls>"
   ]
 }
 ```
 
-待确认：
+| 权限 | 用途 |
+|---|---|
+| `activeTab` | 用户点击插件图标后获取当前 Tab 信息（url、title）和注入 Content Script |
+| `scripting` | 通过 `chrome.scripting.executeScript` 注入 Content Script |
+| `storage` | 通过 `chrome.storage.sync` 读写设置数据 |
+| `optional_host_permissions` | 仅在需要时请求，降低 Chrome Web Store 审核被拒概率 |
 
-- 是否真的需要 `<all_urls>`
-- 是否允许用户按站点授权
-- 是否需要 `tabs` 权限读取 URL 和标题
+不需要的权限：
+
+| 权限 | 原因 |
+|---|---|
+| `<all_urls>`（必选） | `activeTab` + `scripting` 足以在用户主动操作时注入 Content Script |
+| `tabs` | 不需要监听 Tab 变化；每次打开 Popup 时主动查询当前 Tab 即可 |
 
 ---
 
@@ -1208,33 +1212,35 @@ type AppErrorCode =
 - 拆分 Card、Button、Toast、Modal、Switch
 - 完成设计稿还原
 
-### Milestone 2：本地数据层
+### Milestone 2：插件脚手架与通信
 
-- IndexedDB 初始化
-- ArticleRepository
-- SettingsRepository
+- webpack 多入口配置（popup / background / content 独立 bundle）
+- manifest.json（activeTab + scripting + storage）
+- Background Service Worker + 消息路由
+- Content Script 注入 + Ping 就绪检测 + Generation Counter
+- 消息通道验证（Popup ↔ Background ↔ Content Script）
+
+### Milestone 3：本地数据层
+
+- IndexedDB 初始化（仅 Popup 上下文）
+- chrome.storage.sync 设置读写
+- ArticleRepository / SettingsRepository
 - Mock 数据替换为真实数据
-
-### Milestone 3：插件通信
-
-- Background Service Worker
-- Content Script
-- activeTab 获取
-- 当前页元数据检测
 
 ### Milestone 4：正文提取与 Markdown
 
-- 接入 defuddle
-- 接入 `createMarkdownContent()`
-- 完成保存 Pipeline
-- 错误处理
+- defuddle 接入（Content Script，按需加载）
+- Shadow DOM 扁平化
+- createMarkdownContent() 在 Content Script 中调用
+- 完整 Pipeline：提取 → Markdown → 保存
+- 超时保护（8s）+ 同步回退 + 错误处理
 
 ### Milestone 5：交互完善
 
 - 搜索
 - 删除
-- 复制
-- 预览
+- 复制（剪贴板 API + 回退策略）
+- 预览（临时文章 + 保存按钮）
 - 设置保存
 - Toast 与空状态
 
@@ -1244,6 +1250,7 @@ type AppErrorCode =
 - 组件测试
 - 插件端到端测试
 - Manifest V3 打包验证
+- Bundle 体积审计（Content Script < 50KB gzip）
 
 ---
 
