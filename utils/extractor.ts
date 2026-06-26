@@ -3,9 +3,10 @@
 // ============================================================
 // Orchestrates the full extraction flow:
 //   1. Flatten Shadow DOM
-//   2. defuddle parse (async, 8s timeout → sync fallback)
-//   3. Markdown generation via createMarkdownContent
-//   4. Merge metadata from defuddle + custom extractMetadata
+//   2. Strip ad elements from DOM
+//   3. defuddle parse (async, 8s timeout → sync fallback)
+//   4. Markdown generation via createMarkdownContent
+//   5. Merge metadata from defuddle + custom extractMetadata
 //
 // On any fatal error, falls back to document.body.innerText.
 
@@ -13,6 +14,68 @@ import type { ExtractResult } from '@/domain'
 import type { DefuddleResponse } from 'defuddle'
 import { flattenShadowDom } from '@/utils/shadow-dom'
 import { extractMetadata, estimateReadingTime } from '@/utils/metadata-extractor'
+
+// ============================================================
+// Ad stripping selectors — remove common ad containers
+// ============================================================
+const AD_SELECTORS = [
+  '[class*="ad-"]', '[class*="_ad"]', '[class*="ads-"]',
+  '[id*="google_ads"]', '[id*="banner"]',
+  '[data-ad]', '[data-advertisement]',
+  'ins.adsbygoogle',
+  'iframe[src*="doubleclick"]', 'iframe[src*="googlesyndication"]',
+  'script', 'style', 'noscript',
+]
+
+const PROTECTED_SELECTORS = ['article', 'main', '[role="main"]']
+
+/**
+ * Remove common ad elements from a Document before content extraction.
+ *
+ * Safety constraints:
+ * - Only removes leaf nodes or obvious ad containers.
+ * - Does NOT touch elements inside <article>, <main>, or [role="main"].
+ * - Preserves elements with text length > 100 within protected containers.
+ * - Removes empty <p> and whitespace-only <p>.
+ */
+export function stripAds(doc: Document): void {
+  const protectedRoots = new Set<Element>()
+  for (const sel of PROTECTED_SELECTORS) {
+    doc.querySelectorAll(sel).forEach((el) => protectedRoots.add(el))
+  }
+
+  const isProtected = (el: Element): boolean => {
+    for (const root of protectedRoots) {
+      if (root.contains(el)) {
+        // Inside protected container — only remove if text is short (likely ad)
+        if ((el.textContent?.length ?? 0) > 100) return true
+      }
+    }
+    return false
+  }
+
+  for (const selector of AD_SELECTORS) {
+    try {
+      const elements = doc.querySelectorAll(selector)
+      elements.forEach((el) => {
+        if (!isProtected(el)) {
+          el.remove()
+        }
+      })
+    } catch {
+      // Invalid CSS selector — skip
+    }
+  }
+
+  // Remove empty <p> and whitespace-only <p> (including &nbsp;)
+  const paragraphs = doc.querySelectorAll('p')
+  paragraphs.forEach((p) => {
+    const text = p.textContent?.trim() ?? ''
+    if (text === '' || text === '\u00A0') {
+      p.remove()
+    }
+  })
+}
 
 // Extend ExtractResult with markdown field used by content script response
 export interface ExtractResponse extends ExtractResult {
@@ -35,7 +98,10 @@ export async function extractContent(
   // 1. Flatten shadow DOM so defuddle can see Web Component content
   await flattenShadowDom(doc)
 
-  // 2. Extract via defuddle (async first, sync fallback)
+  // 2. Strip ad elements before extraction
+  stripAds(doc)
+
+  // 3. Extract via defuddle (async first, sync fallback)
   try {
     const { default: Defuddle } = await import('defuddle')
     const { createMarkdownContent } = await import('defuddle/full')

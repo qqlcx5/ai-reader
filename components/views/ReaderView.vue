@@ -4,6 +4,7 @@ import { useArticleStore } from '@/stores/article.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import SourceInfo from '../common/SourceInfo.vue'
 import { renderMarkdown } from '@/utils/markdown-renderer'
+import { parseFrontmatter, renderFrontmatterCard, stripFrontmatter } from '@/utils/markdown.service'
 import { AppError } from '@/domain'
 import type { Article } from '@/domain'
 
@@ -58,14 +59,28 @@ function gridBorderBottom(i: number): boolean {
 
 function onCopy() {
   if (!props.article) return
-  try {
-    navigator.clipboard.writeText(props.article.markdown)
+  const text = props.article.markdown
+
+  // 1. Modern Clipboard API
+  navigator.clipboard.writeText(text).then(() => {
     emit('showToast', 'Markdown 已复制', '可以粘贴到 Notion、Obsidian')
     emit('copy')
-  } catch (err) {
-    emit('showError', '当前环境不允许复制')
-    throw new AppError('CLIPBOARD_FAILED', '当前环境不允许复制', err as Error)
-  }
+  }).catch(() => {
+    // 2. execCommand fallback
+    try {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.cssText = 'position:fixed;left:-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      textarea.remove()
+      emit('showToast', 'Markdown 已复制', '可以粘贴到 Notion、Obsidian')
+      emit('copy')
+    } catch {
+      emit('showError', '当前环境不允许复制')
+    }
+  })
 }
 
 function onDeleteClick() {
@@ -88,7 +103,11 @@ async function onSave() {
 
 function renderedMarkdown(md: string): string {
   try {
-    return renderMarkdown(md)
+    // Parse frontmatter → card, strip → render body
+    const fm = parseFrontmatter(md)
+    const card = renderFrontmatterCard(fm)
+    const body = renderMarkdown(stripFrontmatter(md))
+    return card + body
   } catch (err) {
     emit('showError', 'Markdown 渲染失败')
     throw new AppError('MARKDOWN_FAILED', 'Markdown 渲染失败', err as Error)

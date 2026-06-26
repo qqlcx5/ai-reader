@@ -55,7 +55,7 @@ vi.mock('@/utils/shadow-dom', () => ({
   flattenShadowDom: vi.fn(() => Promise.resolve()),
 }))
 
-import { extractContent } from './extractor'
+import { extractContent, stripAds } from './extractor'
 
 function createMockDoc(opts?: {
   title?: string
@@ -145,5 +145,107 @@ describe('extractContent (fallback path)', () => {
     expect(result.title).toBe('Simple Page')
     expect(result.markdown).toBeTruthy()
     expect(result.markdown).toContain('Mock Markdown')
+  })
+})
+
+// ============================================================
+// Ad stripping tests
+// ============================================================
+describe('stripAds', () => {
+  it('removes elements matching ad selectors', () => {
+    const { JSDOM } = require('jsdom')
+    const html = `<!DOCTYPE html><html><head></head><body>
+      <div class="ad-banner">Buy now!</div>
+      <div class="ads-sidebar">Sponsored</div>
+      <div class="normal-content">Real article text.</div>
+      <ins class="adsbygoogle">Ad</ins>
+      <div id="banner-728">Banner ad</div>
+      <div data-ad="true">Data ad</div>
+    </body></html>`
+    const dom = new JSDOM(html, { url: 'https://example.com' })
+    const doc = dom.window.document
+
+    stripAds(doc)
+
+    expect(doc.querySelector('.ad-banner')).toBeNull()
+    expect(doc.querySelector('.ads-sidebar')).toBeNull()
+    expect(doc.querySelector('ins.adsbygoogle')).toBeNull()
+    expect(doc.querySelector('#banner-728')).toBeNull()
+    expect(doc.querySelector('[data-ad="true"]')).toBeNull()
+    // normal content preserved
+    expect(doc.querySelector('.normal-content')).not.toBeNull()
+    expect(doc.querySelector('.normal-content')!.textContent).toContain('Real article text')
+  })
+
+  it('preserves elements inside protected containers when text > 100 chars', () => {
+    const { JSDOM } = require('jsdom')
+    const longText = 'A'.repeat(150)
+    const html = `<!DOCTYPE html><html><head></head><body>
+      <article>
+        <div class="ad-container">${longText}</div>
+      </article>
+    </body></html>`
+    const dom = new JSDOM(html)
+    const doc = dom.window.document
+
+    stripAds(doc)
+
+    const preserved = doc.querySelector('article .ad-container')
+    expect(preserved).not.toBeNull()
+    expect(preserved!.textContent).toContain('A'.repeat(150))
+  })
+
+  it('removes ad elements inside protected containers when text is short', () => {
+    const { JSDOM } = require('jsdom')
+    const html = `<!DOCTYPE html><html><head></head><body>
+      <article>
+        <div class="ad-banner">Ad</div>
+        <p>Real paragraph inside article.</p>
+      </article>
+    </body></html>`
+    const dom = new JSDOM(html)
+    const doc = dom.window.document
+
+    stripAds(doc)
+
+    expect(doc.querySelector('article .ad-banner')).toBeNull()
+    expect(doc.querySelector('article p')).not.toBeNull()
+  })
+
+  it('removes empty and nbsp-only paragraphs', () => {
+    const { JSDOM } = require('jsdom')
+    const html = `<!DOCTYPE html><html><head></head><body>
+      <p>&nbsp;</p>
+      <p>  </p>
+      <p></p>
+      <p>Real content.</p>
+    </body></html>`
+    const dom = new JSDOM(html)
+    const doc = dom.window.document
+
+    stripAds(doc)
+
+    const remaining = doc.querySelectorAll('p')
+    expect(remaining.length).toBe(1)
+    expect(remaining[0].textContent).toContain('Real content')
+  })
+
+  it('removes script and style tags', () => {
+    const { JSDOM } = require('jsdom')
+    const html = `<!DOCTYPE html><html><head></head><body>
+      <script>alert('ad')</script>
+      <style>.ad { display: block; }</style>
+      <noscript>Fallback ad</noscript>
+      <p>Normal text.</p>
+    </body></html>`
+    const dom = new JSDOM(html)
+    const doc = dom.window.document
+
+    stripAds(doc)
+
+    expect(doc.querySelector('script')).toBeNull()
+    expect(doc.querySelector('style')).toBeNull()
+    expect(doc.querySelector('noscript')).toBeNull()
+    expect(doc.querySelector('p')).not.toBeNull()
   })
 })
