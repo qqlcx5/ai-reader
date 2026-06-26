@@ -1,3 +1,27 @@
 {
-  "extends": "./.wxt/tsconfig.json"
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@core/*": ["./core/*"],
+      "@db/*": ["./db/*"],
+      "@shared/*": ["./shared/*"],
+      "@components/*": ["./components/*"],
+      "@styles/*": ["./styles/*"]
+    },
+    "types": ["wxt/vite-builder"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", "**/*.vue"],
+  "exclude": ["node_modules", "dist", ".output"]
 }
