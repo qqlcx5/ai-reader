@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import { X, AlertTriangle, Send } from 'lucide-vue-next';
+import { X, AlertTriangle, Send } from '@lucide/vue';
 import { formatCost } from '@/utils/cost';
 
 const props = defineProps<{

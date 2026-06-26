@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, onErrorCaptured } from 'vue';
-import { AlertCircle, RotateCcw } from 'lucide-vue-next';
+import { AlertCircle, RotateCcw } from '@lucide/vue';
 
 const error = ref<Error | null>(null);
 

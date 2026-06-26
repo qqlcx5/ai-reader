@@ -133,7 +133,7 @@ Step 7: Timeline       (P2, 依赖 Foundation + Perception)
 
 **A. 项目初始化**
 1. 用 `npm create wxt@latest` 初始化 WXT + Vue + TS 项目
-2. 安装所有依赖：`vue`, `vue-router`, `pinia`, `pinia-plugin-persistedstate`, `dexie`, `defuddle`, `dayjs`, `lz-string`, `minisearch`, `eventsource-parser`, `highlight.js`, `dompurify`, `lucide-vue-next`
+2. 安装所有依赖：`vue`, `vue-router`, `pinia`, `pinia-plugin-persistedstate`, `dexie`, `defuddle`, `dayjs`, `lz-string`, `minisearch`, `eventsource-parser`, `highlight.js`, `dompurify`, `@lucide/vue`
 3. 安装开发依赖：`vitest`, `jsdom`, `@wxt-dev/module-vue`, `unocss`, `@unocss/preset-uno`, `eslint`, `prettier`
 4. 配置 `wxt.config.ts`：
    - `modules: ['@wxt-dev/module-vue']`

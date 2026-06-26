@@ -74,13 +74,13 @@ export const TOAST_DURATION = 3000;
  */
 export const DEFAULT_MODELS = [
   {
-    id: 'gpt-4o',
-    name: 'GPT-4o',
+    id: 'mimo-v2.5-pro',
+    name: 'mimo-v2.5-pro',
     provider: 'openai-compatible' as const,
     enabled: true,
-    apiKey: '',
-    baseUrl: 'https://api.openai.com/v1',
-    model: 'gpt-4o',
+    apiKey: 'sk-0FeSEKHeEIobWQYM3arOlSmfd8zbbPE1bhx6gofle9deZxkx',
+    baseUrl: 'http://66.154.117.189:3000/v1',
+    model: 'mimo-v2.5-pro',
     isDefault: true,
   },
   {

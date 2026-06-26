@@ -2,14 +2,10 @@
   <div class="space-y-4">
     <!-- Enable + status header -->
     <div class="flex items-center justify-between">
-      <label class="flex items-center gap-2">
-        <input
-          v-model="syncStore.config.enabled"
-          type="checkbox"
-          class="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-        />
-        <span class="text-sm text-slate-700 dark:text-slate-300">启用 WebDAV 同步</span>
-      </label>
+      <BaseSwitch
+        v-model="syncStore.config.enabled"
+        label="启用 WebDAV 同步"
+      />
       <span
         v-if="syncStore.lastSyncAt"
         class="text-xs text-slate-500 dark:text-slate-400"
@@ -21,62 +17,37 @@
     </div>
 
     <!-- URL -->
-    <div>
-      <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">
-        WebDAV URL
-      </label>
-      <input
-        v-model="syncStore.config.url"
-        type="text"
-        class="input"
-        placeholder="https://example.com/dav/"
-        autocomplete="off"
-        spellcheck="false"
-      />
-    </div>
+    <BaseInput
+      v-model="syncStore.config.url"
+      label="WebDAV URL"
+      placeholder="https://example.com/dav/"
+    />
 
     <!-- Username / Password -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">用户名</label>
-        <input
-          v-model="syncStore.config.username"
-          type="text"
-          class="input"
-          autocomplete="username"
-        />
-      </div>
-      <div>
-        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">密码</label>
-        <input
-          v-model="syncStore.config.password"
-          type="password"
-          class="input"
-          autocomplete="current-password"
-        />
-      </div>
+      <BaseInput
+        v-model="syncStore.config.username"
+        label="用户名"
+      />
+      <BaseInput
+        v-model="syncStore.config.password"
+        label="密码"
+        type="password"
+      />
     </div>
 
     <!-- Remote dir / interval -->
     <div class="grid grid-cols-2 gap-4">
+      <BaseInput
+        v-model="syncStore.config.remoteDir"
+        label="远端目录"
+        placeholder="AIReader_Backup"
+      />
       <div>
-        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">远端目录</label>
-        <input
-          v-model="syncStore.config.remoteDir"
-          type="text"
-          class="input"
-          placeholder="AIReader_Backup"
-        />
-      </div>
-      <div>
-        <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">同步间隔（分钟）</label>
-        <input
-          v-model.number="syncStore.config.syncInterval"
+        <BaseInput
+          v-model="syncIntervalStr"
+          label="同步间隔（分钟）"
           type="number"
-          min="0"
-          step="5"
-          class="input"
-          placeholder="30"
         />
         <p class="text-xs text-slate-400 mt-1">0 = 仅手动</p>
       </div>
@@ -84,27 +55,28 @@
 
     <!-- Sync direction buttons -->
     <div class="flex flex-wrap gap-3 pt-2">
-      <button
-        @click="onTestConnection"
+      <BaseButton
+        variant="secondary"
+        :loading="isTesting"
         :disabled="isTesting"
-        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
+        @click="onTestConnection"
       >
         {{ isTesting ? '测试中…' : '测试连接' }}
-      </button>
-      <button
-        @click="onSyncUp"
+      </BaseButton>
+      <BaseButton
+        variant="primary"
         :disabled="!syncStore.canSync"
-        class="px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors text-sm disabled:opacity-50"
+        @click="onSyncUp"
       >
         立即上传
-      </button>
-      <button
-        @click="onSyncDown"
+      </BaseButton>
+      <BaseButton
+        variant="secondary"
         :disabled="!syncStore.canSync"
-        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
+        @click="onSyncDown"
       >
         立即下载
-      </button>
+      </BaseButton>
     </div>
 
     <!-- Status / progress -->
@@ -128,25 +100,27 @@
 
     <!-- Divider + backup buttons (delegated to backup.service) -->
     <div class="flex flex-wrap gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-      <button
-        @click="onExport"
+      <BaseButton
+        variant="secondary"
+        :loading="isExporting"
         :disabled="isExporting"
-        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm disabled:opacity-50"
+        @click="onExport"
       >
         {{ isExporting ? '导出中…' : '导出备份' }}
-      </button>
-      <label
-        class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm cursor-pointer"
+      </BaseButton>
+      <BaseButton
+        variant="secondary"
+        @click="importInput?.click()"
       >
         导入备份
-        <input
-          ref="importInput"
-          type="file"
-          accept=".json,application/json"
-          class="hidden"
-          @change="onImport"
-        />
-      </label>
+      </BaseButton>
+      <input
+        ref="importInput"
+        type="file"
+        accept=".json,application/json"
+        class="hidden"
+        @change="onImport"
+      />
       <span
         v-if="exportMessage"
         class="text-sm self-center"
@@ -168,6 +142,7 @@ import {
   BackupValidationError,
 } from '@/core/persistence/backup.service'
 import { useSettingsStore } from '@/core/models/store'
+import { BaseButton, BaseInput, BaseSwitch } from '@/components/ui'
 
 const syncStore = useSyncStore()
 const settingsStore = useSettingsStore()
@@ -179,6 +154,13 @@ const isExporting = ref(false)
 const importInput = ref<HTMLInputElement | null>(null)
 const exportMessage = ref<string | null>(null)
 const exportError = ref(false)
+
+const syncIntervalStr = computed({
+  get: () => String(syncStore.config.syncInterval ?? 30),
+  set: (val: string) => {
+    syncStore.config.syncInterval = parseInt(val) || 0
+  },
+})
 
 onMounted(async () => {
   await Promise.all([syncStore.loadConfig(), settingsStore.loadSettings()])

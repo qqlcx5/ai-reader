@@ -6,15 +6,13 @@
     <section class="mb-6">
       <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">通用</h3>
       <div class="space-y-3">
-        <label class="flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
+        <div class="flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
           <span class="text-sm text-slate-700 dark:text-slate-300">显示浮动按钮</span>
-          <input
+          <BaseSwitch
             v-model="settings.showFloatingButton"
-            @change="saveSettings"
-            type="checkbox"
-            class="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            @update:model-value="saveSettings"
           />
-        </label>
+        </div>
 
         <label class="flex items-center justify-between p-3 rounded-lg bg-slate-100 dark:bg-slate-800">
           <span class="text-sm text-slate-700 dark:text-slate-300">暗色模式</span>
@@ -57,15 +55,17 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <button
-            @click="onExport"
+          <BaseButton
+            variant="secondary"
+            size="sm"
             :disabled="isExporting"
-            class="px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+            :loading="isExporting"
+            @click="onExport"
           >
             {{ isExporting ? '导出中…' : '导出 JSON' }}
-          </button>
+          </BaseButton>
           <label
-            class="px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            class="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs rounded-lg font-medium bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition-colors cursor-pointer"
           >
             导入 JSON
             <input
@@ -95,13 +95,15 @@
         <p class="text-xs text-slate-600 dark:text-slate-400">
           清空所有本地数据（文档 / 对话 / 设置）。操作不可撤销。
         </p>
-        <button
-          @click="onClearAll"
+        <BaseButton
+          variant="danger"
+          size="sm"
           :disabled="isClearing"
-          class="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+          :loading="isClearing"
+          @click="onClearAll"
         >
           {{ isClearing ? '清空中…' : '清空所有数据' }}
-        </button>
+        </BaseButton>
       </div>
     </section>
 
@@ -109,12 +111,13 @@
     <section class="mb-6">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400">模型配置</h3>
-        <button
+        <BaseButton
+          variant="primary"
+          size="sm"
           @click="showAddModel = true"
-          class="px-3 py-1 text-sm bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
         >
           添加
-        </button>
+        </BaseButton>
       </div>
 
       <div class="space-y-2">
@@ -130,19 +133,21 @@
             </div>
             <div class="flex items-center gap-2">
               <span v-if="model.isDefault" class="px-2 py-1 text-xs rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">默认</span>
-              <button
-                @click="setDefault(model.id)"
+              <BaseButton
+                variant="secondary"
+                size="sm"
                 :disabled="model.isDefault"
-                class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50"
+                @click="setDefault(model.id)"
               >
                 设默认
-              </button>
-              <button
+              </BaseButton>
+              <BaseButton
+                variant="danger"
+                size="sm"
                 @click="deleteModel(model.id)"
-                class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200"
               >
                 删除
-              </button>
+              </BaseButton>
             </div>
           </div>
         </div>
@@ -150,61 +155,40 @@
     </section>
 
     <!-- Add Model Modal -->
-    <div v-if="showAddModel" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="w-full max-w-md bg-white dark:bg-slate-800 rounded-xl p-4 max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">添加模型</h3>
+    <BaseDialog v-model:open="showAddModel" title="添加模型">
+      <div class="space-y-3">
+        <BaseInput v-model="newModel.name" label="名称" placeholder="例如：我的 OpenAI" />
 
-        <div class="space-y-3">
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">名称</label>
-            <input v-model="newModel.name" type="text" class="input" placeholder="例如：我的 OpenAI" />
-          </div>
-
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">提供商</label>
-            <select v-model="newModel.provider" class="input">
-              <option v-for="provider in settingsStore.builtinProviders" :key="provider.id" :value="provider.id">
-                {{ provider.name }}
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">模型</label>
-            <input v-model="newModel.model" type="text" class="input" placeholder="例如：gpt-4o-mini" />
-          </div>
-
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">Base URL</label>
-            <input v-model="newModel.baseUrl" type="text" class="input" placeholder="https://api.openai.com/v1" />
-          </div>
-
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">API Key</label>
-            <input v-model="newModel.apiKey" type="password" class="input" placeholder="sk-..." />
-          </div>
-
-          <div>
-            <label class="block text-sm text-slate-600 dark:text-slate-400 mb-1">Temperature</label>
-            <input v-model.number="newModel.temperature" type="number" min="0" max="2" step="0.1" class="input" />
-          </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">提供商</label>
+          <select v-model="newModel.provider" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500/20 focus:border-brand-500">
+            <option v-for="provider in settingsStore.builtinProviders" :key="provider.id" :value="provider.id">
+              {{ provider.name }}
+            </option>
+          </select>
         </div>
 
-        <div class="flex justify-end gap-2 mt-6">
-          <button @click="showAddModel = false" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-            取消
-          </button>
-          <button @click="addModel" class="px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors">
-            保存
-          </button>
-        </div>
+        <BaseInput v-model="newModel.model" label="模型" placeholder="例如：gpt-4o-mini" />
+        <BaseInput v-model="newModel.baseUrl" label="Base URL" placeholder="https://api.openai.com/v1" />
+        <BaseInput v-model="newModel.apiKey" label="API Key" type="password" placeholder="sk-..." />
+        <BaseInput v-model="temperatureStr" label="Temperature" type="number" />
       </div>
-    </div>
+
+      <div class="flex justify-end gap-2 mt-6">
+        <BaseButton variant="secondary" @click="showAddModel = false">
+          取消
+        </BaseButton>
+        <BaseButton variant="primary" @click="addModel">
+          保存
+        </BaseButton>
+      </div>
+    </BaseDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { BaseButton, BaseSwitch, BaseDialog, BaseInput } from '@/components/ui'
 import { useSettingsStore } from '@/core/models/store'
 import { settingsService } from '@/core/persistence/settings.service'
 import {
@@ -235,6 +219,11 @@ const newModel = reactive<Partial<ModelConfig>>({
   apiKey: '',
   temperature: 0.7,
   enabled: true,
+})
+
+const temperatureStr = computed({
+  get: () => String(newModel.temperature ?? 0.7),
+  set: (v: string) => { newModel.temperature = Number(v) || 0.7 },
 })
 
 const storageStats = ref<TimelineStats>({

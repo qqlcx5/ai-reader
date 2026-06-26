@@ -3,23 +3,23 @@
     <!-- Search input + status -->
     <div class="mb-3">
       <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-        <input
+        <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
+        <BaseInput
           v-model="searchQuery"
-          @input="onInput"
-          @keyup.enter="performSearch"
-          type="text"
           placeholder="搜索文档..."
-          class="w-full pl-10 pr-10 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          class="[&_input]:pl-10 [&_input]:pr-10"
+          @keyup.enter="performSearch"
         />
-        <button
+        <BaseButton
           v-if="searchQuery"
-          @click="clearSearch"
-          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          variant="ghost"
+          size="sm"
+          class="absolute right-1 top-1/2 -translate-y-1/2"
           aria-label="Clear"
+          @click="clearSearch"
         >
           <X class="w-4 h-4" />
-        </button>
+        </BaseButton>
       </div>
       <div class="mt-1.5 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
         <span data-testid="index-status">
@@ -45,14 +45,16 @@
     <div v-if="searchStore.searchHistory.length > 0 && !searchQuery" class="mb-4">
       <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">最近搜索</h3>
       <div class="flex flex-wrap gap-2">
-        <button
+        <BaseButton
           v-for="query in searchStore.searchHistory"
           :key="query"
+          variant="secondary"
+          size="sm"
+          class="rounded-full"
           @click="searchQuery = query; performSearch()"
-          class="px-3 py-1 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
         >
           {{ query }}
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -141,8 +143,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { Search, X, Loader2 } from '@lucide/vue'
+import { BaseInput, BaseButton } from '@/components/ui'
 import { useSearchStore } from '@/core/search/store'
 import type { SearchResult } from '@db/schema'
 import { useDocumentStore } from '@/core/documents/store'
@@ -160,9 +163,9 @@ onMounted(async () => {
   await searchStore.refreshIndexStatus()
 })
 
-function onInput() {
+watch(searchQuery, (val) => {
   if (debounceTimer) clearTimeout(debounceTimer)
-  const q = searchQuery.value.trim()
+  const q = val.trim()
   if (q.length === 0) {
     searchStore.clearSearch()
     return
@@ -171,7 +174,7 @@ function onInput() {
   debounceTimer = setTimeout(() => {
     void performSearch()
   }, 300)
-}
+})
 
 async function performSearch() {
   const q = searchQuery.value.trim()

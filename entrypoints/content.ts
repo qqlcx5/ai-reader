@@ -120,7 +120,7 @@ function mountFloatingButton() {
       color: white;
     }
     .ai-reader-fab__btn {
-      background: linear-gradient(135deg, #0ea5e9, #2563eb);
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
     }
     .ai-reader-fab__close {
       background: rgba(15, 23, 42, 0.6);

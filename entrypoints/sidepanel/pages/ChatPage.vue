@@ -14,12 +14,13 @@
     >
       <div class="p-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
         <span class="text-sm font-medium text-slate-700 dark:text-slate-200">会话历史</span>
-        <button
-          class="text-xs text-brand-500 hover:text-brand-600"
+        <BaseButton
+          variant="ghost"
+          size="sm"
           @click="newSession"
         >
           + 新建
-        </button>
+        </BaseButton>
       </div>
       <div class="flex-1 overflow-y-auto">
         <div
@@ -28,20 +29,23 @@
         >
           还没有会话
         </div>
-        <button
+        <BaseButton
           v-for="s in chatStore.sessions"
           :key="s.id"
-          class="w-full text-left p-3 text-sm border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
-          :class="s.id === chatStore.currentSessionId ? 'bg-brand-50 dark:bg-brand-900/30' : ''"
+          variant="ghost"
+          class="w-full text-left p-3 text-sm border-b border-slate-100 dark:border-slate-700 justify-start rounded-none"
+          :class="s.id === chatStore.currentSessionId ? '!bg-brand-50 dark:!bg-brand-900/30' : ''"
           @click="selectSession(s.id)"
         >
-          <div class="font-medium text-slate-800 dark:text-slate-100 truncate">
-            {{ sessionTitle(s) }}
+          <div class="w-full">
+            <div class="font-medium text-slate-800 dark:text-slate-100 truncate">
+              {{ sessionTitle(s) }}
+            </div>
+            <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {{ s.messages.length }} 条消息 · {{ formatRelativeTime(s.updatedAt) }}
+            </div>
           </div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ s.messages.length }} 条消息 · {{ formatRelativeTime(s.updatedAt) }}
-          </div>
-        </button>
+        </BaseButton>
       </div>
     </aside>
 
@@ -51,13 +55,14 @@
       <div
         class="chat-page__topbar px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2"
       >
-        <button
-          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+        <BaseButton
+          variant="ghost"
+          size="sm"
           :title="showHistory ? '隐藏历史' : '显示历史'"
           @click="showHistory = !showHistory"
         >
           <History class="w-4 h-4" />
-        </button>
+        </BaseButton>
 
         <ModelSelector
           v-if="modelStore.models.length > 0"
@@ -76,29 +81,33 @@
           <div v-else class="text-xs text-slate-400">未选择文档</div>
         </div>
 
-        <button
+        <BaseButton
           v-if="chatStore.currentSessionId"
-          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+          variant="ghost"
+          size="sm"
           title="新建会话"
           @click="newSession"
         >
           <Plus class="w-4 h-4" />
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           v-if="chatStore.currentSessionId"
-          class="p-1.5 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
+          variant="ghost"
+          size="sm"
+          class="!text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/30"
           title="删除当前会话"
           @click="deleteCurrentSession"
         >
           <Trash2 class="w-4 h-4" />
-        </button>
-        <button
-          class="p-1.5 rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+        </BaseButton>
+        <BaseButton
+          variant="ghost"
+          size="sm"
           :title="showSystemPrompt ? '隐藏系统提示词' : '查看系统提示词'"
           @click="showSystemPrompt = !showSystemPrompt"
         >
           <Eye class="w-4 h-4" />
-        </button>
+        </BaseButton>
       </div>
 
       <!-- Collapsible system prompt preview -->
@@ -151,38 +160,38 @@
         class="px-3 py-2 text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-t border-red-200 dark:border-red-800"
       >
         {{ chatStore.error }}
-        <button class="ml-2 underline" @click="chatStore.error = null">关闭</button>
+        <BaseButton variant="ghost" size="sm" class="ml-2 underline" @click="chatStore.error = null">关闭</BaseButton>
       </div>
 
       <!-- Composer -->
-      <div class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+      <div ref="composerWrapper" class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
         <div class="flex gap-2 items-end">
-          <textarea
-            ref="composerEl"
+          <BaseTextarea
             v-model="input"
             :placeholder="composerPlaceholder"
             :disabled="!chatStore.currentDocument"
-            :maxlength="MAX_MESSAGE_LENGTH"
-            rows="1"
-            class="chat-page__composer flex-1 resize-none max-h-32 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50"
-            @keydown="onComposerKeydown"
+            :rows="1"
+            class="flex-1 chat-page__composer"
             @input="autoGrow"
+            @keydown="onComposerKeydown"
           />
-          <button
+          <BaseButton
             v-if="chatStore.streaming"
-            class="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm"
+            variant="danger"
+            size="sm"
             @click="chatStore.abort()"
           >
             <Square class="w-4 h-4" />
-          </button>
-          <button
+          </BaseButton>
+          <BaseButton
             v-else
+            variant="primary"
+            size="sm"
             :disabled="!canSend"
-            class="px-3 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             @click="send"
           >
             <Send class="w-4 h-4" />
-          </button>
+          </BaseButton>
         </div>
         <div class="text-[10px] text-slate-400 mt-1 text-right">
           {{ input.length }} / {{ MAX_MESSAGE_LENGTH }}
@@ -197,6 +206,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { History, Plus, Trash2, Send, Square, Sparkles, Eye } from '@lucide/vue'
 import ModelSelector from '@components/ModelSelector.vue'
 import ChatMessageBubble from './ChatMessageBubble.vue'
+import { BaseButton, BaseTextarea } from '@/components/ui'
 import { useChatStore } from '@core/chat/store'
 import { useModelStore } from '@core/models/store'
 import type { CapturedDocument, ChatHistory } from '@db/schema'
@@ -210,7 +220,7 @@ const props = defineProps<{
 const chatStore = useChatStore()
 const modelStore = useModelStore()
 const input = ref('')
-const composerEl = ref<HTMLTextAreaElement | null>(null)
+const composerWrapper = ref<HTMLElement | null>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
 const showHistory = ref(true)
 const showSystemPrompt = ref(false)
@@ -235,8 +245,12 @@ const canSend = computed(
   () => !!input.value.trim() && input.value.length <= MAX_MESSAGE_LENGTH && !chatStore.streaming
 )
 
+function getComposerEl(): HTMLTextAreaElement | null {
+  return composerWrapper.value?.querySelector('textarea') ?? null
+}
+
 function autoGrow() {
-  const el = composerEl.value
+  const el = getComposerEl()
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 128)}px`
@@ -253,6 +267,7 @@ async function send() {
   if (!canSend.value) return
   const text = input.value.trim()
   input.value = ''
+  await nextTick()
   autoGrow()
   await chatStore.sendMessage(text)
 }
@@ -318,7 +333,7 @@ onMounted(async () => {
     await modelStore.loadAll()
   }
   await nextTick()
-  composerEl.value?.focus()
+  getComposerEl()?.focus()
 })
 
 onBeforeUnmount(() => {
@@ -333,8 +348,9 @@ onBeforeUnmount(() => {
 .chat-page__system-prompt summary::-webkit-details-marker {
   display: none;
 }
-.chat-page__composer {
+.chat-page__composer :deep(textarea) {
   font-family: inherit;
   line-height: 1.4;
+  max-height: 128px;
 }
 </style>

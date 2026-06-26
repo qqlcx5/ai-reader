@@ -16,44 +16,39 @@
           :title="`${captureCount} capture${captureCount === 1 ? '' : 's'}`"
         >{{ captureCount }}</span>
       </div>
-      <div class="flex items-center gap-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          @click="activeTab = tab.id"
-          class="p-2 rounded-lg transition-colors"
-          :class="activeTab === tab.id ? 'bg-brand-100 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'"
-          :title="tab.label"
-        >
-          <component :is="tab.icon" class="w-5 h-5" />
-        </button>
-      </div>
     </header>
 
     <!-- Content -->
-    <main class="flex-1 overflow-hidden">
-      <ChatPage v-if="activeTab === 'chat'" :current-document="currentDocument" />
-      <SearchPage v-else-if="activeTab === 'search'" />
-      <TimelinePage v-else-if="activeTab === 'timeline'" />
-      <SettingsPage v-else-if="activeTab === 'settings'" />
-    </main>
+    <BaseTabs v-model="activeTab" :tabs="tabs" class="flex-1 flex flex-col overflow-hidden">
+      <template #chat>
+        <ChatPage :current-document="currentDocument" />
+      </template>
+      <template #search>
+        <SearchPage />
+      </template>
+      <template #timeline>
+        <TimelinePage />
+      </template>
+      <template #settings>
+        <SettingsPage />
+      </template>
+    </BaseTabs>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { BookOpen, Search, Clock, Settings } from '@lucide/vue'
 import ChatPage from './pages/ChatPage.vue'
 import SearchPage from './pages/SearchPage.vue'
 import TimelinePage from './pages/TimelinePage.vue'
 import SettingsPage from './pages/SettingsPage.vue'
+import { BaseTabs } from '@/components/ui'
 import { useCaptureEvents } from './use-capture-events'
 
 const tabs = [
-  { id: 'chat', label: 'Chat', icon: BookOpen },
-  { id: 'search', label: 'Search', icon: Search },
-  { id: 'timeline', label: 'Timeline', icon: Clock },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'chat', label: 'Chat', icon: '📖' },
+  { id: 'search', label: 'Search', icon: '🔍' },
+  { id: 'timeline', label: 'Timeline', icon: '🕐' },
+  { id: 'settings', label: 'Settings', icon: '⚙' },
 ]
 
 const { activeTab, currentDocument, captureCount } = useCaptureEvents({ initialTab: 'chat' })

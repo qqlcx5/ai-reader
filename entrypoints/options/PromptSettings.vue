@@ -4,30 +4,30 @@
     <div>
       <div class="flex items-center justify-between mb-1">
         <label class="block text-sm text-slate-600 dark:text-slate-400">全局默认系统提示词</label>
-        <button
+        <BaseButton
+          variant="ghost"
+          size="sm"
           @click="onResetDefault"
-          class="text-xs text-brand-600 dark:text-brand-400 hover:underline"
         >
           重置为默认
-        </button>
+        </BaseButton>
       </div>
-      <textarea
+      <BaseTextarea
         v-model="defaultPromptDraft"
-        rows="6"
-        class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
+        :rows="6"
         placeholder="所有对话都会在 system 消息中使用这个提示词（除非被按模型配置覆盖）。"
-      ></textarea>
+      />
       <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
         这个提示词会作为默认的系统提示词，用于所有新的对话。
       </p>
       <div class="flex gap-2 mt-3">
-        <button
-          @click="onSaveDefault"
+        <BaseButton
+          variant="primary"
           :disabled="!defaultPromptDirty"
-          class="px-4 py-2 rounded-lg bg-brand-500 text-white hover:bg-brand-600 transition-colors text-sm disabled:opacity-50"
+          @click="onSaveDefault"
         >
           保存
-        </button>
+        </BaseButton>
       </div>
     </div>
 
@@ -70,28 +70,29 @@
               <div class="text-xs text-slate-500 truncate">{{ model.model }}</div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <button
+              <BaseButton
                 v-if="perModelDrafts[model.id] && perModelDrafts[model.id]!.length > 0"
+                variant="ghost"
+                size="sm"
                 @click="onClearModelPrompt(model.id)"
-                class="text-xs text-red-600 dark:text-red-400 hover:underline"
               >
                 清除
-              </button>
-              <button
-                @click="onSaveModelPrompt(model.id)"
+              </BaseButton>
+              <BaseButton
+                variant="primary"
+                size="sm"
                 :disabled="perModelDrafts[model.id] === modelStore.perModelPrompts[model.id] || perModelDrafts[model.id] === undefined"
-                class="text-xs px-3 py-1 rounded bg-brand-500 text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                @click="onSaveModelPrompt(model.id)"
               >
                 保存
-              </button>
+              </BaseButton>
             </div>
           </div>
-          <textarea
+          <BaseTextarea
             v-model="perModelDrafts[model.id]"
-            rows="3"
-            class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-y"
+            :rows="3"
             :placeholder="defaultSystemPrompt || '留空将使用全局默认系统提示词'"
-          ></textarea>
+          />
           <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
             留空则继承全局默认提示词。
           </p>
@@ -109,6 +110,7 @@
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useModelStore } from '@/core/models/store'
 import { DEFAULT_SYSTEM_PROMPT } from '@shared/constants'
+import { BaseButton, BaseTextarea } from '@/components/ui'
 
 interface TemplateVariable {
   token: string

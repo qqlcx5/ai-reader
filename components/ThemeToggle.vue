@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
-import { Sun, Moon, Monitor } from 'lucide-vue-next';
+import { Sun, Moon, Monitor } from '@lucide/vue';
 import { browser } from 'wxt/browser';
 
 const emit = defineEmits<{

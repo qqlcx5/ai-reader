@@ -14,30 +14,33 @@
     </div>
 
     <div class="space-y-2">
-      <button
-        @click="captureAndOpen"
+      <BaseButton
+        variant="primary"
         :disabled="isCapturing"
-        class="w-full px-4 py-2.5 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+        class="w-full"
+        @click="captureAndOpen"
       >
         <BookOpen class="w-4 h-4" />
         {{ isCapturing ? '捕获中...' : '捕获当前页面' }}
-      </button>
+      </BaseButton>
 
-      <button
+      <BaseButton
+        variant="secondary"
+        class="w-full"
         @click="openSidePanel"
-        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
       >
         <MessageSquare class="w-4 h-4" />
         打开侧边栏
-      </button>
+      </BaseButton>
 
-      <button
+      <BaseButton
+        variant="secondary"
+        class="w-full"
         @click="openOptions"
-        class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm font-medium flex items-center justify-center gap-2"
       >
         <Settings class="w-4 h-4" />
         设置
-      </button>
+      </BaseButton>
     </div>
 
     <div v-if="recentDocs.length > 0" class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
@@ -60,6 +63,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { BookOpen, MessageSquare, Settings } from '@lucide/vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import type { CapturedDocument } from '@/shared/types'
 
 const isCapturing = ref(false)
