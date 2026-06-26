@@ -54,20 +54,20 @@ const infoItems = (a: Article) => [
       <!-- Top actions -->
       <div class="flex items-center justify-between gap-2.5 mb-3.5">
         <button
-          class="h-32px px-3 rounded-12px border border-rgba(29,29,31,0.08) bg-white/72 text-#3f3f46 text-12px font-semibold cursor-pointer transition-all hover:bg-white hover:-translate-y-px"
+          class="h-32px px-3 rounded-12px border border-rgba(29,29,31,0.08) bg-white/72 text-#3f3f46 text-12px font-semibold cursor-pointer transition-all hover:bg-white hover:-translate-y-px inline-flex items-center"
           @click="emit('back')"
         >
           ← 文章库
         </button>
         <div class="flex gap-2">
           <button
-            class="h-32px px-2.5 rounded-12px border border-rgba(29,29,31,0.08) bg-white/72 text-#3f3f46 text-12px font-semibold cursor-pointer transition-all hover:bg-white hover:-translate-y-px"
+            class="h-32px px-2.5 rounded-12px border border-rgba(29,29,31,0.08) bg-white/72 text-#3f3f46 text-12px font-semibold cursor-pointer transition-all hover:bg-white hover:-translate-y-px inline-flex items-center"
             @click="emit('showToast', 'Markdown 已复制', '可以粘贴到 Notion、Obsidian')"
           >
             复制
           </button>
           <button
-            class="h-32px px-2.5 rounded-12px border text-#dc2626 text-12px font-semibold cursor-pointer transition-all hover:-translate-y-px"
+            class="h-32px px-2.5 rounded-12px border text-#dc2626 text-12px font-semibold cursor-pointer transition-all hover:-translate-y-px inline-flex items-center"
             style="border-color: rgba(220,38,38,0.15); background: rgba(254,242,242,0.76)"
             @click="emit('showToast', '文章已删除', article.title)"
           >

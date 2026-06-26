@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
+import { Label, Separator } from 'reka-ui'
 
 const props = defineProps<{
   pageTitle: string

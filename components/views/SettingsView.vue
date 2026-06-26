@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { SwitchRoot, SwitchThumb } from 'reka-ui'
+import { SwitchRoot, SwitchThumb, Separator, Label } from 'reka-ui'
 
 const emit = defineEmits<{
   showToast: [title: string, desc: string]
@@ -35,7 +35,7 @@ function exportObsidian() {
   <section class="p-4 space-y-5">
     <!-- BYOK 模型配置区 -->
     <div class="space-y-3">
-      <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+      <div class="flex items-center justify-between pb-1.5">
         <span class="text-xs font-bold text-gray-900 flex items-center">
           <svg class="w-4 h-4 mr-1.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
           LLM 模型服务商配置 (BYOK)
@@ -45,9 +45,10 @@ function exportObsidian() {
           AES-GCM 本地加密
         </span>
       </div>
+      <Separator class="h-px bg-gray-100" />
       <div class="space-y-2">
         <div>
-          <label class="text-[10px] font-bold text-gray-400 block mb-1">API ENDPOINT (Base URL)</label>
+          <Label class="text-[10px] font-bold text-gray-400 block mb-1">API ENDPOINT (Base URL)</Label>
           <input
             v-model="byokEndpoint"
             type="text"
@@ -55,7 +56,7 @@ function exportObsidian() {
           >
         </div>
         <div>
-          <label class="text-[10px] font-bold text-gray-400 block mb-1">API KEY (加密存储)</label>
+          <Label class="text-[10px] font-bold text-gray-400 block mb-1">API KEY (加密存储)</Label>
           <div class="relative flex items-center">
             <input
               v-model="byokKey"
@@ -77,7 +78,7 @@ function exportObsidian() {
 
     <!-- WebDAV 云端同步 -->
     <div class="space-y-3">
-      <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
+      <div class="flex items-center justify-between pb-1.5">
         <span class="text-xs font-bold text-gray-900 flex items-center">
           <svg class="w-4 h-4 mr-1.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
           WebDAV 每日静默同步 (坚果云/Nextcloud)
@@ -92,10 +93,11 @@ function exportObsidian() {
           />
         </SwitchRoot>
       </div>
+      <Separator class="h-px bg-gray-100" />
       <div class="space-y-2">
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-[10px] font-bold text-gray-400 block mb-1">WEBDAV 账号</label>
+            <Label class="text-[10px] font-bold text-gray-400 block mb-1">WEBDAV 账号</Label>
             <input
               v-model="webdavAccount"
               type="text"
@@ -104,7 +106,7 @@ function exportObsidian() {
             >
           </div>
           <div>
-            <label class="text-[10px] font-bold text-gray-400 block mb-1">同步校验密码</label>
+            <Label class="text-[10px] font-bold text-gray-400 block mb-1">同步校验密码</Label>
             <input
               v-model="webdavPassword"
               type="password"
@@ -117,7 +119,8 @@ function exportObsidian() {
 
     <!-- 本地存储持久化与流转 -->
     <div class="space-y-3">
-      <span class="text-xs font-bold text-gray-900 block border-b border-gray-100 pb-1.5">本地存储持久化与流转</span>
+      <span class="text-xs font-bold text-gray-900 block pb-1.5">本地存储持久化与流转</span>
+      <Separator class="h-px bg-gray-100" />
       <div class="grid grid-cols-2 gap-2">
         <button
           class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1.5 cursor-pointer border-0"

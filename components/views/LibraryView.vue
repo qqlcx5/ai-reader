@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import {
   DialogRoot, DialogPortal, DialogOverlay, DialogContent,
   DialogTitle, DialogDescription, DialogClose,
+  ToggleGroupRoot, ToggleGroupItem,
 } from 'reka-ui'
 import type { Article } from '../types'
 
@@ -77,24 +78,28 @@ function exportSingleObsidian() {
         >
       </div>
       <!-- 快捷标签过滤器 -->
-      <div class="flex items-center space-x-1.5 overflow-x-auto py-1" style="scrollbar-width: none">
-        <button
-          class="flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-md cursor-pointer border bg-transparent"
-          :class="activeTag === null ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'"
+      <ToggleGroupRoot
+        v-model="activeTag"
+        type="single"
+        class="flex items-center space-x-1.5 overflow-x-auto py-1"
+        style="scrollbar-width: none"
+      >
+        <ToggleGroupItem
+          value=""
+          class="flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold rounded-md cursor-pointer border bg-transparent data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 data-[state=on]:border-blue-100 bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200"
           @click="activeTag = null"
         >
           全部
-        </button>
-        <button
+        </ToggleGroupItem>
+        <ToggleGroupItem
           v-for="tag in allTags"
           :key="tag"
-          class="flex-shrink-0 px-2 py-0.5 text-[10px] font-medium rounded-md cursor-pointer border bg-transparent"
-          :class="activeTag === tag ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'"
-          @click="toggleTag(tag)"
+          :value="tag"
+          class="flex-shrink-0 px-2 py-0.5 text-[10px] font-medium rounded-md cursor-pointer border bg-transparent data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600 data-[state=on]:border-blue-100 bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200"
         >
           #{{ tag }}
-        </button>
-      </div>
+        </ToggleGroupItem>
+      </ToggleGroupRoot>
     </div>
 
     <!-- 时间轴列表 -->

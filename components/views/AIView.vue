@@ -311,7 +311,7 @@ onUnmounted(() => {
           @keydown.enter="triggerQA"
         >
         <button
-          class="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-lg transition cursor-pointer border-0"
+          class="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-lg transition cursor-pointer border-0 inline-flex items-center justify-center"
           @click="triggerQA"
         >
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -338,7 +338,7 @@ onUnmounted(() => {
         <span>停止生成</span>
       </button>
       <button
-        class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-xl text-xs transition cursor-pointer border-0"
+        class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-xl text-xs transition cursor-pointer border-0 inline-flex items-center justify-center"
         title="复制总结"
         @click="copyOutput"
       >

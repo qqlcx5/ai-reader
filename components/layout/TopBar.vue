@@ -37,7 +37,7 @@ const emit = defineEmits<{
         Local
       </div>
       <button
-        class="w-32px h-32px rounded-12px border border-#e4e4e7 bg-white/72 color-#3f3f46 cursor-pointer transition-all duration-150 hover:bg-white hover:border-#d4d4d8 hover:-translate-y-px"
+        class="w-32px h-32px rounded-12px border border-#e4e4e7 bg-white/72 color-#3f3f46 cursor-pointer transition-all duration-150 hover:bg-white hover:border-#d4d4d8 hover:-translate-y-px inline-flex items-center justify-center"
         title="设置"
         @click="emit('navigate', 'settings')"
       >
