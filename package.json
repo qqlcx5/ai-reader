@@ -1,8 +1,8 @@
 {
-  "name": "wxt-vue-starter",
-  "description": "manifest.json description",
+  "name": "readchat-clipper",
+  "description": "AI Reader Chrome Extension - 捕获网页、AI 对话、本地检索",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -38,6 +38,7 @@
     "@vitest/coverage-v8": "^4.1.9",
     "@vue/test-utils": "^2.4.11",
     "@wxt-dev/module-vue": "^1.0.3",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "reka-ui": "^2.10.0",
     "typescript": "^5.9.3",

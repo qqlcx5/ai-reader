@@ -10,7 +10,8 @@
       "Bash(node -e \"const u = require\\('unocss'\\); console.log\\(typeof u.presetTypography, typeof u.presetUno\\)\")",
       "Bash(npm list *)",
       "Bash(pnpm list *)",
-      "Read(//Users/another/Library/pnpm/**)"
+      "Read(//Users/another/Library/pnpm/**)",
+      "Bash(pnpm add *)"
     ]
   },
   "outputStyle": "Proactive"
