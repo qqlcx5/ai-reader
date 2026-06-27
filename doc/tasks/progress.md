@@ -6,8 +6,8 @@
 
 | 模块 | 状态 | 完成日期 | 备注 |
 |---|---|---|---|
-| ext-foundation | 未开始 | — | WXT 工程 + Chrome Manifest + 基础组件库 + 数据库 |
-| app-shell | 未开始 | — | TopBar + 三视图切换 + Tab 感知 |
+| ext-foundation | ✅ | 2026-06-27 | WXT 工程 + Chrome Manifest + 基础组件库 + 数据库 |
+| app-shell | ✅ | 2026-06-28 | TopBar + 三视图切换 + Tab 感知 + 页面变化提示条 |
 | web-capture | 未开始 | — | content script + defuddle 抓取 + 通信通道 |
 | context-preview | 未开始 | — | Markdown/Raw/Metadata 预览 |
 | ai-chat | 未开始 | — | 对话 UI + 流式输出 + 对话保存 |

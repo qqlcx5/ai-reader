@@ -1,13 +1,38 @@
 <script lang="ts" setup>
 import { Database, CloudSync, Search, MessageSquare, Trash2, FileText, Terminal, BookOpen } from '@lucide/vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
+import { useAppStore } from '@/stores/app.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useDocumentStore } from '@/stores/document.store'
 import Heatmap from './Heatmap.vue'
+
+const appStore = useAppStore()
+const workspaceStore = useWorkspaceStore()
+const documentStore = useDocumentStore()
 
 const documents = [
   { id: '1', title: 'Local-First 软件设计原则与实践指南', source: 'inkandswitch.com', time: '今天 14:30', icon: FileText, iconBg: 'bg-indigo-50 border-indigo-100', iconColor: 'text-brand' },
   { id: '2', title: 'React 18 并发渲染机制深度解析', source: 'Dan Abramov', time: '昨天', icon: Terminal, iconBg: 'bg-orange-50 border-orange-100', iconColor: 'text-orange-500' },
   { id: '3', title: '穷查理宝典 网页提取版', source: '本地 PDF 解析', time: '10-22', icon: BookOpen, iconBg: 'bg-zinc-100 border-zinc-200', iconColor: 'text-zinc-500', faded: true },
 ]
+
+function handleDocumentClick(doc: (typeof documents)[number]) {
+  documentStore.setCurrentDocument({
+    id: doc.id,
+    url: doc.source,
+    title: doc.title,
+    markdown: '',
+    wordCount: 0,
+    tokenCount: 0,
+    contentHash: '',
+    extractionMethod: 'manual',
+    source: 'library',
+    capturedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+  workspaceStore.setDocumentSource('library')
+  appStore.setCurrentView('workspace')
+}
 </script>
 
 <template>
@@ -46,6 +71,7 @@ const documents = [
           :key="doc.id"
           class="group relative p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm cursor-pointer transition-all flex gap-3"
           :class="{ 'opacity-80': doc.faded }"
+          @click="handleDocumentClick(doc)"
         >
           <div class="w-7 h-7 rounded-lg border flex items-center justify-center shrink-0" :class="doc.iconBg">
             <component :is="doc.icon" class="w-3.5 h-3.5" :class="doc.iconColor" />
