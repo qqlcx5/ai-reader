@@ -125,7 +125,7 @@ function exportSingleObsidian() {
             </div>
             <span class="text-[10px] text-gray-400">{{ article.createdAt }}</span>
           </div>
-          <h4 class="text-xs font-bold text-gray-900 leading-tight">{{ article.title }}</h4>
+          <div class="text-xs font-bold text-gray-900 leading-tight">{{ article.title }}</div>
           <p class="text-[11px] text-gray-500 line-clamp-2">{{ article.excerpt }}</p>
           <div class="flex items-center justify-between pt-1 border-t border-gray-50">
             <div class="flex space-x-1">
@@ -163,7 +163,7 @@ function exportSingleObsidian() {
             </div>
             <span class="text-[10px] text-gray-400">{{ article.createdAt }}</span>
           </div>
-          <h4 class="text-xs font-bold text-gray-900 leading-tight">{{ article.title }}</h4>
+          <div class="text-xs font-bold text-gray-900 leading-tight">{{ article.title }}</div>
           <p class="text-[11px] text-gray-500 line-clamp-2">{{ article.excerpt }}</p>
           <div class="flex items-center justify-between pt-1 border-t border-gray-50">
             <div class="flex space-x-1">

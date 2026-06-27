@@ -9,44 +9,118 @@ html, body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'SF Pro Display', 'SF Pro Text', 'Segoe UI', sans-serif;
-  color: #1f2937;
-  background: #f9fafb;
+  color: #18181b;
+  background: #d4d4d8;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-button, input, select {
+button, input, select, textarea {
   font: inherit;
 }
 
 button {
   border: 0;
   cursor: pointer;
+  background: none;
 }
 
-input, select {
+input, select, textarea {
+  border: none;
+  appearance: none;
+  outline: none;
+  background: transparent;
   cursor: text;
 }
 
-/* 隐藏滚动条但保持可用 */
 ::-webkit-scrollbar {
-  display: none;
-}
-* {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  width: 4px;
+  height: 4px;
 }
 
-/* 模拟流式打字动画的光标 */
-.cursor-blink::after {
-  content: '▌';
-  animation: blink 1s step-start infinite;
-  color: #3B82F6;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-@keyframes blink {
-  50% { opacity: 0; }
+::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
+}
+
+.prose-lite h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #18181b;
+  margin-bottom: 14px;
+  line-height: 1.35;
+}
+
+.prose-lite h2 {
+  font-size: 15px;
+  font-weight: 650;
+  color: #27272a;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+.prose-lite h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3f3f46;
+  margin-top: 14px;
+  margin-bottom: 6px;
+}
+
+.prose-lite p {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #3f3f46;
+  margin-bottom: 12px;
+}
+
+.prose-lite ul {
+  margin-left: 18px;
+  margin-bottom: 12px;
+  list-style: disc;
+}
+
+.prose-lite li {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #3f3f46;
+  margin-bottom: 4px;
+}
+
+.prose-lite blockquote {
+  border-left: 3px solid #6366f1;
+  background: #f8fafc;
+  color: #71717a;
+  padding: 8px 12px;
+  border-radius: 0 8px 8px 0;
+  margin: 12px 0;
+}
+
+.prose-lite blockquote p {
+  margin-bottom: 0;
+  color: #52525b;
+}
+
+.prose-lite code {
+  background: #f4f4f5;
+  color: #db2777;
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
 }
