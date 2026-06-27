@@ -45,6 +45,7 @@ export interface PageExtractedPayload {
   wordCount: number
   tokenCount: number
   extractionMethod: 'defuddle' | 'fallback'
+  sanitizedHtml?: string
 }
 
 export interface ExtractErrorPayload {

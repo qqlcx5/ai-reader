@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { RefreshCw } from '@lucide/vue'
+import LZString from 'lz-string'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity } from '@/types/document'
@@ -11,6 +13,7 @@ import type { DocumentEntity } from '@/types/document'
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
 const appStore = useAppStore()
+const settingsStore = useSettingsStore()
 
 const isRefreshing = ref(false)
 
@@ -59,7 +62,8 @@ function buildDocumentEntity(data: {
   wordCount: number
   tokenCount: number
   extractionMethod: 'defuddle' | 'fallback'
-  sanitizedHtml?: string
+  rawHtml?: string
+  rawHtmlCompressed?: boolean
 }): DocumentEntity {
   const now = nowISO()
   return {
@@ -73,7 +77,8 @@ function buildDocumentEntity(data: {
     publishedAt: data.publishedAt,
     markdown: data.markdown,
     rawText: data.rawText,
-    rawHtml: data.sanitizedHtml,
+    rawHtml: data.rawHtml,
+    rawHtmlCompressed: data.rawHtmlCompressed,
     wordCount: data.wordCount,
     tokenCount: data.tokenCount,
     contentHash: data.contentHash,
@@ -97,6 +102,21 @@ async function handleRefresh() {
   try {
     const extracted = await requestExtract(tabId)
 
+    const saveRawHtml = settingsStore.settings.capture.saveRawHtml
+    const compressRawHtml = settingsStore.settings.capture.compressRawHtml
+    let rawHtml: string | undefined
+    let rawHtmlCompressed: boolean | undefined
+
+    if (saveRawHtml && (extracted as any).sanitizedHtml) {
+      if (compressRawHtml) {
+        rawHtml = LZString.compress((extracted as any).sanitizedHtml)
+        rawHtmlCompressed = true
+      } else {
+        rawHtml = (extracted as any).sanitizedHtml
+        rawHtmlCompressed = false
+      }
+    }
+
     const doc = buildDocumentEntity({
       url: extracted.url,
       title: extracted.title,
@@ -111,6 +131,8 @@ async function handleRefresh() {
       wordCount: extracted.wordCount,
       tokenCount: extracted.tokenCount,
       extractionMethod: extracted.extractionMethod,
+      rawHtml,
+      rawHtmlCompressed,
     })
 
     documentStore.setCurrentDocument(doc)

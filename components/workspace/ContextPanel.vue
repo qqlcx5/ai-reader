@@ -1,0 +1,192 @@
+<script lang="ts" setup>
+import { ref, computed } from 'vue'
+import {
+  TabsRoot,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from 'reka-ui'
+import { Copy, RefreshCw } from '@lucide/vue'
+import { useDocumentStore } from '@/stores/document.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useAppStore } from '@/stores/app.store'
+import { requestExtract } from '@/services/capture/capture.service'
+import { nowISO } from '@/utils/date'
+import type { DocumentEntity } from '@/types/document'
+import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
+import RawPreview from '@/components/workspace/RawPreview.vue'
+import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
+
+const documentStore = useDocumentStore()
+const workspaceStore = useWorkspaceStore()
+const appStore = useAppStore()
+
+const isRefreshing = ref(false)
+
+const contextTab = computed({
+  get: () => workspaceStore.currentContextTab,
+  set: (val) => workspaceStore.setContextTab(val),
+})
+
+function buildDocumentEntity(data: {
+  url: string
+  title: string
+  markdown: string
+  rawText?: string
+  siteName?: string
+  author?: string
+  description?: string
+  publishedAt?: string
+  canonicalUrl?: string
+  contentHash: string
+  wordCount: number
+  tokenCount: number
+  extractionMethod: 'defuddle' | 'fallback'
+  sanitizedHtml?: string
+}): DocumentEntity {
+  const now = nowISO()
+  return {
+    id: data.contentHash,
+    url: data.url,
+    canonicalUrl: data.canonicalUrl,
+    title: data.title,
+    siteName: data.siteName,
+    author: data.author,
+    description: data.description,
+    publishedAt: data.publishedAt,
+    markdown: data.markdown,
+    rawText: data.rawText,
+    rawHtml: data.sanitizedHtml,
+    wordCount: data.wordCount,
+    tokenCount: data.tokenCount,
+    contentHash: data.contentHash,
+    extractionMethod: data.extractionMethod,
+    source: 'current-page',
+    capturedAt: now,
+    updatedAt: now,
+  }
+}
+
+async function handleRefresh() {
+  const tabId = appStore.activeTab?.id
+  if (!tabId) {
+    appStore.showToast('无法获取当前标签页', 'error')
+    return
+  }
+
+  isRefreshing.value = true
+  workspaceStore.setExtracting(true)
+
+  try {
+    const extracted = await requestExtract(tabId)
+
+    const doc = buildDocumentEntity({
+      url: extracted.url,
+      title: extracted.title,
+      markdown: extracted.markdown,
+      rawText: extracted.rawText,
+      siteName: extracted.siteName,
+      author: extracted.author,
+      description: extracted.description,
+      publishedAt: extracted.publishedAt,
+      canonicalUrl: extracted.canonicalUrl,
+      contentHash: extracted.contentHash,
+      wordCount: extracted.wordCount,
+      tokenCount: extracted.tokenCount,
+      extractionMethod: extracted.extractionMethod,
+      sanitizedHtml: (extracted as any).sanitizedHtml,
+    })
+
+    documentStore.setCurrentDocument(doc)
+    documentStore.setPageDocument(doc)
+    await documentStore.saveDocument(doc)
+
+    workspaceStore.setCaptureStatus('ready')
+    appStore.showToast('抓取完成', 'success')
+  } catch (err: any) {
+    workspaceStore.setCaptureStatus('failed')
+    appStore.showToast(err.message || '抓取失败', 'error')
+  } finally {
+    isRefreshing.value = false
+    workspaceStore.setExtracting(false)
+  }
+}
+
+async function handleCopy() {
+  const markdown = documentStore.currentDocument?.markdown || ''
+  if (!markdown) {
+    appStore.showToast('没有可复制的内容', 'error')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(markdown)
+    appStore.showToast('已复制', 'success')
+  } catch {
+    appStore.showToast('复制失败', 'error')
+  }
+}
+
+const showRefresh = computed(() => {
+  return workspaceStore.documentSource === 'current-page'
+})
+</script>
+
+<template>
+  <div class="flex-1 min-h-0 overflow-hidden flex flex-col bg-white">
+    <!-- Toolbar -->
+    <div class="h-9 shrink-0 flex items-center justify-between px-3 border-b border-zinc-200 bg-zinc-50/80">
+      <TabsRoot
+        v-model="contextTab"
+        class="flex items-center gap-1 h-full"
+      >
+        <TabsList class="flex items-center gap-1 h-full">
+          <TabsTrigger
+            value="markdown"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            Markdown
+          </TabsTrigger>
+          <TabsTrigger
+            value="raw"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            Raw
+          </TabsTrigger>
+          <TabsTrigger
+            value="metadata"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            元数据
+          </TabsTrigger>
+        </TabsList>
+      </TabsRoot>
+
+      <div class="flex items-center gap-1">
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+          title="复制 Markdown"
+          @click="handleCopy"
+        >
+          <Copy class="w-3.5 h-3.5" />
+        </button>
+        <button
+          v-if="showRefresh"
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="isRefreshing"
+          title="重新抓取"
+          @click="handleRefresh"
+        >
+          <RefreshCw
+            class="w-3.5 h-3.5"
+            :class="{ 'animate-spin': isRefreshing }"
+          />
+        </button>
+      </div>
+    </div>
+
+    <!-- Tab Content -->
+    <MarkdownPreview v-show="contextTab === 'markdown'" />
+    <RawPreview v-show="contextTab === 'raw'" />
+    <MetadataPanel v-show="contextTab === 'metadata'" />
+  </div>
+</template>

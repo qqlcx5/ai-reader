@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { ModelRepository } from '../db/repositories/model.repository'
 import type { ModelConfig } from '../types/model'
+import { testConnection as runTestConnection } from '../services/ai/test-connection.service'
 
 export const useModelStore = defineStore('model', () => {
   const models = ref<ModelConfig[]>([])
@@ -56,9 +57,26 @@ export const useModelStore = defineStore('model', () => {
     currentModelId.value = id
   }
 
-  async function testConnection(_modelId: string): Promise<boolean> {
-    // placeholder: actual implementation in ai-provider module
-    return true
+  async function testConnection(id: string): Promise<boolean> {
+    const model = models.value.find(m => m.id === id)
+    if (!model) return false
+
+    // Set testing status
+    model.lastTestStatus = 'testing'
+    model.lastTestError = undefined
+    model.lastTestLatency = undefined
+
+    try {
+      const result = await runTestConnection(model)
+      model.lastTestStatus = result.success ? 'success' : 'failed'
+      model.lastTestLatency = result.latency
+      model.lastTestError = result.error
+      return result.success
+    } catch (e: any) {
+      model.lastTestStatus = 'failed'
+      model.lastTestError = e?.message ?? String(e)
+      return false
+    }
   }
 
   return {
