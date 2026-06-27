@@ -1,749 +1,998 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>最强大脑 (SuperBrain) - 智能剪藏浏览器扩展</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons (用于大厂级精致图标设计) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        slate: {
-                            800: '#1F2937',
-                        },
-                        blue: {
-                            500: '#3B82F6',
-                            600: '#2563EB',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'PingFang SC', 'Microsoft YaHei', 'sans-serif'],
-                    }
-                }
-            }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuraMind Complete Prototype</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            brand: '#6366F1'
+          }
         }
-    </script>
-    <style>
-        /* 隐藏滚动条但保持可用 */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* 模拟流式打字动画的光标 */
-        .cursor-blink::after {
-            content: '▌';
-            animation: blink 1s step-start infinite;
-            color: #3B82F6;
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
-    </style>
+      }
+    }
+  </script>
+
+  <style>
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #E4E4E7;
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #D4D4D8;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .prose-lite h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #18181B;
+      margin-bottom: 14px;
+      line-height: 1.35;
+    }
+
+    .prose-lite h2 {
+      font-size: 15px;
+      font-weight: 650;
+      color: #27272A;
+      margin-top: 18px;
+      margin-bottom: 8px;
+    }
+
+    .prose-lite h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #3F3F46;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    .prose-lite p {
+      font-size: 13px;
+      line-height: 1.75;
+      color: #3F3F46;
+      margin-bottom: 12px;
+    }
+
+    .prose-lite ul {
+      margin-left: 18px;
+      margin-bottom: 12px;
+      list-style: disc;
+    }
+
+    .prose-lite li {
+      font-size: 13px;
+      line-height: 1.7;
+      color: #3F3F46;
+      margin-bottom: 4px;
+    }
+
+    .prose-lite blockquote {
+      border-left: 3px solid #6366F1;
+      background: #F8FAFC;
+      color: #71717A;
+      padding: 8px 12px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+    }
+
+    .prose-lite blockquote p {
+      margin-bottom: 0;
+      color: #52525B;
+    }
+
+    .prose-lite code {
+      background: #F4F4F5;
+      color: #DB2777;
+      padding: 2px 5px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .toggle-checkbox:checked {
+      right: 0;
+      border-color: #6366F1;
+    }
+
+    .toggle-checkbox:checked + .toggle-label {
+      background-color: #6366F1;
+    }
+
+    .soft-shadow {
+      box-shadow:
+        0 18px 50px rgba(24, 24, 27, 0.16),
+        0 2px 8px rgba(24, 24, 27, 0.08);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+  </style>
 </head>
-<body class="bg-gray-50 text-slate-800 antialiased font-sans h-screen flex flex-col justify-between overflow-hidden">
 
-    <!-- HEADER: 全局导航与状态控制 -->
-    <header class="bg-white border-b border-gray-200 px-4 py-3 flex-shrink-0">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-sm shadow-blue-200">
-                    <i data-lucide="brain" class="text-white w-5 h-5"></i>
-                </div>
-                <div>
-                    <h1 class="text-sm font-bold text-gray-900 tracking-tight flex items-center">
-                        SuperBrain
-                        <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-600 rounded">MV3 v1.0</span>
-                    </h1>
-                    <p class="text-[10px] text-gray-400">Local-First AI Clipper</p>
-                </div>
-            </div>
-            <!-- 右上角状态显示 -->
-            <div class="flex items-center space-x-3">
-                <span id="sync-badge" class="flex items-center text-[11px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></span>
-                    WebDAV 已同步
-                </span>
-                <button onclick="switchTab('settings')" class="text-gray-400 hover:text-gray-600 transition">
-                    <i data-lucide="sliders" class="w-4 h-4"></i>
-                </button>
-            </div>
+<body class="h-screen w-screen overflow-hidden bg-zinc-300 flex items-center justify-center font-sans text-zinc-900">
+
+  <!-- App Shell -->
+  <div class="w-[380px] h-[100vh] sm:h-[88vh] sm:rounded-2xl bg-[#FAFAFA] soft-shadow border border-zinc-200 overflow-hidden flex flex-col relative">
+
+    <!-- Top Bar -->
+    <header class="h-12 shrink-0 glass border-b border-zinc-200 flex items-center justify-between px-3 z-30">
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+          <i data-lucide="sparkles" class="w-4 h-4 text-brand"></i>
         </div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold truncate">AuraMind</div>
+          <div id="top-subtitle" class="text-[10px] text-zinc-400 truncate">已注入当前网页上下文</div>
+        </div>
+      </div>
 
-        <!-- 标签页导航 (Tabs) -->
-        <nav class="flex space-x-1 mt-3 bg-gray-100 p-1 rounded-lg">
-            <button onclick="switchTab('clip')" id="btn-clip" class="tab-btn flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition duration-150 flex items-center justify-center space-x-1.5 bg-white text-gray-900 shadow-sm">
-                <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
-                <span>当前网页</span>
-            </button>
-            <button onclick="switchTab('ai')" id="btn-ai" class="tab-btn flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition duration-150 flex items-center justify-center space-x-1.5 text-gray-500 hover:text-gray-900">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                <span>AI 消化</span>
-            </button>
-            <button onclick="switchTab('history')" id="btn-history" class="tab-btn flex-1 py-1.5 px-2 text-xs font-medium rounded-md transition duration-150 flex items-center justify-center space-x-1.5 text-gray-500 hover:text-gray-900">
-                <i data-lucide="database" class="w-3.5 h-3.5"></i>
-                <span>我的大脑</span>
-            </button>
-        </nav>
+      <div class="flex items-center gap-1">
+        <button onclick="goView('workspace')" class="top-icon p-1.5 rounded-md text-brand bg-indigo-50" data-view="workspace" title="工作区">
+          <i data-lucide="panel-right" class="w-4 h-4"></i>
+        </button>
+        <button onclick="goView('library')" class="top-icon p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100" data-view="library" title="记忆库">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+        </button>
+        <button onclick="goView('settings')" class="top-icon p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100" data-view="settings" title="设置">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+        </button>
+      </div>
     </header>
 
-    <!-- CONTENT: 主体视图区 -->
-    <main class="flex-grow overflow-y-auto no-scrollbar relative bg-white">
+    <!-- ========================= -->
+    <!-- View 1: Workspace -->
+    <!-- ========================= -->
+    <section id="view-workspace" class="view flex-1 flex flex-col min-h-0">
 
-        <!-- Tab 1: 当前网页捕获 (Clip Tab) -->
-        <section id="tab-pane-clip" class="tab-pane p-4 space-y-4">
-            <!-- 1.1 自动捕获状态指示 -->
-            <div class="p-3 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start space-x-3">
-                <div class="p-2 bg-blue-500 rounded-lg text-white">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i>
-                </div>
-                <div class="flex-grow">
-                    <h3 class="text-xs font-semibold text-blue-900">网页正文自动提取成功</h3>
-                    <p class="text-[11px] text-blue-700/80 mt-0.5">Mozilla Readability 已精准剥离 3 个广告与侧边栏干扰元素。</p>
-                </div>
+      <!-- Workspace Header -->
+      <div class="h-14 shrink-0 border-b border-zinc-200 bg-white/75 backdrop-blur-md px-3 flex items-center justify-between">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+            <i data-lucide="file-text" class="w-4 h-4 text-zinc-600"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[13px] font-medium truncate max-w-[145px]">Local-First 软件设计原则</div>
+            <div class="text-[10px] text-zinc-400 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              当前网页 · 3,421 tokens
             </div>
-
-            <!-- 1.2 元数据面板 -->
-            <div class="space-y-2.5">
-                <div class="text-xs font-semibold text-gray-400 tracking-wider uppercase">元数据（可编辑）</div>
-                <div class="space-y-2 bg-gray-50 p-3 rounded-xl border border-gray-200">
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">标题 (Title)</label>
-                        <input id="meta-title" type="text" class="w-full text-xs font-semibold bg-white border border-gray-200 rounded px-2.5 py-1.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" value="如何构建第二大脑 (How to Build a Second Brain)">
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">作者 (Author)</label>
-                            <input id="meta-author" type="text" class="w-full text-xs bg-white border border-gray-200 rounded px-2.5 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" value="Tiago Forte">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">发布时间 (Published At)</label>
-                            <input id="meta-date" type="text" class="w-full text-xs bg-white border border-gray-200 rounded px-2.5 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none" value="2022-06-14">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">原始 URL (Canonical Link)</label>
-                        <div class="flex items-center space-x-1.5 bg-gray-100 rounded px-2.5 py-1">
-                            <i data-lucide="link" class="w-3 h-3 text-gray-400 flex-shrink-0"></i>
-                            <span class="text-[11px] text-gray-600 truncate">https://fortelabs.com/blog/how-to-build-a-second-brain</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">SEO Keywords (解析值)</label>
-                        <div class="flex flex-wrap gap-1" id="seo-tags-box">
-                            <span class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[10px] rounded-md font-medium">PKM</span>
-                            <span class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[10px] rounded-md font-medium">Productivity</span>
-                            <span class="px-2 py-0.5 bg-gray-200 text-gray-700 text-[10px] rounded-md font-medium">Second Brain</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 1.3 正文 Markdown 结构预览 -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-gray-400 tracking-wider uppercase">正文 Markdown 预览 (5,240 字符)</span>
-                    <button class="text-xs text-blue-500 hover:text-blue-600 flex items-center space-x-1">
-                        <i data-lucide="eye" class="w-3 h-3"></i>
-                        <span>预览 HTML</span>
-                    </button>
-                </div>
-                <div class="relative bg-gray-900 text-gray-200 p-4 rounded-xl text-xs font-mono max-h-48 overflow-y-auto border border-gray-800 shadow-inner">
-                    <div class="absolute top-2 right-2 px-1.5 py-0.5 bg-gray-800 text-gray-400 rounded text-[9px]">COMMONMARK</div>
-                    <p class="text-green-400">---<br>title: How to Build a Second Brain<br>author: Tiago Forte<br>---</p>
-                    <p class="mt-2 text-blue-400"># Introduction to PKM</p>
-                    <p class="mt-1">A Second Brain is an **external, digital repository** for everything you learn, remember, and process. By offloading cognitive burden, you liberate mental capacity for deep creative work.</p>
-                    <p class="mt-2 text-blue-400">## The CODE Method</p>
-                    <p class="mt-1">CODE stands for: *Capture, Organize, Distill, Express*. These four pillars govern the lifecycle of modern digital knowledge asset preservation...</p>
-                </div>
-            </div>
-
-            <!-- 1.4 高亮与划词摘录模块 -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-gray-400 tracking-wider uppercase">划词高亮 (W3C Text Quote Anchor)</span>
-                    <span class="text-[10px] text-gray-400">已捕捉 1 条金句</span>
-                </div>
-                <div class="p-3 bg-amber-50/50 border border-amber-200 rounded-xl space-y-2">
-                    <div class="flex items-start space-x-2">
-                        <i data-lucide="quote" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
-                        <blockquote class="text-xs text-amber-900 leading-relaxed font-serif italic">
-                            "...By offloading cognitive burden, you liberate mental capacity for deep creative work..."
-                        </blockquote>
-                    </div>
-                    <div class="flex items-center justify-between text-[10px] text-amber-700/80 pt-1 border-t border-amber-100">
-                        <span class="flex items-center"><i data-lucide="anchor" class="w-2.5 h-2.5 mr-1"></i> W3C 精准锚点已就绪</span>
-                        <a href="#" class="hover:underline flex items-center text-blue-600">
-                            测试回跳
-                            <i data-lucide="arrow-up-right" class="w-2.5 h-2.5 ml-0.5"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 1.5 一键本地持久化剪藏按钮 -->
-            <div class="pt-2 flex space-x-2">
-                <button onclick="performSave()" class="flex-grow bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition shadow-sm flex items-center justify-center space-x-2">
-                    <i data-lucide="save" class="w-4 h-4"></i>
-                    <span>一键存入 IndexedDB 数据库</span>
-                </button>
-                <button onclick="exportToMarkdown()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2.5 rounded-xl transition flex-shrink-0" title="导出为 Obsidian Markdown">
-                    <i data-lucide="file-output" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- Tab 2: AI 消化层 (AI Tab) -->
-        <section id="tab-pane-ai" class="tab-pane hidden p-4 space-y-4">
-
-            <!-- 2.1 类似 Cherry Studio 的多模型快速调度器 -->
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">智能体模型 (Model)</label>
-                    <div class="relative">
-                        <select id="ai-model-select" class="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-8 py-2 outline-none appearance-none cursor-pointer focus:border-blue-500">
-                            <option value="deepseek-chat">DeepSeek Chat (默认)</option>
-                            <option value="claude-3-5">Claude 3.5 Sonnet</option>
-                            <option value="gpt-4o">GPT-4o (中转/本地代理)</option>
-                            <option value="ollama-llama3">Ollama Local (离线 Llama3)</option>
-                        </select>
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-2.5 pointer-events-none"></i>
-                    </div>
-                </div>
-                <div>
-                    <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">消化工作流 (Workflow)</label>
-                    <div class="relative">
-                        <select id="ai-prompt-select" class="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-8 py-2 outline-none appearance-none cursor-pointer focus:border-blue-500">
-                            <option value="tldr">沉浸阅读: TL;DR 摘要</option>
-                            <option value="juice">核心知识榨汁机</option>
-                            <option value="action">提炼 Action Items</option>
-                            <option value="tags">生成分类 Tags</option>
-                        </select>
-                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-2.5 pointer-events-none"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2.2 流式生成响应视窗 (Typewriter Simulator) -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-gray-400 tracking-wider uppercase">AI 深度分析与消化结果</span>
-                    <span id="ai-status-indicator" class="text-[10px] text-gray-400 flex items-center">
-                        <span class="w-1.5 h-1.5 bg-gray-300 rounded-full mr-1.5"></span>
-                        空闲
-                    </span>
-                </div>
-                <div id="ai-output-panel" class="bg-gray-50 border border-gray-200 rounded-xl p-4 min-h-64 max-h-96 overflow-y-auto text-xs leading-relaxed space-y-3 relative">
-                    <!-- 缺省状态占位符 -->
-                    <div id="ai-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 space-y-2 p-6 text-center">
-                        <i data-lucide="sparkles" class="w-8 h-8 text-blue-400 animate-pulse"></i>
-                        <p class="font-semibold text-gray-600 text-xs">选择工作流，一键智能化解析</p>
-                        <p class="text-[10px] text-gray-400 max-w-[200px]">支持多模型调度，流式高表现力打字机输出。</p>
-                    </div>
-
-                    <!-- 动态生成区域 -->
-                    <div id="ai-dynamic-content" class="hidden"></div>
-                </div>
-            </div>
-
-            <!-- 2.3 连续追问 (Q&A Panel) -->
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-gray-400 tracking-wider uppercase">基于当前正文连续追问</span>
-                    <button onclick="clearContext()" class="text-[10px] text-red-500 hover:text-red-600 flex items-center space-x-1">
-                        <i data-lucide="trash-2" class="w-3 h-3"></i>
-                        <span>清除上下文 (Reset)</span>
-                    </button>
-                </div>
-                <div class="flex items-center space-x-2 bg-gray-100 rounded-xl p-1 border border-gray-200">
-                    <input id="qa-input" type="text" class="flex-grow bg-transparent text-xs outline-none px-2 py-1.5 placeholder-gray-400" placeholder="例如：这篇文章对程序员有什么具体的启发？">
-                    <button onclick="triggerQA()" class="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-lg transition">
-                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 2.4 操作功能键区 -->
-            <div class="flex space-x-2 pt-1">
-                <button onclick="startAiProcess()" id="btn-run-ai" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-2 px-4 rounded-xl text-xs shadow-sm flex items-center justify-center space-x-2 transition">
-                    <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                    <span>一键运行 AI 分析</span>
-                </button>
-                <button onclick="stopAiProcess()" id="btn-stop-ai" class="hidden bg-red-100 text-red-700 hover:bg-red-200 font-semibold py-2 px-4 rounded-xl text-xs flex items-center justify-center space-x-2 transition">
-                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
-                    <span>停止生成</span>
-                </button>
-                <button onclick="copyAiOutput()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-3 rounded-xl text-xs transition" title="复制总结">
-                    <i data-lucide="copy" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- Tab 3: 本地知识库与检索 (History Tab) -->
-        <section id="tab-pane-history" class="tab-pane hidden flex flex-col h-full">
-            <!-- 3.1 极速检索工具栏 -->
-            <div class="p-4 border-b border-gray-100 space-y-2 flex-shrink-0 bg-gray-50">
-                <div class="relative bg-white border border-gray-200 rounded-xl flex items-center px-3 shadow-sm focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-                    <i data-lucide="search" class="w-4 h-4 text-gray-400 mr-2 flex-shrink-0"></i>
-                    <input id="search-box" oninput="performSearch()" type="text" class="w-full text-xs py-2 bg-transparent outline-none placeholder-gray-400" placeholder="检索标题、摘要、全文、或标签...">
-                </div>
-                <!-- 快捷标签过滤器 -->
-                <div class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
-                    <span class="flex-shrink-0 px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-semibold rounded-md cursor-pointer hover:bg-blue-100">全部</span>
-                    <span class="flex-shrink-0 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded-md cursor-pointer hover:bg-gray-200">#AI</span>
-                    <span class="flex-shrink-0 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded-md cursor-pointer hover:bg-gray-200">#知识管理</span>
-                    <span class="flex-shrink-0 px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded-md cursor-pointer hover:bg-gray-200">#Obsidian</span>
-                </div>
-            </div>
-
-            <!-- 3.2 游标分页时间轴列表 -->
-            <div id="history-timeline" class="flex-grow overflow-y-auto p-4 space-y-4 no-scrollbar max-h-[460px]">
-                <!-- 时间戳分组 1 -->
-                <div class="space-y-2">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center">
-                        <i data-lucide="calendar" class="w-3 h-3 mr-1"></i> 今天 (Today)
-                    </div>
-
-                    <!-- 卡片 1 (新存入) -->
-                    <div onclick="openDetail('second-brain')" class="history-card bg-white border border-gray-200 p-3 rounded-xl hover:shadow-md hover:border-blue-400 transition cursor-pointer space-y-2 relative">
-                        <div class="flex items-start justify-between">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 rounded bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="globe" class="w-2.5 h-2.5 text-blue-500"></i>
-                                </div>
-                                <span class="text-[10px] text-gray-400 font-medium truncate max-w-[150px]">fortelabs.com</span>
-                            </div>
-                            <span class="text-[10px] text-gray-400">10分钟前</span>
-                        </div>
-                        <h4 class="text-xs font-bold text-gray-900 leading-tight">如何构建第二大脑 (How to Build a Second Brain)</h4>
-                        <p class="text-[11px] text-gray-500 line-clamp-2">A Second Brain is an external, digital repository for everything you learn, remember, and process...</p>
-                        <div class="flex items-center justify-between pt-1 border-t border-gray-50">
-                            <div class="flex space-x-1">
-                                <span class="px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded text-[9px] font-medium">#PKM</span>
-                                <span class="px-1.5 py-0.2 bg-purple-50 text-purple-600 rounded text-[9px] font-medium">#AI总结</span>
-                            </div>
-                            <div class="flex space-x-1">
-                                <i data-lucide="quote" class="w-3 h-3 text-amber-500" title="包含划词高亮"></i>
-                                <i data-lucide="sparkles" class="w-3 h-3 text-blue-500" title="已进行AI消化"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 时间戳分组 2 -->
-                <div class="space-y-2">
-                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center">
-                        <i data-lucide="calendar" class="w-3 h-3 mr-1"></i> 上周 (Last Week)
-                    </div>
-
-                    <!-- 卡片 2 -->
-                    <div onclick="openDetail('deepseek')" class="history-card bg-white border border-gray-200 p-3 rounded-xl hover:shadow-md hover:border-blue-400 transition cursor-pointer space-y-2">
-                        <div class="flex items-start justify-between">
-                            <div class="flex items-center space-x-2">
-                                <div class="w-4 h-4 rounded bg-red-50 flex items-center justify-center flex-shrink-0">
-                                    <i data-lucide="cpu" class="w-2.5 h-2.5 text-red-500"></i>
-                                </div>
-                                <span class="text-[10px] text-gray-400 font-medium truncate">github.com/deepseek</span>
-                            </div>
-                            <span class="text-[10px] text-gray-400">3天前</span>
-                        </div>
-                        <h4 class="text-xs font-bold text-gray-900 leading-tight">DeepSeek V3 System Architecture Specification</h4>
-                        <p class="text-[11px] text-gray-500 line-clamp-2">This document reveals the underlying distributed matrix multiplication design and MoE scheduling of DeepSeek V3...</p>
-                        <div class="flex items-center justify-between pt-1 border-t border-gray-50">
-                            <div class="flex space-x-1">
-                                <span class="px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded text-[9px] font-medium">#DeepSeek</span>
-                                <span class="px-1.5 py-0.2 bg-gray-50 text-gray-600 rounded text-[9px] font-medium">#System</span>
-                            </div>
-                            <div class="flex space-x-1">
-                                <i data-lucide="sparkles" class="w-3 h-3 text-blue-500" title="已进行AI消化"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Tab 4: 数据库与安全设置 (Settings Tab) -->
-        <section id="tab-pane-settings" class="tab-pane hidden p-4 space-y-5">
-            <!-- 4.1 BYOK 模型配置区 (安全加密) -->
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
-                    <span class="text-xs font-bold text-gray-900 flex items-center">
-                        <i data-lucide="key" class="w-4 h-4 mr-1.5 text-blue-500"></i>
-                        LLM 模型服务商配置 (BYOK)
-                    </span>
-                    <span class="text-[9px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded flex items-center">
-                        <i data-lucide="shield-check" class="w-2.5 h-2.5 mr-0.5"></i> AES-GCM 本地加密
-                    </span>
-                </div>
-                <div class="space-y-2">
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 block mb-1">API ENDPOINT (Base URL)</label>
-                        <input type="text" class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500" value="https://api.deepseek.com/v1">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-gray-400 block mb-1">API KEY (加密存储)</label>
-                        <div class="relative flex items-center">
-                            <input id="settings-key" type="password" class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-10 py-1.5 outline-none focus:border-blue-500" value="••••••••••••••••••••••••••••••••">
-                            <button onclick="toggleKeyVisible()" class="absolute right-3 text-gray-400 hover:text-gray-600">
-                                <i id="settings-key-eye" data-lucide="eye-off" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4.2 WebDAV 云端增量静默同步 -->
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-gray-100 pb-1.5">
-                    <span class="text-xs font-bold text-gray-900 flex items-center">
-                        <i data-lucide="cloud" class="w-4 h-4 mr-1.5 text-blue-500"></i>
-                        WebDAV 每日静默同步 (坚果云/Nextcloud)
-                    </span>
-                    <label class="relative inline-flex items-center cursor-pointer scale-75">
-                        <input type="checkbox" checked class="sr-only peer">
-                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                </div>
-                <div class="space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">WEBDAV 账号</label>
-                            <input type="text" class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500" value="superbrain_user@jianguoyun.com">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 block mb-1">同步校验密码</label>
-                            <input type="password" class="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500" value="••••••••">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4.3 渐进式备份恢复 -->
-            <div class="space-y-3">
-                <span class="text-xs font-bold text-gray-900 block border-b border-gray-100 pb-1.5">本地存储持久化与流转</span>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="simulateManualBackup()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1.5">
-                        <i data-lucide="file-json" class="w-3.5 h-3.5"></i>
-                        <span>导出 JSON 备份</span>
-                    </button>
-                    <button onclick="simulateManualRestore()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center space-x-1.5">
-                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                        <span>导入恢复数据</span>
-                    </button>
-                </div>
-                <button onclick="simulateObsidianExport()" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center space-x-2 border border-blue-200 shadow-sm shadow-blue-50">
-                    <i data-lucide="package" class="w-4 h-4"></i>
-                    <span>一键打包导出 Obsidian 兼容 .ZIP 归档</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- 详情弹窗抽屉 (Markdown & AI Detail Overlay) -->
-        <div id="detail-overlay" class="absolute inset-0 bg-white z-50 transform translate-x-full transition-transform duration-300 flex flex-col justify-between">
-            <div class="flex-grow overflow-y-auto no-scrollbar p-4 space-y-4">
-                <!-- 详情头部 -->
-                <div class="flex items-center justify-between border-b border-gray-100 pb-3">
-                    <button onclick="closeDetail()" class="text-gray-400 hover:text-gray-600 flex items-center text-xs space-x-1">
-                        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                        <span>返回列表</span>
-                    </button>
-                    <span class="text-[10px] text-gray-400 font-mono">ID: SB-UUID-8472</span>
-                </div>
-
-                <!-- 详情标题 -->
-                <h2 id="detail-title" class="text-sm font-bold text-gray-900 leading-snug">如何构建第二大脑 (How to Build a Second Brain)</h2>
-
-                <!-- 详情元数据 & YAML Frontmatter 效果 -->
-                <div class="bg-gray-950 text-green-400 p-3 rounded-xl font-mono text-[10px] overflow-x-auto space-y-1">
-                    <div>---</div>
-                    <div>title: "如何构建第二大脑 (How to Build a Second Brain)"</div>
-                    <div>url: "https://fortelabs.com/blog/how-to-build-a-second-brain"</div>
-                    <div>clipped_at: "2025-10-24 12:00:00"</div>
-                    <div>tags: ["#PKM", "#Productivity"]</div>
-                    <div>---</div>
-                </div>
-
-                <!-- 模拟 Markdown 预览 -->
-                <div class="space-y-2">
-                    <span class="text-xs font-bold text-gray-400 block tracking-wider uppercase"> Obsidian Markdown 正文段落</span>
-                    <article class="prose prose-sm text-xs text-gray-600 leading-relaxed space-y-2">
-                        <p class="font-semibold text-gray-950">A Second Brain is an external, digital repository for everything you learn, remember, and process.</p>
-                        <p>By offloading cognitive burden, you liberate mental capacity for deep creative work. The human brain is for having ideas, not for holding them.</p>
-                        <p class="border-l-2 border-amber-400 bg-amber-50 p-2 text-amber-900 italic">"By offloading cognitive burden, you liberate mental capacity for deep creative work..." [W3C Text Quote Anchor]</p>
-                    </article>
-                </div>
-            </div>
-
-            <!-- 抽屉底部导出 -->
-            <div class="p-4 border-t border-gray-100 bg-gray-50 flex space-x-2">
-                <button onclick="simulateSingleObsidianExport()" class="flex-grow bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
-                    <i data-lucide="file-down" class="w-4 h-4"></i>
-                    <span>导出 Obsidian Markdown 文件</span>
-                </button>
-                <button onclick="closeDetail()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-3 rounded-xl text-xs transition">
-                    关闭
-                </button>
-            </div>
+          </div>
         </div>
 
-    </main>
-
-    <!-- FOOTER: 数据库物理连接与审计 -->
-    <footer class="bg-gray-50 border-t border-gray-200 px-4 py-2 flex-shrink-0 flex items-center justify-between text-[10px] text-gray-400">
-        <div class="flex items-center space-x-1.5">
-            <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-blue-500"></i>
-            <span class="font-medium">IndexedDB 本地隔离沙盒连接成功</span>
+        <div class="flex p-0.5 bg-zinc-100 border border-zinc-200 rounded-[9px]">
+          <button id="workspace-tab-chat" onclick="switchWorkspaceTab('chat')" class="px-3 py-1 text-[12px] font-medium rounded-[7px] bg-white shadow-sm text-zinc-900 transition-all">
+            对话
+          </button>
+          <button id="workspace-tab-context" onclick="switchWorkspaceTab('context')" class="px-3 py-1 text-[12px] font-medium rounded-[7px] text-zinc-500 hover:text-zinc-700 transition-all">
+            上下文
+          </button>
         </div>
-        <div id="db-size" class="font-mono">SQLite Size: 2.4 MB</div>
-    </footer>
+      </div>
 
-    <!-- INTERACTION LOGIC (交互脚本) -->
-    <script>
-        // 渲染初始化图标
-        lucide.createIcons();
+      <!-- Chat View -->
+      <main id="workspace-chat" class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-5 bg-[#FAFAFA]">
+        <div class="flex justify-center">
+          <span class="text-[10px] border border-brand/20 bg-indigo-50 text-brand px-2 py-0.5 rounded-md flex items-center gap-1">
+            <i data-lucide="plug-zap" class="w-3 h-3"></i>
+            已挂载当前网页上下文
+          </span>
+        </div>
 
-        // 1. 全局标签页切换控制
-        function switchTab(tabId) {
-            // 隐藏所有面板
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.add('hidden');
-            });
-            // 移除所有 Tab 按钮的高亮状态
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
-                btn.classList.add('text-gray-500', 'hover:text-gray-900');
-            });
+        <div class="flex justify-end">
+          <div class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
+            帮我总结这篇文章里关于 CRDT 和 Local-First 的核心观点。
+          </div>
+        </div>
 
-            // 显示当前面板
-            document.getElementById(`tab-pane-${tabId}`).classList.remove('hidden');
-            // 高亮当前 Tab 按钮
-            const activeBtn = document.getElementById(`btn-${tabId}`);
-            if (activeBtn) {
-                activeBtn.classList.remove('text-gray-500', 'hover:text-gray-900');
-                activeBtn.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
-            }
-        }
+        <div class="flex flex-col gap-2 max-w-[95%]">
+          <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand"></i>
+            AuraMind
+            <span class="text-[10px] text-zinc-400 font-normal">Claude 3.5 Sonnet</span>
+          </div>
 
-        // 2. 自定义密码显示切换
-        let keyVisible = false;
-        function toggleKeyVisible() {
-            const input = document.getElementById('settings-key');
-            const eyeIcon = document.getElementById('settings-key-eye');
-            keyVisible = !keyVisible;
-            if (keyVisible) {
-                input.type = "text";
-                eyeIcon.setAttribute('data-lucide', 'eye');
-            } else {
-                input.type = "password";
-                eyeIcon.setAttribute('data-lucide', 'eye-off');
-            }
-            lucide.createIcons();
-        }
+          <div class="bg-white border border-zinc-200 rounded-2xl rounded-tl-sm px-3.5 py-3 text-[13px] leading-relaxed text-zinc-800 shadow-sm">
+            <p class="mb-2">
+              这篇文章的核心观点是：Local-First 并不是“离线缓存”，而是把本地设备视为数据的第一写入源。
+            </p>
+            <p class="mb-2">
+              CRDT 的作用类似“自动合并的 Git”。不同设备即使离线修改同一份数据，恢复网络后也能合并，而不需要用户手动解决冲突。
+            </p>
+            <div class="mt-3 p-2 rounded-lg bg-indigo-50 border border-indigo-100 text-brand text-[12px]">
+              关键句：云端不再是唯一真相，本地副本也拥有完整主权。
+            </div>
+          </div>
+        </div>
 
-        // 3. 模拟一键存入 IndexedDB 动作
-        function performSave() {
-            alert('【最强大脑】通知:\n此网页正文与 YAML 元数据已经成功本地序列化，写入 IndexedDB! 已生成增量同步指令。');
-            document.getElementById('db-size').innerText = "SQLite Size: 2.8 MB";
-        }
+        <div class="flex justify-end">
+          <div class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
+            用一个生活化比喻解释 CRDT。
+          </div>
+        </div>
 
-        // 4. 模拟 Obsidian 导出 Markdown
-        function exportToMarkdown() {
-            const yaml = `---
-title: "如何构建第二大脑 (How to Build a Second Brain)"
-url: "https://fortelabs.com/blog/how-to-build-a-second-brain"
-author: "Tiago Forte"
----
-# How to Build a Second Brain...`;
-            const blob = new Blob([yaml], {type: "text/markdown;charset=utf-8"});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = "How_to_Build_a_Second_Brain.md";
-            a.click();
-        }
+        <div class="flex flex-col gap-2 max-w-[95%]">
+          <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand"></i>
+            AuraMind
+          </div>
 
-        // 5. 模拟 AI 连续追问 (Q&A)
-        function triggerQA() {
-            const input = document.getElementById('qa-input');
-            const value = input.value.trim();
-            if (!value) return;
+          <div class="bg-white border border-zinc-200 rounded-2xl rounded-tl-sm px-3.5 py-3 text-[13px] leading-relaxed text-zinc-800 shadow-sm">
+            可以把 CRDT 想象成两个人分别在同一张购物清单上加东西：
+            <br><br>
+            你离线加了“牛奶”，我离线加了“鸡蛋”。同步时，系统不是问“保留谁的版本”，而是自动得到“牛奶 + 鸡蛋”。
+          </div>
+        </div>
+      </main>
 
-            switchTab('ai'); // 强制切换至 AI 面板
-            const dynamicContent = document.getElementById('ai-dynamic-content');
-            const placeholder = document.getElementById('ai-placeholder');
+      <!-- Context View -->
+      <main id="workspace-context" class="hidden flex-1 min-h-0 overflow-hidden flex flex-col bg-white">
+        <div class="h-9 shrink-0 flex items-center gap-4 px-4 border-b border-zinc-100 bg-zinc-50/80 text-[11px] font-medium">
+          <button id="context-tab-md" onclick="switchContextTab('md')" class="text-brand border-b-2 border-brand h-full flex items-center gap-1">
+            <i data-lucide="file-text" class="w-3 h-3"></i>
+            Markdown 预览
+          </button>
 
-            placeholder.classList.add('hidden');
-            dynamicContent.classList.remove('hidden');
+          <button id="context-tab-raw" onclick="switchContextTab('raw')" class="text-zinc-400 hover:text-zinc-700 h-full flex items-center gap-1">
+            <i data-lucide="code-2" class="w-3 h-3"></i>
+            原始内容
+          </button>
 
-            // 插入用户问题
-            dynamicContent.innerHTML += `
-                <div class="flex justify-end mb-3">
-                    <div class="bg-blue-500 text-white p-2.5 rounded-lg max-w-[80%] font-semibold text-xs shadow-sm">${value}</div>
-                </div>
-                <div class="flex justify-start mb-3" id="qa-loader">
-                    <div class="bg-gray-100 text-gray-500 p-2.5 rounded-lg flex items-center space-x-1 text-xs">
-                        <span class="animate-bounce">●</span>
-                        <span class="animate-bounce" style="animation-delay: 0.2s">●</span>
-                        <span class="animate-bounce" style="animation-delay: 0.4s">●</span>
+          <button id="context-tab-meta" onclick="switchContextTab('meta')" class="text-zinc-400 hover:text-zinc-700 h-full flex items-center gap-1">
+            <i data-lucide="info" class="w-3 h-3"></i>
+            元数据
+          </button>
+        </div>
+
+        <!-- Markdown Preview -->
+        <div id="context-md" class="flex-1 overflow-y-auto p-5 prose-lite">
+          <h1>Local-First 软件设计原则</h1>
+
+          <p>
+            云计算带来了极大的便利，但也让用户逐渐失去了对数据的控制权。Local-First 软件试图重新平衡这种关系：
+            既保留云同步的便利，又让本地设备成为数据的主要载体。
+          </p>
+
+          <h2>核心思想</h2>
+
+          <blockquote>
+            <p>在 Local-First 架构中，本地设备是主要的数据读写节点，云端只是同步和备份媒介。</p>
+          </blockquote>
+
+          <p>
+            这意味着用户即使在断网状态下，依然可以完整地创建、编辑、搜索和组织自己的知识库。
+          </p>
+
+          <h2>CRDT 的作用</h2>
+
+          <p>
+            CRDT，即 <code>Conflict-free Replicated Data Type</code>，可以理解为一种“天然可合并”的数据结构。
+            它允许多个副本独立变化，并在之后自动合并。
+          </p>
+
+          <ul>
+            <li>无需中心服务器裁决最终版本。</li>
+            <li>无需用户手动处理大多数冲突。</li>
+            <li>非常适合笔记、知识库、任务列表、协作文档。</li>
+          </ul>
+
+          <h2>典型技术栈</h2>
+
+          <p>
+            常见实现包括 <code>Yjs</code>、<code>Automerge</code>、<code>Replicache</code>、<code>ElectricSQL</code> 等。
+            对 AuraMind 而言，Local-First 的意义是：网页抓取、AI 对话、摘要和用户标注都可以优先保存在本地。
+          </p>
+
+          <h3>对于 AI 知识库的意义</h3>
+
+          <p>
+            AI 产品如果只依赖云端，就会形成新的数据黑箱。Local-First 能让用户明确知道：我的原文、摘要、向量索引、对话记录都掌握在自己手里。
+          </p>
+        </div>
+
+        <!-- Raw Content -->
+        <div id="context-raw" class="hidden flex-1 overflow-y-auto bg-[#18181B] p-4">
+<pre class="text-[11px] leading-relaxed text-zinc-300 font-mono whitespace-pre-wrap"><code># Local-First 软件设计原则
+
+云计算带来了极大的便利，但也让用户逐渐失去了对数据的控制权。Local-First 软件试图重新平衡这种关系：
+既保留云同步的便利，又让本地设备成为数据的主要载体。
+
+## 核心思想
+
+> 在 Local-First 架构中，本地设备是主要的数据读写节点，云端只是同步和备份媒介。
+
+这意味着用户即使在断网状态下，依然可以完整地创建、编辑、搜索和组织自己的知识库。
+
+## CRDT 的作用
+
+CRDT，即 `Conflict-free Replicated Data Type`，可以理解为一种“天然可合并”的数据结构。
+它允许多个副本独立变化，并在之后自动合并。
+
+- 无需中心服务器裁决最终版本。
+- 无需用户手动处理大多数冲突。
+- 非常适合笔记、知识库、任务列表、协作文档。
+
+## 典型技术栈
+
+常见实现包括 `Yjs`、`Automerge`、`Replicache`、`ElectricSQL` 等。
+对 AuraMind 而言，Local-First 的意义是：网页抓取、AI 对话、摘要和用户标注都可以优先保存在本地。</code></pre>
+        </div>
+
+        <!-- Metadata -->
+        <div id="context-meta" class="hidden flex-1 overflow-y-auto p-4 bg-zinc-50">
+          <div class="bg-white border border-zinc-200 rounded-xl overflow-hidden text-[13px] shadow-sm">
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-500">标题</span>
+              <span class="font-medium text-zinc-900 text-right max-w-[210px]">Local-First 软件设计原则</span>
+            </div>
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-500">来源</span>
+              <span class="font-mono text-[11px] text-zinc-700">inkandswitch.com</span>
+            </div>
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-500">抓取方式</span>
+              <span class="text-zinc-700">Readability + DOM 清洗</span>
+            </div>
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-500">Markdown 字数</span>
+              <span class="font-mono text-[11px] text-zinc-700">6,842 chars</span>
+            </div>
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-500">Token 估算</span>
+              <span class="font-mono text-[11px] text-brand">3,421 tokens</span>
+            </div>
+            <div class="p-3 flex justify-between">
+              <span class="text-zinc-500">本地状态</span>
+              <span class="text-emerald-600 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                已保存 IndexedDB
+              </span>
+            </div>
+          </div>
+
+          <button class="mt-3 w-full py-2.5 rounded-xl bg-white border border-zinc-200 text-[13px] text-zinc-700 font-medium hover:bg-zinc-50 flex items-center justify-center gap-2">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            复制 Markdown
+          </button>
+        </div>
+      </main>
+
+      <!-- Chat Input -->
+      <div id="chat-input" class="absolute left-0 right-0 bottom-0 p-3 bg-gradient-to-t from-[#FAFAFA] via-[#FAFAFA] to-transparent z-20">
+        <div class="bg-white border border-zinc-200 rounded-2xl shadow-lg overflow-hidden">
+          <div class="flex items-center justify-between px-3 pt-2">
+            <button class="text-[11px] text-zinc-500 flex items-center gap-1 hover:text-brand">
+              <i data-lucide="cpu" class="w-3 h-3"></i>
+              Claude 3.5 Sonnet
+              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+            </button>
+
+            <button class="text-[11px] text-zinc-400 hover:text-zinc-700 flex items-center gap-1">
+              <i data-lucide="paperclip" class="w-3 h-3"></i>
+              当前网页
+            </button>
+          </div>
+
+          <div class="relative">
+            <textarea rows="1" class="w-full resize-none outline-none bg-transparent text-[13px] px-3 py-2.5 pr-11 placeholder:text-zinc-400 min-h-[42px]" placeholder="基于当前网页继续提问..."></textarea>
+            <button class="absolute right-2 bottom-2 p-1.5 bg-brand text-white rounded-lg hover:bg-indigo-600 transition-colors">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= -->
+    <!-- View 2: Library -->
+    <!-- ========================= -->
+    <section id="view-library" class="view hidden flex-1 min-h-0 flex-col bg-[#FCFCFC]">
+
+      <div class="h-12 shrink-0 px-4 flex items-center justify-between border-b border-zinc-200 bg-white/80 backdrop-blur-md">
+        <div class="text-[14px] font-semibold text-zinc-900 flex items-center gap-2">
+          <i data-lucide="database" class="w-4 h-4 text-brand"></i>
+          记忆库
+          <span class="text-[11px] font-normal text-zinc-400">5,241 篇</span>
+        </div>
+
+        <button class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100">
+          <i data-lucide="cloud-sync" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <main class="flex-1 min-h-0 overflow-y-auto">
+        <!-- Search -->
+        <div class="sticky top-0 z-10 p-4 pb-3 bg-[#FCFCFC]/95 backdrop-blur-md border-b border-zinc-100">
+          <div class="h-10 bg-white border border-zinc-200 rounded-xl flex items-center px-3 shadow-sm focus-within:border-brand focus-within:ring-4 focus-within:ring-indigo-50 transition-all">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-400 mr-2 shrink-0"></i>
+            <input class="flex-1 outline-none bg-transparent text-[13px] placeholder:text-zinc-400" placeholder="搜索知识库、网页、对话..." />
+            <kbd class="text-[10px] px-1.5 py-0.5 bg-zinc-100 border border-zinc-200 rounded text-zinc-500 font-mono">⌘K</kbd>
+          </div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="px-4 py-5 border-b border-zinc-100">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-[12px] font-medium flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-500"></i>
+              知识捕获轨迹
+            </h3>
+            <span class="text-[11px] text-zinc-400">近 6 个月</span>
+          </div>
+
+          <div id="heatmap-scroll" class="overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing pb-1">
+            <div id="heatmap-grid" class="grid grid-rows-7 grid-flow-col gap-[3px] w-max"></div>
+          </div>
+
+          <div class="flex justify-end items-center gap-1.5 mt-2 text-[10px] text-zinc-400">
+            <span>少</span>
+            <div class="w-2.5 h-2.5 rounded-[2px] bg-zinc-100"></div>
+            <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-200"></div>
+            <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-400"></div>
+            <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-600"></div>
+            <span>多</span>
+          </div>
+        </div>
+
+        <!-- Documents -->
+        <div class="p-2 pb-6">
+          <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">最近捕获</div>
+
+          <article class="doc-item group relative p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm cursor-pointer transition-all flex gap-3">
+            <div class="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-brand"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-[13px] font-medium truncate group-hover:text-brand">Local-First 软件设计原则与实践指南</h4>
+              <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 truncate mt-1">
+                <span>inkandswitch.com</span>
+                <span class="w-[3px] h-[3px] rounded-full bg-zinc-300"></span>
+                <span>今天 14:30</span>
+              </div>
+            </div>
+            <div class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
+              <button class="p-1.5 rounded-md text-brand hover:bg-indigo-50">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              </button>
+              <button class="p-1.5 rounded-md text-red-500 hover:bg-red-50">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </article>
+
+          <article class="doc-item group relative p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm cursor-pointer transition-all flex gap-3">
+            <div class="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-orange-500"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-[13px] font-medium truncate group-hover:text-brand">React 18 并发渲染机制深度解析</h4>
+              <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 truncate mt-1">
+                <span>Dan Abramov</span>
+                <span class="w-[3px] h-[3px] rounded-full bg-zinc-300"></span>
+                <span>昨天</span>
+              </div>
+            </div>
+            <div class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
+              <button class="p-1.5 rounded-md text-brand hover:bg-indigo-50">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              </button>
+              <button class="p-1.5 rounded-md text-red-500 hover:bg-red-50">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </article>
+
+          <article class="doc-item group relative p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm cursor-pointer transition-all flex gap-3 opacity-80">
+            <div class="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center shrink-0">
+              <i data-lucide="book-open" class="w-3.5 h-3.5 text-zinc-500"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h4 class="text-[13px] font-medium truncate group-hover:text-brand">穷查理宝典 网页提取版</h4>
+              <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 truncate mt-1">
+                <span>本地 PDF 解析</span>
+                <span class="w-[3px] h-[3px] rounded-full bg-zinc-300"></span>
+                <span>10-22</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </main>
+    </section>
+
+    <!-- ========================= -->
+    <!-- View 3: Settings -->
+    <!-- ========================= -->
+    <section id="view-settings" class="view hidden flex-1 min-h-0 flex-col bg-[#F4F4F5]">
+
+      <div class="h-12 shrink-0 px-4 flex items-center justify-between border-b border-zinc-200/70 bg-[#F4F4F5]/90 backdrop-blur-md">
+        <div class="text-[14px] font-semibold flex items-center gap-2">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-brand"></i>
+          核心配置
+        </div>
+        <button class="text-[12px] font-medium text-brand">保存</button>
+      </div>
+
+      <main class="flex-1 min-h-0 overflow-y-auto px-4 py-5 flex flex-col gap-7">
+
+        <!-- Models -->
+        <section class="flex flex-col gap-2.5">
+          <div class="flex items-center justify-between pl-1">
+            <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider">AI 模型池</h2>
+            <span class="text-[10px] bg-zinc-200 text-zinc-500 px-1.5 py-0.5 rounded">3 启用</span>
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <div class="bg-white rounded-xl border border-zinc-200 p-3 shadow-sm relative overflow-hidden group">
+              <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400"></div>
+
+              <div class="flex items-center justify-between pl-2">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-orange-50 text-orange-500 border border-orange-100 flex items-center justify-center">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                  </div>
+
+                  <div>
+                    <div class="text-[13px] font-medium flex items-center gap-1.5">
+                      Claude 3.5 Sonnet
+                      <span class="text-[9px] px-1 bg-emerald-100 text-emerald-600 rounded font-semibold">默认</span>
                     </div>
+                    <div class="text-[11px] text-zinc-400 font-mono">api.anthropic.com</div>
+                  </div>
                 </div>
-            `;
-            input.value = "";
 
-            // 模拟 AI 2秒后响应
-            setTimeout(() => {
-                const loader = document.getElementById('qa-loader');
-                if (loader) loader.remove();
+                <button class="p-1.5 rounded-md text-zinc-400 hover:bg-zinc-100">
+                  <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
 
-                dynamicContent.innerHTML += `
-                    <div class="flex justify-start mb-3">
-                        <div class="bg-blue-50 text-blue-900 border border-blue-100 p-3 rounded-lg max-w-[85%] text-xs font-medium leading-relaxed">
-                            <i class="inline-block" data-lucide="sparkles"></i>
-                            关于您的提问 <strong>“${value}”</strong>：构建第二大脑能有效防范信息过载对脑细胞的损耗。在工作中，建议您把知识库作为外部检索代理，只专注于高阶战略性输出。
-                        </div>
-                    </div>
-                `;
-                lucide.createIcons();
-            }, 1500);
-        }
+            <div class="bg-white rounded-xl border border-zinc-200 p-3 shadow-sm group">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-[13px] font-medium">GPT-4o Mini</div>
+                    <div class="text-[11px] text-zinc-400 font-mono">api.openai.com</div>
+                  </div>
+                </div>
 
-        // 6. 模拟流式生成器 (SSE Mock)
-        let streamTimer = null;
-        function startAiProcess() {
-            const dynamicContent = document.getElementById('ai-dynamic-content');
-            const placeholder = document.getElementById('ai-placeholder');
-            const runBtn = document.getElementById('btn-run-ai');
-            const stopBtn = document.getElementById('btn-stop-ai');
-            const aiStatus = document.getElementById('ai-status-indicator');
+                <div class="relative inline-block w-8 align-middle select-none">
+                  <input type="checkbox" id="toggle-openai" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-zinc-200 appearance-none cursor-pointer" checked />
+                  <label for="toggle-openai" class="toggle-label block overflow-hidden h-4 rounded-full bg-zinc-200 cursor-pointer"></label>
+                </div>
+              </div>
+            </div>
 
-            placeholder.classList.add('hidden');
-            dynamicContent.classList.remove('hidden');
-            dynamicContent.innerHTML = "";
+            <div class="bg-white rounded-xl border border-zinc-200 p-3 shadow-sm group">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-zinc-100 text-zinc-600 border border-zinc-200 flex items-center justify-center">
+                    <i data-lucide="box" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <div class="text-[13px] font-medium">Ollama / Llama 3</div>
+                    <div class="text-[11px] text-zinc-400 font-mono">localhost:11434</div>
+                  </div>
+                </div>
 
-            runBtn.classList.add('hidden');
-            stopBtn.classList.remove('hidden');
-            aiStatus.innerHTML = `<span class="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5 animate-pulse"></span>正在流式生成...`;
+                <div class="relative inline-block w-8 align-middle select-none">
+                  <input type="checkbox" id="toggle-ollama" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-zinc-200 appearance-none cursor-pointer" checked />
+                  <label for="toggle-ollama" class="toggle-label block overflow-hidden h-4 rounded-full bg-zinc-200 cursor-pointer"></label>
+                </div>
+              </div>
+            </div>
 
-            const fullText = `### 🚀 【太长不看 (TL;DR)】
-本文是由知识管理专家 Tiago Forte 撰写的核心指南。文章阐明了通过建立数字辅助“第二大脑”来降低认知压力，释放人脑底层创造力的方法。
+            <button onclick="openModelModal()" class="w-full py-2.5 rounded-xl border-2 border-dashed border-zinc-200 text-zinc-500 text-[12px] font-medium hover:border-brand hover:text-brand hover:bg-indigo-50/50 transition-colors flex items-center justify-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              添加模型节点
+            </button>
+          </div>
+        </section>
 
----
+        <!-- Context Rules -->
+        <section class="flex flex-col gap-2.5">
+          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">上下文与系统指令</h2>
 
-### 🧠 核心观点榨汁
-1. **记忆是创造力的敌人**：大脑应当被视作处理器而不是存储硬盘。
-2. **CODE 运行模型**：
-   - **C**apture (捕获): 精简无噪资产
-   - **O**rganize (组织): PARA 结构化
-   - **D**istill (提炼): 榨取高含金量知识点
-   - **E**xpress (表达): 输出赋能实践
+          <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
+            <div class="p-3 border-b border-zinc-100 flex flex-col gap-2">
+              <div class="flex justify-between items-center">
+                <span class="text-zinc-700">注入窗口大小限制</span>
+                <span class="text-brand font-mono font-medium text-[12px]">32K Tokens</span>
+              </div>
+              <input type="range" min="4" max="128" value="32" class="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-brand">
+              <div class="flex justify-between text-[10px] text-zinc-400">
+                <span>4K 快速</span>
+                <span>128K 深度</span>
+              </div>
+            </div>
 
----
+            <div class="p-3 flex flex-col gap-1.5">
+              <span class="text-zinc-700">全局系统指令</span>
+              <textarea rows="4" class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-[11px] text-zinc-600 outline-none focus:border-brand transition-colors font-mono resize-none">You are AuraMind, a local-first knowledge assistant. Always answer based on injected context. Keep answers structured and concise.</textarea>
+            </div>
+          </div>
+        </section>
 
-### 📋 行动指南建议
-- [ ] 建议立即在 Notion 或 Obsidian 中建立 PARA 笔记本。
-- [ ] 开启【最强大脑】WebDAV 静默增量同步，将今天的知识捕获进 Obsidian 文件夹。`;
+        <!-- WebDAV -->
+        <section class="flex flex-col gap-2.5">
+          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">WebDAV 同步</h2>
 
-            let index = 0;
-            const container = document.createElement('div');
-            container.className = "cursor-blink whitespace-pre-wrap font-medium text-gray-800";
-            dynamicContent.appendChild(container);
+          <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
+            <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
+              <span class="text-zinc-700 whitespace-nowrap mr-3">服务器 URL</span>
+              <input class="flex-1 text-right outline-none text-zinc-900 placeholder:text-zinc-300" placeholder="https://dav.example.com" value="https://dav.jianguoyun.com/dav" />
+            </div>
 
-            streamTimer = setInterval(() => {
-                if (index < fullText.length) {
-                    container.innerHTML += fullText.charAt(index);
-                    index++;
-                    // 自动向下滚动
-                    document.getElementById('ai-output-panel').scrollTop = document.getElementById('ai-output-panel').scrollHeight;
-                } else {
-                    stopAiProcess();
-                }
-            }, 15);
-        }
+            <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
+              <span class="text-zinc-700 whitespace-nowrap mr-3">账号</span>
+              <input class="flex-1 text-right outline-none text-zinc-900 placeholder:text-zinc-300" placeholder="user@example.com" />
+            </div>
 
-        function stopAiProcess() {
-            clearInterval(streamTimer);
-            document.getElementById('btn-run-ai').classList.remove('hidden');
-            document.getElementById('btn-stop-ai').classList.add('hidden');
-            const cursor = document.querySelector('.cursor-blink');
-            if (cursor) cursor.classList.remove('cursor-blink');
+            <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
+              <span class="text-zinc-700 whitespace-nowrap mr-3">应用密码</span>
+              <input type="password" class="flex-1 text-right outline-none text-zinc-900 placeholder:text-zinc-300" placeholder="••••••••••" />
+            </div>
 
-            const aiStatus = document.getElementById('ai-status-indicator');
-            aiStatus.innerHTML = `<span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>生成完成 (SUCCESS)`;
-        }
+            <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
+              <span class="text-zinc-700">后台增量同步</span>
+              <div class="relative inline-block w-8 align-middle select-none">
+                <input type="checkbox" id="toggle-sync" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 border-zinc-200 appearance-none cursor-pointer" checked />
+                <label for="toggle-sync" class="toggle-label block overflow-hidden h-4 rounded-full bg-zinc-200 cursor-pointer"></label>
+              </div>
+            </div>
 
-        function clearContext() {
-            document.getElementById('ai-dynamic-content').innerHTML = "";
-            document.getElementById('ai-placeholder').classList.remove('hidden');
-            document.getElementById('ai-status-indicator').innerHTML = `<span class="w-1.5 h-1.5 bg-gray-300 rounded-full mr-1.5"></span>空闲`;
-        }
+            <div class="p-3 flex items-center justify-between">
+              <span class="text-zinc-700">冲突解决规则</span>
+              <select class="bg-zinc-50 border border-zinc-200 text-zinc-700 text-[11px] rounded-md px-2 py-1 outline-none">
+                <option>CRDT 自动合并</option>
+                <option>保留本地覆盖</option>
+                <option>接受云端版本</option>
+                <option>手动确认</option>
+              </select>
+            </div>
+          </div>
 
-        function copyAiOutput() {
-            const text = document.getElementById('ai-dynamic-content').innerText;
-            if (!text) {
-                alert('无可复制内容');
-                return;
-            }
-            navigator.clipboard.writeText(text);
-            alert('AI 总结内容已成功复制到系统剪切板！');
-        }
+          <div class="flex gap-2">
+            <button onclick="testConnection()" id="test-btn" class="flex-1 py-2.5 rounded-xl bg-white border border-zinc-200 text-[12px] font-medium text-zinc-700 hover:bg-zinc-50 flex items-center justify-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              <span>测试连接</span>
+            </button>
 
-        // 7. 本地极速检索过滤器
-        function performSearch() {
-            const query = document.getElementById('search-box').value.toLowerCase();
-            const cards = document.querySelectorAll('.history-card');
+            <button onclick="startSync()" id="sync-btn" class="flex-1 py-2.5 rounded-xl bg-brand text-white text-[12px] font-medium hover:bg-indigo-600 flex items-center justify-center gap-1.5">
+              <i id="sync-icon" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span id="sync-text">立即同步</span>
+            </button>
+          </div>
 
-            cards.forEach(card => {
-                const text = card.innerText.toLowerCase();
-                if (text.includes(query)) {
-                    card.style.display = "block";
-                } else {
-                    card.style.display = "none";
-                }
-            });
-        }
+          <div class="text-center text-[11px] text-zinc-400 flex justify-center items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            上次同步：今天 09:41
+          </div>
+        </section>
 
-        // 8. 详情抽屉控制
-        function openDetail(type) {
-            const overlay = document.getElementById('detail-overlay');
-            const title = document.getElementById('detail-title');
-            if (type === 'deepseek') {
-                title.innerText = "DeepSeek V3 System Architecture Specification";
-            } else {
-                title.innerText = "如何构建第二大脑 (How to Build a Second Brain)";
-            }
-            overlay.classList.remove('translate-x-full');
-        }
+        <!-- Storage -->
+        <section class="flex flex-col gap-2.5 pb-8">
+          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">本地存储</h2>
 
-        function closeDetail() {
-            const overlay = document.getElementById('detail-overlay');
-            overlay.classList.add('translate-x-full');
-        }
+          <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-700">IndexedDB 占用</span>
+              <span class="font-mono text-[12px] text-zinc-500">24.5 MB</span>
+            </div>
+            <div class="p-3 border-b border-zinc-100 flex justify-between">
+              <span class="text-zinc-700">文档数量</span>
+              <span class="font-mono text-[12px] text-zinc-500">5,241</span>
+            </div>
+            <div class="p-3 flex justify-between">
+              <span class="text-zinc-700">向量索引</span>
+              <span class="font-mono text-[12px] text-zinc-500">Ready</span>
+            </div>
+          </div>
 
-        // 9. 设置页系统备份测试
-        function simulateManualBackup() {
-            alert('最强大脑本地数据打包完毕，开始生成 .JSON。 \n检测到包含 2 条结构化文章，1 条高亮，1 个自定义模型。 \n自动启动浏览器离线下载。');
-        }
+          <button class="w-full py-2.5 rounded-xl bg-white border border-red-100 text-red-500 text-[13px] font-medium hover:bg-red-50 flex items-center justify-center gap-2">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            清空本地数据
+          </button>
+        </section>
+      </main>
+    </section>
 
-        function simulateManualRestore() {
-            alert('请上传 SuperBrain JSON 或 ZIP 归档文件。\n系统将自动执行【分流合并机制】，检测更新时间戳后执行覆盖更新。');
-        }
+    <!-- Heatmap Tooltip -->
+    <div id="heatmap-tooltip" class="fixed hidden opacity-0 pointer-events-none bg-[#18181B] text-white text-[11px] px-2.5 py-1.5 rounded-md shadow-lg z-50 whitespace-nowrap transition-opacity duration-150 -translate-x-1/2 -translate-y-full">
+      Tooltip
+    </div>
 
-        function simulateObsidianExport() {
-            alert('开始组装 JSZip 压缩包...\n正在将文章表转换为 Obsidian YAML 格式 Markdown...\n导出完成，即将开始下载：SuperBrain-Obsidian-Vault-2025.zip');
-        }
+    <!-- Add Model Modal -->
+    <div id="model-modal" class="hidden absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-end">
+      <div class="w-full bg-white rounded-t-2xl border-t border-zinc-200 shadow-2xl p-4 animate-[slideUp_.2s_ease-out]">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h3 class="text-[15px] font-semibold">添加模型节点</h3>
+            <p class="text-[11px] text-zinc-400 mt-0.5">支持 OpenAI Compatible / Claude / Ollama</p>
+          </div>
+          <button onclick="closeModelModal()" class="p-1.5 rounded-md text-zinc-400 hover:bg-zinc-100">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
 
-        function simulateSingleObsidianExport() {
-            alert('正在将当前详情页输出为标准 Obsidian Markdown。正文底部已融合 AI TL;DR 消化分析。');
-            closeDetail();
-        }
-    </script>
+        <div class="space-y-3 text-[13px]">
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">模型名称</label>
+            <input class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand" placeholder="例如 DeepSeek Chat" />
+          </div>
+
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">服务商类型</label>
+            <select class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand bg-white">
+              <option>OpenAI Compatible</option>
+              <option>Anthropic Claude</option>
+              <option>Ollama Local</option>
+              <option>Gemini</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">Base URL</label>
+            <input class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand font-mono text-[12px]" placeholder="https://api.example.com/v1" />
+          </div>
+
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">API Key</label>
+            <input type="password" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand font-mono text-[12px]" placeholder="sk-..." />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[11px] text-zinc-500 font-medium">上下文</label>
+              <input class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand font-mono text-[12px]" value="128000" />
+            </div>
+            <div>
+              <label class="text-[11px] text-zinc-500 font-medium">温度</label>
+              <input class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 outline-none focus:border-brand font-mono text-[12px]" value="0.7" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-5">
+          <button onclick="closeModelModal()" class="flex-1 h-10 rounded-xl bg-zinc-100 text-zinc-700 text-[13px] font-medium hover:bg-zinc-200">
+            取消
+          </button>
+          <button onclick="closeModelModal()" class="flex-1 h-10 rounded-xl bg-brand text-white text-[13px] font-medium hover:bg-indigo-600">
+            添加模型
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const subtitles = {
+      workspace: '已注入当前网页上下文',
+      library: '本地知识库与历史轨迹',
+      settings: '模型、同步与本地配置'
+    };
+
+    function refreshIcons() {
+      lucide.createIcons();
+    }
+
+    function goView(view) {
+      document.querySelectorAll('.view').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      });
+
+      const active = document.getElementById(`view-${view}`);
+      active.classList.remove('hidden');
+      active.classList.add('flex');
+
+      document.querySelectorAll('.top-icon').forEach(btn => {
+        btn.classList.remove('text-brand', 'bg-indigo-50');
+        btn.classList.add('text-zinc-500');
+      });
+
+      const activeBtn = document.querySelector(`.top-icon[data-view="${view}"]`);
+      activeBtn.classList.add('text-brand', 'bg-indigo-50');
+      activeBtn.classList.remove('text-zinc-500');
+
+      document.getElementById('top-subtitle').innerText = subtitles[view];
+
+      refreshIcons();
+    }
+
+    function switchWorkspaceTab(tab) {
+      const chat = document.getElementById('workspace-chat');
+      const context = document.getElementById('workspace-context');
+      const input = document.getElementById('chat-input');
+
+      const tabChat = document.getElementById('workspace-tab-chat');
+      const tabContext = document.getElementById('workspace-tab-context');
+
+      if (tab === 'chat') {
+        chat.classList.remove('hidden');
+        context.classList.add('hidden');
+        input.classList.remove('hidden');
+
+        tabChat.className = 'px-3 py-1 text-[12px] font-medium rounded-[7px] bg-white shadow-sm text-zinc-900 transition-all';
+        tabContext.className = 'px-3 py-1 text-[12px] font-medium rounded-[7px] text-zinc-500 hover:text-zinc-700 transition-all';
+      } else {
+        chat.classList.add('hidden');
+        context.classList.remove('hidden');
+        input.classList.add('hidden');
+
+        tabContext.className = 'px-3 py-1 text-[12px] font-medium rounded-[7px] bg-white shadow-sm text-zinc-900 transition-all';
+        tabChat.className = 'px-3 py-1 text-[12px] font-medium rounded-[7px] text-zinc-500 hover:text-zinc-700 transition-all';
+      }
+
+      refreshIcons();
+    }
+
+    function switchContextTab(tab) {
+      const panes = ['md', 'raw', 'meta'];
+      panes.forEach(name => {
+        document.getElementById(`context-${name}`).classList.add('hidden');
+        const btn = document.getElementById(`context-tab-${name}`);
+        btn.className = 'text-zinc-400 hover:text-zinc-700 h-full flex items-center gap-1';
+      });
+
+      document.getElementById(`context-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`context-tab-${tab}`);
+      activeBtn.className = 'text-brand border-b-2 border-brand h-full flex items-center gap-1';
+
+      refreshIcons();
+    }
+
+    function buildHeatmap() {
+      const grid = document.getElementById('heatmap-grid');
+      const tooltip = document.getElementById('heatmap-tooltip');
+
+      if (!grid || grid.children.length > 0) return;
+
+      const colors = [
+        'bg-zinc-100',
+        'bg-emerald-200',
+        'bg-emerald-400',
+        'bg-emerald-600'
+      ];
+
+      const cols = 30;
+      const rows = 7;
+
+      for (let i = 0; i < cols * rows; i++) {
+        const square = document.createElement('div');
+
+        const rand = Math.random();
+        let intensity = 0;
+
+        if (rand > 0.55) intensity = 1;
+        if (rand > 0.82) intensity = 2;
+        if (rand > 0.94) intensity = 3;
+
+        square.className = `w-[9px] h-[9px] rounded-[2px] ${colors[intensity]} hover:scale-125 transition-transform cursor-crosshair`;
+
+        square.addEventListener('mouseenter', () => {
+          const rect = square.getBoundingClientRect();
+          const captures = intensity === 0 ? 0 : intensity * 3 + Math.floor(Math.random() * 3);
+          const chats = intensity === 0 ? 0 : intensity * 2;
+
+          tooltip.innerHTML = intensity === 0
+            ? `<strong>无捕获</strong><br/>这一天没有新增知识`
+            : `<strong>捕获 ${captures} 篇</strong><br/>AI 对话 ${chats} 次`;
+
+          tooltip.style.left = `${rect.left + rect.width / 2}px`;
+          tooltip.style.top = `${rect.top - 8}px`;
+
+          tooltip.classList.remove('hidden');
+          requestAnimationFrame(() => tooltip.classList.remove('opacity-0'));
+        });
+
+        square.addEventListener('mouseleave', () => {
+          tooltip.classList.add('opacity-0');
+          setTimeout(() => tooltip.classList.add('hidden'), 150);
+        });
+
+        grid.appendChild(square);
+      }
+
+      const scroll = document.getElementById('heatmap-scroll');
+      setTimeout(() => {
+        scroll.scrollLeft = scroll.scrollWidth;
+      }, 0);
+    }
+
+    function testConnection() {
+      const btn = document.getElementById('test-btn');
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>连接中...</span>';
+      refreshIcons();
+
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i><span class="text-emerald-600">测试通过 120ms</span>';
+        refreshIcons();
+
+        setTimeout(() => {
+          btn.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5"></i><span>测试连接</span>';
+          refreshIcons();
+        }, 2500);
+      }, 1200);
+    }
+
+    function startSync() {
+      const btn = document.getElementById('sync-btn');
+      const text = document.getElementById('sync-text');
+      const icon = document.getElementById('sync-icon');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      icon.classList.add('animate-spin');
+      text.innerText = '同步中...';
+
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i><span id="sync-text">同步完成</span>';
+        refreshIcons();
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.classList.remove('opacity-80', 'cursor-not-allowed');
+          btn.innerHTML = '<i id="sync-icon" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span id="sync-text">立即同步</span>';
+          refreshIcons();
+        }, 2200);
+      }, 1800);
+    }
+
+    function openModelModal() {
+      document.getElementById('model-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+
+    function closeModelModal() {
+      document.getElementById('model-modal').classList.add('hidden');
+    }
+
+    buildHeatmap();
+    refreshIcons();
+  </script>
 </body>
 </html>
