@@ -1,8 +1,8 @@
 {
-  "name": "wxt-vue-starter",
-  "description": "manifest.json description",
+  "name": "superbrain",
+  "description": "Local-First AI Web Clipper — capture, organize, and chat with web articles. Built with WXT + Vue 3 + Pinia + Dexie.",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -12,6 +12,8 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
@@ -23,17 +25,26 @@
     "eventsource-parser": "^3.1.0",
     "highlight.js": "^11.11.1",
     "lz-string": "^1.5.0",
+    "marked": "^15.0.0",
     "minisearch": "^7.2.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.2.0",
+    "@unocss/preset-icons": "^66.7.2",
+    "@unocss/preset-uno": "^66.7.2",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/test-utils": "^2.4.11",
     "@wxt-dev/module-vue": "^1.0.3",
     "@wxt-dev/unocss": "^1.0.1",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
     "reka-ui": "^2.10.0",
     "typescript": "^5.9.3",
     "unocss": "^66.7.2",
+    "vitest": "^4.1.9",
     "vue-tsc": "^3.2.5",
     "wxt": "^0.20.27"
   }

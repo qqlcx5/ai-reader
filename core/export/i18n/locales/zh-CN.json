@@ -1,0 +1,51 @@
+{
+  "export": {
+    "title": "导出文章",
+    "format": "导出格式",
+    "format_obsidian": "Obsidian Markdown (.md)",
+    "format_mdx": "思维脑图 MDX",
+    "format_json": "JSON 脑图",
+    "variant": "导出变体",
+    "variant_default": "标准导出",
+    "variant_developer": "开发者增强",
+    "variant_business": "商务模板",
+    "preview": "预览",
+    "download": "下载文件",
+    "copy": "复制内容",
+    "batch_export": "批量导出",
+    "batch_export_all": "导出全部 ({{count}} 篇)",
+    "export_success": "导出成功",
+    "copy_success": "已复制到剪贴板",
+    "copy_failed": "复制失败",
+    "no_article": "没有可导出的文章",
+    "select_format": "请选择导出格式"
+  },
+  "mindmap": {
+    "title": "思维脑图",
+    "format_mdx": "MDX 格式",
+    "format_json": "JSON 格式",
+    "description_mdx": "嵌套标题层级 + MindMap 组件，可直接用于 MDX 渲染",
+    "description_json": "结构化 JSON，便于程序化处理与二次开发"
+  },
+  "obsidian": {
+    "frontmatter": "YAML Frontmatter",
+    "body": "Markdown 正文",
+    "filename": "文件名格式",
+    "fields": {
+      "title": "标题",
+      "source": "来源URL",
+      "created": "创建日期",
+      "author": "作者",
+      "site_name": "站点名称",
+      "tags": "标签",
+      "excerpt": "摘要",
+      "reading_time": "阅读时间"
+    }
+  },
+  "common": {
+    "cancel": "取消",
+    "confirm": "确认",
+    "close": "关闭",
+    "back": "返回"
+  }
+}
