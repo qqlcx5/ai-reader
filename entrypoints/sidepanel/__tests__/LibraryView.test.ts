@@ -35,10 +35,17 @@ describe('LibraryView', () => {
   it('shows empty state when no articles', () => {
     const wrapper = mount(LibraryView, {
       global: {
-        stubs: { AppCard: true },
+        stubs: {
+          Search: { template: '<svg />' },
+          Calendar: { template: '<svg />' },
+          Globe: { template: '<svg />' },
+          Cpu: { template: '<svg />' },
+          Quote: { template: '<svg />' },
+          Sparkles: { template: '<svg />' },
+        },
       },
     })
-    expect(wrapper.text()).toContain('暂无保存的文章')
+    expect(wrapper.text()).toContain('剪藏的网页文章将展示于此')
   })
 
   it('renders articles from store', () => {
@@ -47,9 +54,12 @@ describe('LibraryView', () => {
     const wrapper = mount(LibraryView, {
       global: {
         stubs: {
-          AppCard: {
-            template: '<div class="app-card"><slot /></div>',
-          },
+          Search: { template: '<svg />' },
+          Calendar: { template: '<svg />' },
+          Globe: { template: '<svg />' },
+          Cpu: { template: '<svg />' },
+          Quote: { template: '<svg />' },
+          Sparkles: { template: '<svg />' },
         },
       },
     })
@@ -65,18 +75,19 @@ describe('LibraryView', () => {
     const wrapper = mount(LibraryView, {
       global: {
         stubs: {
-          AppCard: {
-            template: '<div class="app-card"><slot /></div>',
-          },
+          Search: { template: '<svg />' },
+          Calendar: { template: '<svg />' },
+          Globe: { template: '<svg />' },
+          Cpu: { template: '<svg />' },
+          Quote: { template: '<svg />' },
+          Sparkles: { template: '<svg />' },
         },
       },
     })
 
     const input = wrapper.find('input')
     await input.setValue('Vue')
-
-    // Wait for debounce (200ms) + a little extra
-    await new Promise((r) => setTimeout(r, 300))
+    await new Promise((r) => setTimeout(r, 50))
 
     expect(wrapper.text()).toContain('Vue Guide')
     expect(wrapper.text()).not.toContain('React Docs')

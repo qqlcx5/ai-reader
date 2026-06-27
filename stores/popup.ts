@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-export type PopupView = 'capture' | 'library' | 'reader' | 'chat' | 'settings' | 'export'
+export type PopupView = 'capture' | 'library' | 'chat' | 'settings'
 
 export const usePopupStore = defineStore('popup', {
   state: () => ({

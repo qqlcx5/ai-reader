@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ArrowLeft, FileDown, Trash2, X } from '@lucide/vue'
 import { useLibraryStore } from '@/stores/library'
 import { useModal } from '../composables/useModal'
 import { useToast } from '../composables/useToast'
+import { articleRepo } from '@/db/article.repository'
+import { exportArticleObsidian, downloadFile } from '@/core/export/obsidian-exporter'
 
 const library = useLibraryStore()
 const modal = useModal()
@@ -12,9 +14,17 @@ const toast = useToast()
 const isOpen = ref(false)
 const article = computed(() => library.selectedArticle)
 
+// Auto-open when library selects an article
+watch(() => library.selectedId, (newId) => {
+  if (newId) {
+    isOpen.value = true
+  } else {
+    isOpen.value = false
+  }
+})
+
 function open(id: string) {
   library.selectArticle(id)
-  isOpen.value = true
 }
 
 function close() {
@@ -31,6 +41,7 @@ async function handleDelete() {
     variant: 'danger',
   })
   if (confirmed) {
+    await articleRepo.delete(article.value.id)
     library.removeArticle(article.value.id)
     toast.showInfo('已删除', article.value.title)
     close()
@@ -39,15 +50,9 @@ async function handleDelete() {
 
 function exportObsidian() {
   if (!article.value) return
-  const md = article.value.markdown
-  const blob = new Blob([md], { type: 'text/markdown' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${article.value.title.replace(/[/\\?%*:|"<>]/g, '_')}.md`
-  a.click()
-  URL.revokeObjectURL(url)
-  toast.showSuccess('已导出', article.value.title)
+  const result = exportArticleObsidian(article.value)
+  downloadFile(result.filename, result.content)
+  toast.showSuccess('已导出', result.filename)
 }
 
 defineExpose({ open, close, isOpen })
