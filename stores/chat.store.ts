@@ -58,7 +58,6 @@ export const useChatStore = defineStore('chat', () => {
 
   const canSend = computed<boolean>(() => {
     if (isSending.value || isStreaming.value) return false
-    if (!inputText.value.trim()) return false
 
     const modelStore = useModelStore()
     const model = modelStore.currentModel
@@ -68,6 +67,16 @@ export const useChatStore = defineStore('chat', () => {
 
     // Ollama doesn't require API key
     if (model.provider !== 'ollama' && !model.apiKey) return false
+
+    // Allow empty input when system prompt or document context exists
+    if (!inputText.value.trim()) {
+      const settingsStore = useSettingsStore()
+      const hasSystemPrompt = !!(model.systemPrompt || settingsStore.settings.globalSystemPrompt)
+      const documentStore = useDocumentStore()
+      const doc = documentStore.pageDocument || documentStore.currentDocument
+      const hasContext = !!(doc?.markdown)
+      if (!hasSystemPrompt && !hasContext) return false
+    }
 
     return true
   })
@@ -489,7 +498,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     // Truncate context before building the prompt (was previously done
-    // post-build by checking m.role === 'system', but context is now user-role).
+    // post-build by checking m.role === 'system', but context is now assistant-role).
     const maxTokens = Math.min(
       model.contextWindow,
       settings.context.maxContextTokens,

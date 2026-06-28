@@ -4,6 +4,7 @@ import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X } f
 import { useChatStore } from '@/stores/chat.store'
 import { useModelStore } from '@/stores/model.store'
 import { useDocumentStore } from '@/stores/document.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import ModelSelect from '@/components/workspace/ModelSelect.vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
@@ -12,6 +13,7 @@ import RekaTextarea from '@/components/ui/RekaTextarea.vue'
 const chatStore = useChatStore()
 const modelStore = useModelStore()
 const documentStore = useDocumentStore()
+const settingsStore = useSettingsStore()
 const promptTemplateStore = usePromptTemplateStore()
 
 // ── Template popover ─────────────────────────────────────
@@ -109,10 +111,20 @@ const sendLabel = computed(() => {
   return ''
 })
 
+// ── Helper: check if system prompt or document context exists ──
+function hasContentContext(): boolean {
+  const model = modelStore.currentModel
+  if (!model) return false
+  if (model.systemPrompt || settingsStore.settings.globalSystemPrompt) return true
+  const doc = documentStore.pageDocument || documentStore.currentDocument
+  if (doc?.markdown) return true
+  return false
+}
+
 // ── canSend for multi-model: at least 1 model selected ───
 const canSendMulti = computed(() => {
   const msg = chatStore.inputText.trim()
-  if (!msg) return false
+  if (!msg && !hasContentContext()) return false
   if (chatStore.isSending || chatStore.isStreaming) return false
   if (multiModelIds.value.length === 0) return false
 
@@ -143,7 +155,7 @@ function handleModelChange(value: string | string[]) {
 
 function submit() {
   const msg = chatStore.inputText.trim()
-  if (!msg) return
+  if (!msg && !hasContentContext()) return
   if (!canSendMulti.value) return
 
   chatStore.clearError()
