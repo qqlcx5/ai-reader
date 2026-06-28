@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { ref, onUnmounted, nextTick } from 'vue'
-import {
-  SelectRoot, SelectTrigger, SelectValue, SelectContent,
-  SelectItem, SelectItemText, SelectPortal, SelectIcon, SelectViewport,
-} from 'reka-ui'
+import Select from '@/components/ui/Select.vue'
 
 const emit = defineEmits<{
   showToast: [title: string, desc: string]
@@ -190,65 +187,11 @@ onUnmounted(() => {
     <div class="grid grid-cols-2 gap-2">
       <div>
         <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">智能体模型 (Model)</label>
-        <SelectRoot v-model="selectedModel">
-          <SelectTrigger
-            class="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-2 py-2 outline-none inline-flex items-center justify-between cursor-pointer focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          >
-            <SelectValue />
-            <SelectIcon class="ml-1">
-              <svg class="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </SelectIcon>
-          </SelectTrigger>
-          <SelectPortal>
-            <SelectContent
-              class="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
-              :side-offset="4"
-              position="popper"
-            >
-              <SelectViewport class="p-1">
-                <SelectItem
-                  v-for="m in models"
-                  :key="m.value"
-                  :value="m.value"
-                  class="text-xs font-medium px-2.5 py-2 rounded-md outline-none cursor-pointer hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600"
-                >
-                  <SelectItemText>{{ m.label }}</SelectItemText>
-                </SelectItem>
-              </SelectViewport>
-            </SelectContent>
-          </SelectPortal>
-        </SelectRoot>
+        <Select v-model="selectedModel" :options="models" />
       </div>
       <div>
         <label class="text-[10px] font-bold text-gray-400 block mb-1 uppercase">消化工作流 (Workflow)</label>
-        <SelectRoot v-model="selectedWorkflow">
-          <SelectTrigger
-            class="w-full text-xs font-semibold bg-gray-50 border border-gray-200 rounded-lg pl-2.5 pr-2 py-2 outline-none inline-flex items-center justify-between cursor-pointer focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          >
-            <SelectValue />
-            <SelectIcon class="ml-1">
-              <svg class="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </SelectIcon>
-          </SelectTrigger>
-          <SelectPortal>
-            <SelectContent
-              class="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50"
-              :side-offset="4"
-              position="popper"
-            >
-              <SelectViewport class="p-1">
-                <SelectItem
-                  v-for="w in workflows"
-                  :key="w.value"
-                  :value="w.value"
-                  class="text-xs font-medium px-2.5 py-2 rounded-md outline-none cursor-pointer hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[state=checked]:bg-blue-50 data-[state=checked]:text-blue-600"
-                >
-                  <SelectItemText>{{ w.label }}</SelectItemText>
-                </SelectItem>
-              </SelectViewport>
-            </SelectContent>
-          </SelectPortal>
-        </SelectRoot>
+        <Select v-model="selectedWorkflow" :options="workflows" />
       </div>
     </div>
 

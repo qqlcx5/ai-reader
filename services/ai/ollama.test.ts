@@ -100,7 +100,7 @@ describe('OllamaProvider', () => {
           model: mockModelConfig(),
           messages: [{ role: 'user', content: 'Hi' }],
         }),
-      ).rejects.toThrow(/Ollama API error/)
+      ).rejects.toThrow(/Ollama error/)
     })
   })
 
@@ -176,7 +176,7 @@ describe('OllamaProvider', () => {
         },
       )
 
-      expect(errorMsg).toContain('HTTP 500')
+      expect(errorMsg).toContain('Ollama error')
     })
   })
 

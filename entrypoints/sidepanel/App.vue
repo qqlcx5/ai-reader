@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useDocumentStore } from '@/stores/document.store'
+import { useModelStore } from '@/stores/model.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import TopBar from '@/components/auramind/TopBar.vue'
@@ -18,6 +19,7 @@ const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 const documentStore = useDocumentStore()
+const modelStore = useModelStore()
 
 function handleBackgroundMessage(
   message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload>,
@@ -74,6 +76,12 @@ let removeListener: (() => void) | null = null
 
 onMounted(async () => {
   await settingsStore.loadSettings()
+  await modelStore.loadModels()
+
+  // Auto-select default model if none selected
+  if (!modelStore.currentModelId && modelStore.defaultModel) {
+    modelStore.selectModel(modelStore.defaultModel.id)
+  }
 
   if (browser?.runtime?.onMessage) {
     browser.runtime.onMessage.addListener(handleBackgroundMessage)

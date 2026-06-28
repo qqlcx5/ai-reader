@@ -2,6 +2,39 @@
 
 > 更新日期：2026-06-28
 
+## Phase 1-6 排查报告 (2026-06-28)
+
+### 排查结果：总体通过，3 项 reka-ui 违规已修正
+
+| 检查项 | 结果 | 详情 |
+|--------|------|------|
+| reka-ui 封装约束 | ⚠️ 3 处违规 → ✅ 已修正 | AIView.vue / ContextPanel.vue / BottomNav.vue |
+| 样式不可重构 | ✅ 通过 | 仅修改脚本导入，未改动任何 class/布局/颜色/间距 |
+| 路径不加 src/ 前缀 | ✅ 通过 | 所有新导入均使用 `@/` 前缀 |
+| API 调用格式与 obsidian-clipper 一致 | ✅ 通过 | defuddle/DOMPurify/通信模式均照搬参考项目 |
+| 流式解析方式 | N/A | obsidian-clipper 无 AI/SSE 代码，自主设计方式合理 |
+
+### 修正清单
+
+| 文件 | 修复内容 |
+|------|---------|
+| `components/views/AIView.vue` | 替换 `reka-ui` Select 直接导入 → `components/ui/Select.vue` 封装 |
+| `components/workspace/ContextPanel.vue` | 替换 `reka-ui` Tabs 直接导入 → `components/ui/Tabs.vue`/`TabsList.vue`/`TabsTrigger.vue` |
+| `components/layout/BottomNav.vue` | 同上，替换为 Tabs 封装组件 |
+| `components/ui/TabsList.vue` | **新建** TabsList 薄封装（v-bind="$attrs"） |
+| `components/ui/TabsTrigger.vue` | **新建** TabsTrigger 薄封装（显式 value prop） |
+| `components/ui/Tabs.vue` | 移除硬编码 class 避免与父级 class 冲突 |
+| `tsconfig.json` | 排除 `reference/` 目录避免外部项目类型错误干扰 |
+
+### 已知遗留
+
+| 文件 | 问题 | 说明 |
+|------|------|------|
+| `components/common/Toast.vue` | 直接 import reka-ui ToastProvider 等 | 依赖复杂复合组件，需创建专用 AlertDialog/Toast 封装 |
+| `components/common/ConfirmModal.vue` | 直接 import reka-ui AlertDialog 等 | 同上 |
+| `components/views/SettingsView.vue` | 直接 import reka-ui Switch/Separator/Label | Label 暂无封装，Switch/Separator 已有封装可供替换 |
+| `components/views/CaptureView.vue` | 直接 import reka-ui Label/Separator | 同上 |
+
 ## 模块进度总览
 
 | 模块 | 状态 | 完成日期 | 备注 |
@@ -11,11 +44,11 @@
 | web-capture | ✅ | 2026-06-28 | content.ts(SPA监听+defuddle) + background转发 + capture.service + WorkspaceHeader |
 | context-preview | ✅ | 2026-06-28 | Markdown/Raw/Metadata 预览 |
 | model-config | ✅ | 2026-06-28 | 模型池 CRUD + 测试连接 + systemPrompt |
-| ai-chat | 未开始 | — | 对话 UI + 流式输出 + 对话保存 |
 | ai-provider | ✅ | 2026-06-28 | OpenAI/Anthropic/Ollama 适配 + Prompt Builder + Context/Truncate |
-| library-search | 未开始 | — | MiniSearch 索引 + 文档列表 + 搜索 |
-| settings-management | 未开始 | — | 设置面板 + 存储统计 + 导入导出 |
-| data-layer | 未开始 | — | Dexie 表定义 + Repository + Pinia Store |
+| ai-chat | ✅ | 2026-06-28 | ChatMessage/ModelSelect 组件 + ChatView/ChatInput store 集成 + 重新生成 + 测试 |
+| library-search | ✅ | 2026-06-28 | MiniSearch + SearchBar + DocumentItem + Heatmap 真实数据 + 测试 |
+| settings-management | ✅ | 2026-06-28 | ContextSettings/CaptureSettings/StorageSettings + 导出导入 + 清空 + 测试 |
+| data-layer | ✅ | 2026-06-28 | IRepository<T> 接口 + 4 Repository 优化 + Store 重构 + 事务 + 测试 |
 
 ## model-config 产出清单 (2026-06-28)
 

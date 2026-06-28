@@ -3,7 +3,7 @@ withDefaults(defineProps<{
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'dashed' | 'link'
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
-  type?: string
+  type?: 'button' | 'submit' | 'reset'
 }>(), {
   variant: 'secondary',
   size: 'md',

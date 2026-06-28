@@ -1,31 +1,476 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useChatStore } from './chat.store'
+import type { ConversationEntity, ChatMessage } from '../types/chat'
+import type { ModelConfig } from '../types/model'
+import type { AppSettings } from '../types/settings'
 
+// ── Mock ChatRepository ────────────────────────────────
+const chatDb = new Map<string, ConversationEntity>()
+
+vi.mock('../db/repositories/chat.repository', () => ({
+  ChatRepository: {
+    findById: vi.fn(async (id: string) => chatDb.get(id)),
+    findAll: vi.fn(async () => Array.from(chatDb.values())),
+    save: vi.fn(async (conv: ConversationEntity) => {
+      chatDb.set(conv.id, { ...conv })
+      return conv.id
+    }),
+    delete: vi.fn(async (id: string) => {
+      chatDb.delete(id)
+    }),
+  },
+}))
+
+// ── Mock ModelRepository (real modelStore uses this) ────
+const modelDb = new Map<string, ModelConfig>()
+
+vi.mock('../db/repositories/model.repository', () => ({
+  ModelRepository: {
+    findAll: vi.fn(async () => Array.from(modelDb.values())),
+    findById: vi.fn(async (id: string) => modelDb.get(id)),
+    save: vi.fn(async (model: ModelConfig) => {
+      modelDb.set(model.id, { ...model })
+      return model.id
+    }),
+    delete: vi.fn(async (id: string) => {
+      modelDb.delete(id)
+    }),
+  },
+}))
+
+// ── Mock SettingsRepository ─────────────────────────────
+vi.mock('../db/repositories/settings.repository', () => ({
+  SettingsRepository: {
+    get: vi.fn(async () => undefined),
+    save: vi.fn(async (_s: AppSettings) => {}),
+  },
+}))
+
+// ── Mock AI Factory ────────────────────────────────────
+const mockStreamChat = vi.fn()
+vi.mock('../services/ai/factory', () => ({
+  createProvider: vi.fn(() => ({
+    chat: vi.fn(),
+    streamChat: mockStreamChat,
+    testConnection: vi.fn(),
+  })),
+}))
+
+// ── Mock PromptBuilder (class to allow `new`) ──────────
+const mockBuild = vi.fn()
+vi.mock('../services/prompt/builder', () => ({
+  PromptBuilder: class {
+    build = mockBuild
+  },
+}))
+
+// ── Mock truncate ──────────────────────────────────────
+vi.mock('../services/prompt/truncate', () => ({
+  truncateContext: vi.fn((text: string) => text),
+}))
+
+import { useChatStore } from './chat.store'
+import { useModelStore } from './model.store'
+
+// ── Helpers ────────────────────────────────────────────
+function makeModel(overrides: Partial<ModelConfig> = {}): ModelConfig {
+  return {
+    id: 'm1',
+    name: 'GPT-4',
+    provider: 'openai-compatible',
+    modelId: 'gpt-4',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: 'sk-test',
+    enabled: true,
+    isDefault: true,
+    contextWindow: 128000,
+    temperature: 0.7,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  }
+}
+
+function makeConv(id: string, documentId: string): ConversationEntity {
+  return {
+    id,
+    documentId,
+    title: 'Test Conversation',
+    messages: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  }
+}
+
+function setupStreamSuccess(content: string) {
+  mockBuild.mockReturnValue({
+    messages: [{ role: 'user', content: 'test' }],
+    system: undefined,
+  })
+  mockStreamChat.mockImplementation(
+    async (
+      _input: any,
+      callbacks: { onToken: (t: string) => void; onDone: () => void; onError: (e: Error) => void },
+    ) => {
+      callbacks.onToken(content)
+      callbacks.onDone()
+    },
+  )
+}
+
+async function seedModel(overrides: Partial<ModelConfig> = {}) {
+  const model = makeModel(overrides)
+  modelDb.set(model.id, model)
+  const modelStore = useModelStore()
+  await modelStore.loadModels()
+  modelStore.selectModel(model.id)
+  return model
+}
+
+// ── Tests ──────────────────────────────────────────────
 describe('stores/chat.store', () => {
-  beforeEach(() => {
+  let timeCursor = 1700000000000
+
+  beforeEach(async () => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
+    chatDb.clear()
+    modelDb.clear()
+
+    // Each Date.now() call returns 60s+ later than previous to avoid
+    // the 60s rate limiter blocking tests that call sendMessage in sequence.
+    vi.spyOn(Date, 'now').mockImplementation(() => {
+      timeCursor += 60_001
+      return timeCursor
+    })
   })
 
+  // 1. Default values
   it('should initialize with default values', () => {
     const store = useChatStore()
-    expect(store.currentConversation).toBeNull()
+    expect(store.messages).toEqual([])
+    expect(store.currentConversationId).toBeNull()
     expect(store.inputText).toBe('')
     expect(store.isStreaming).toBe(false)
     expect(store.isSending).toBe(false)
   })
 
+  // 2. setInputText
   it('should set input text', () => {
     const store = useChatStore()
     store.setInputText('Hello AI')
     expect(store.inputText).toBe('Hello AI')
   })
 
-  it('should toggle streaming state', () => {
+  // 3. sendMessage appends messages to list
+  it('sendMessage should append user and assistant messages', async () => {
+    await seedModel()
+    setupStreamSuccess('Hello!')
     const store = useChatStore()
-    store.startStreaming()
-    expect(store.isStreaming).toBe(true)
-    store.stopStreaming()
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('Hi')
+
+    expect(store.messages).toHaveLength(2)
+    expect(store.messages[0].role).toBe('user')
+    expect(store.messages[0].content).toBe('Hi')
+    expect(store.messages[1].role).toBe('assistant')
+    expect(store.messages[1].content).toBe('Hello!')
+    expect(store.messages[1].status).toBe('success')
+  })
+
+  // 4. sendMessage validation: no model selected
+  it('sendMessage should fail when no model is selected', async () => {
+    // No model seeded → models array empty → currentModel is null
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await expect(store.sendMessage('Hi')).rejects.toThrow('No model selected')
+  })
+
+  // 5. sendMessage validation: model disabled
+  it('sendMessage should fail when model is disabled', async () => {
+    await seedModel({ enabled: false })
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await expect(store.sendMessage('Hi')).rejects.toThrow('disabled')
+  })
+
+  // 6. sendMessage validation: missing API key (non-Ollama)
+  it('sendMessage should fail when API key is missing for OpenAI provider', async () => {
+    await seedModel({ apiKey: undefined })
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await expect(store.sendMessage('Hi')).rejects.toThrow('API key')
+  })
+
+  // 7. sendMessage validation: missing baseUrl
+  it('sendMessage should fail when baseUrl is missing', async () => {
+    await seedModel({ baseUrl: undefined })
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await expect(store.sendMessage('Hi')).rejects.toThrow('base URL')
+  })
+
+  // 8. sendMessage permits Ollama without API key
+  it('sendMessage should allow Ollama without API key', async () => {
+    await seedModel({ provider: 'ollama', apiKey: undefined, baseUrl: 'http://localhost:11434' })
+    setupStreamSuccess('Ollama response')
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('Hi')
+
+    expect(store.messages).toHaveLength(2)
+    expect(store.messages[1].status).toBe('success')
+  })
+
+  // 9. stopGeneration preserves generated content
+  it('stopGeneration should preserve generated content and mark aborted', async () => {
+    await seedModel()
+    mockBuild.mockReturnValue({
+      messages: [{ role: 'user', content: 'test' }],
+      system: undefined,
+    })
+    mockStreamChat.mockImplementation(
+      async (
+        _input: any,
+        callbacks: { onToken: (t: string) => void; onDone: () => void; onError: (e: Error) => void },
+      ) => {
+        callbacks.onToken('Partial response')
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      },
+    )
+
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    const sendPromise = store.sendMessage('Hi')
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    store.stopGeneration()
+
+    try {
+      await sendPromise
+    } catch {
+      // Expected
+    }
+
+    const lastMsg = store.messages[store.messages.length - 1]
+    expect(lastMsg.role).toBe('assistant')
+    expect(lastMsg.status).toBe('aborted')
+    expect(lastMsg.content).toContain('Partial response')
+  })
+
+  // 10. regenerate
+  it('regenerate should remove last assistant message and resend', async () => {
+    await seedModel()
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    setupStreamSuccess('First response')
+    await store.sendMessage('Question 1')
+    expect(store.messages).toHaveLength(2)
+
+    setupStreamSuccess('Regenerated response')
+    await store.regenerate()
+
+    expect(store.messages).toHaveLength(2)
+    expect(store.messages[1].content).toBe('Regenerated response')
+    expect(store.messages[0].content).toBe('Question 1')
+  })
+
+  // 11. Streaming state
+  it('should set streaming/sending states during sendMessage lifecycle', async () => {
+    await seedModel()
+
+    let capturedDuringStream: { isStreaming: boolean; isSending: boolean } | undefined
+
+    mockBuild.mockReturnValue({
+      messages: [{ role: 'user', content: 'test' }],
+      system: undefined,
+    })
+    mockStreamChat.mockImplementation(
+      async (
+        _input: any,
+        callbacks: { onToken: (t: string) => void; onDone: () => void; onError: (e: Error) => void },
+      ) => {
+        capturedDuringStream = {
+          isStreaming: store.isStreaming,
+          isSending: store.isSending,
+        }
+        callbacks.onToken('ok')
+        callbacks.onDone()
+      },
+    )
+
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
     expect(store.isStreaming).toBe(false)
+    expect(store.isSending).toBe(false)
+
+    await store.sendMessage('Hi')
+
+    expect(capturedDuringStream!.isStreaming).toBe(true)
+    expect(capturedDuringStream!.isSending).toBe(true)
+    expect(store.isStreaming).toBe(false)
+    expect(store.isSending).toBe(false)
+  })
+
+  // 12. canSend computed
+  describe('canSend', () => {
+    it('should return false when input is empty', async () => {
+      await seedModel()
+      const store = useChatStore()
+      store.setInputText('')
+      expect(store.canSend).toBe(false)
+    })
+
+    it('should return true when input is non-empty and model is valid', async () => {
+      await seedModel()
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(true)
+    })
+
+    it('should return false when no model is available', () => {
+      // No model seeded
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(false)
+    })
+
+    it('should return false when model is disabled', async () => {
+      await seedModel({ enabled: false })
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(false)
+    })
+
+    it('should return false when no baseUrl', async () => {
+      await seedModel({ baseUrl: undefined })
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(false)
+    })
+
+    it('should return false when no API key for non-Ollama', async () => {
+      await seedModel({ apiKey: undefined })
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(false)
+    })
+
+    it('should return true for Ollama without API key', async () => {
+      await seedModel({ provider: 'ollama', apiKey: undefined, baseUrl: 'http://localhost:11434' })
+      const store = useChatStore()
+      store.setInputText('Hello')
+      expect(store.canSend).toBe(true)
+    })
+  })
+
+  // 13. createConversation
+  it('createConversation should create and set as current', async () => {
+    const store = useChatStore()
+    const conv = await store.createConversation('doc-abc', 'My Chat')
+
+    expect(conv.id).toBeTruthy()
+    expect(conv.documentId).toBe('doc-abc')
+    expect(conv.title).toBe('My Chat')
+    expect(store.currentConversationId).toBe(conv.id)
+    expect(store.messages).toEqual([])
+  })
+
+  // 14. loadConversation
+  it('loadConversation should load messages from DB', async () => {
+    const conv = makeConv('conv-1', 'doc-1')
+    conv.messages = [
+      {
+        id: 'msg-1',
+        role: 'user',
+        content: 'Hello',
+        status: 'success' as const,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]
+    chatDb.set(conv.id, conv)
+
+    const store = useChatStore()
+    await store.loadConversation('conv-1')
+
+    expect(store.currentConversationId).toBe('conv-1')
+    expect(store.messages).toHaveLength(1)
+    expect(store.messages[0].content).toBe('Hello')
+  })
+
+  // 15. deleteConversation
+  it('deleteConversation should clear active conversation', async () => {
+    const store = useChatStore()
+    const conv = await store.createConversation('doc-1')
+
+    await store.deleteConversation(conv.id)
+
+    expect(store.currentConversationId).toBeNull()
+    expect(store.messages).toEqual([])
+  })
+
+  // 16. Error status marking on stream error
+  it('sendMessage should mark assistant as failed on stream error', async () => {
+    await seedModel()
+    mockBuild.mockReturnValue({
+      messages: [{ role: 'user', content: 'test' }],
+      system: undefined,
+    })
+    mockStreamChat.mockImplementation(
+      async (
+        _input: any,
+        callbacks: { onToken: (t: string) => void; onDone: () => void; onError: (e: Error) => void },
+      ) => {
+        callbacks.onError(new Error('Network timeout'))
+      },
+    )
+
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('Hi')
+
+    const lastMsg = store.messages[store.messages.length - 1]
+    expect(lastMsg.status).toBe('failed')
+    expect(lastMsg.error).toContain('Network timeout')
+  })
+
+  // 17. sendMessage should fail when already sending
+  it('sendMessage should fail when another request is in progress', async () => {
+    await seedModel()
+    mockBuild.mockReturnValue({
+      messages: [{ role: 'user', content: 'test' }],
+      system: undefined,
+    })
+    // Never resolve on its own — simulate in-progress, manually resolve later
+    let resolveFirst: (() => void) | null = null
+    mockStreamChat.mockImplementation(
+      async () => {
+        await new Promise<void>((resolve) => { resolveFirst = resolve })
+      },
+    )
+
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    // Start first send (won't finish)
+    const p1 = store.sendMessage('First')
+    // Wait for it to enter the streaming phase
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // Second should throw — guard prevents concurrent sends
+    await expect(store.sendMessage('Second')).rejects.toThrow('already in progress')
+
+    // Clean up: resolve the first send
+    resolveFirst!()
+    await p1
   })
 })

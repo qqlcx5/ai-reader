@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { TabsRoot, TabsList, TabsTrigger } from 'reka-ui'
+import TabsRoot from '@/components/ui/Tabs.vue'
+import TabsList from '@/components/ui/TabsList.vue'
+import TabsTrigger from '@/components/ui/TabsTrigger.vue'
 
 defineProps<{
   currentView: string
@@ -20,7 +22,7 @@ const tabs = [
 <template>
   <TabsRoot
     :model-value="currentView"
-    @update:model-value="v => emit('navigate', v)"
+    @update:model-value="(v: string) => emit('navigate', v)"
     class="h-68px px-3.5 pb-3.5 pt-2.5 flex-shrink-0"
     style="background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.72) 34%)"
   >

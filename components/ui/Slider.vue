@@ -20,7 +20,7 @@ const emit = defineEmits<{
     :max="max"
     :step="step || 1"
     class="relative flex items-center w-full h-6 touch-none select-none"
-    @update:model-value="emit('update:modelValue', $event[0])"
+    @update:model-value="(v: number[] | undefined) => v?.[0] != null && emit('update:modelValue', v[0])"
   >
     <SliderTrack class="relative h-1.5 w-full grow rounded-full bg-zinc-200 cursor-pointer">
       <SliderRange class="absolute h-full rounded-full bg-brand" />

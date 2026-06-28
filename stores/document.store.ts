@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { DocumentRepository } from '../db/repositories/document.repository'
+import { addToIndex, removeFromIndex, replaceInIndex, initSearchIndex } from '../services/search'
 import type { DocumentEntity } from '../types/document'
 
 export const useDocumentStore = defineStore('document', () => {
@@ -29,10 +30,12 @@ export const useDocumentStore = defineStore('document', () => {
 
   async function saveDocument(doc: DocumentEntity) {
     await DocumentRepository.save(doc)
+    replaceInIndex(doc)
   }
 
   async function deleteDocument(id: string) {
     await DocumentRepository.delete(id)
+    removeFromIndex(id)
     if (currentDocument.value?.id === id) currentDocument.value = null
     if (pageDocument.value?.id === id) pageDocument.value = null
   }
@@ -40,6 +43,11 @@ export const useDocumentStore = defineStore('document', () => {
   async function refreshDocuments() {
     documents.value = await DocumentRepository.findAll()
   }
+
+  // Initialize search index on first use
+  initSearchIndex().catch(() => {
+    // non-critical; index will be built on next add
+  })
 
   return {
     currentDocument,

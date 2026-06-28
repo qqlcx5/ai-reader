@@ -93,6 +93,7 @@ describe('AnthropicProvider', () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 401,
+        statusText: 'Unauthorized',
         text: () => Promise.resolve('Unauthorized'),
       })
       vi.stubGlobal('fetch', mockFetch)
@@ -102,7 +103,7 @@ describe('AnthropicProvider', () => {
           model: mockModelConfig(),
           messages: [{ role: 'user', content: 'Hi' }],
         }),
-      ).rejects.toThrow(/Anthropic API error/)
+      ).rejects.toThrow(/Anthropic error/)
     })
   })
 
@@ -166,6 +167,7 @@ describe('AnthropicProvider', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
+        statusText: 'Internal Server Error',
         text: () => Promise.resolve('Server error'),
       }))
 
@@ -179,7 +181,7 @@ describe('AnthropicProvider', () => {
         },
       )
 
-      expect(errorMsg).toContain('HTTP 500')
+      expect(errorMsg).toContain('Anthropic error: Internal Server Error Server error')
     })
   })
 

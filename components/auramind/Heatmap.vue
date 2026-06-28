@@ -1,37 +1,77 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useDocumentStore } from '@/stores/document.store'
 
+const documentStore = useDocumentStore()
 const gridRef = ref<HTMLElement | null>(null)
 const tooltipRef = ref<HTMLElement | null>(null)
 const tooltipText = ref('')
+const isReady = ref(false)
 
 const colors = ['bg-zinc-100', 'bg-emerald-200', 'bg-emerald-400', 'bg-emerald-600']
 const cols = 30
 const rows = 7
+const totalCells = cols * rows // 210 cells = 210 days ≈ 7 months
+
+function getDateKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function buildCountMap(): Map<string, number> {
+  const map = new Map<string, number>()
+  for (const doc of documentStore.documents) {
+    if (!doc.capturedAt) continue
+    const key = getDateKey(new Date(doc.capturedAt))
+    map.set(key, (map.get(key) || 0) + 1)
+  }
+  return map
+}
+
+function intensityFromCount(count: number): number {
+  if (count === 0) return 0
+  if (count <= 2) return 1
+  if (count <= 5) return 2
+  return 3
+}
 
 function buildHeatmap() {
   const grid = gridRef.value
   if (!grid || grid.children.length > 0) return
 
-  for (let i = 0; i < cols * rows; i++) {
-    const square = document.createElement('div')
-    const rand = Math.random()
-    let intensity = 0
-    if (rand > 0.55) intensity = 1
-    if (rand > 0.82) intensity = 2
-    if (rand > 0.94) intensity = 3
+  const countMap = buildCountMap()
+  const today = new Date()
+  // End date is today truncated to start of day
+  const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const startDate = new Date(endDate)
+  startDate.setDate(startDate.getDate() - totalCells + 1)
 
+  const dateLabels: string[] = []
+  const dayCounts: number[] = []
+  for (let i = 0; i < totalCells; i++) {
+    const d = new Date(startDate)
+    d.setDate(d.getDate() + i)
+    const key = getDateKey(d)
+    dateLabels.push(key)
+    dayCounts.push(countMap.get(key) || 0)
+  }
+
+  for (let cellIdx = 0; cellIdx < totalCells; cellIdx++) {
+    const count = dayCounts[cellIdx]
+    const intensity = intensityFromCount(count)
+    const dateKey = dateLabels[cellIdx]
+
+    const square = document.createElement('div')
     square.className = `${colors[intensity]} hover:scale-125 transition-transform cursor-crosshair`
     square.style.cssText = 'width:9px;height:9px;border-radius:2px;flex-shrink:0'
 
     square.addEventListener('mouseenter', (e) => {
       const rect = square.getBoundingClientRect()
-      const captures = intensity === 0 ? 0 : intensity * 3 + Math.floor(Math.random() * 3)
-      const chats = intensity === 0 ? 0 : intensity * 2
-      tooltipText.value = intensity === 0
-        ? '无捕获 — 这一天没有新增知识'
-        : `捕获 ${captures} 篇 · AI 对话 ${chats} 次`
-
+      tooltipText.value = count === 0
+        ? `无捕获 — 这一天没有新增知识`
+        : `捕获 ${count} 篇`
       const tip = tooltipRef.value
       if (tip) {
         tip.style.left = `${rect.left + rect.width / 2}px`
@@ -57,7 +97,28 @@ function buildHeatmap() {
   }
 }
 
-onMounted(buildHeatmap)
+// Watch documents to rebuild heatmap when data changes
+watch(
+  () => documentStore.documents.length,
+  () => {
+    if (isReady.value) {
+      const grid = gridRef.value
+      if (grid) {
+        while (grid.firstChild) grid.removeChild(grid.firstChild)
+        buildHeatmap()
+      }
+    }
+  },
+)
+
+onMounted(async () => {
+  // Ensure documents are loaded
+  if (documentStore.documents.length === 0) {
+    await documentStore.refreshDocuments()
+  }
+  buildHeatmap()
+  isReady.value = true
+})
 </script>
 
 <template>

@@ -1,57 +1,107 @@
 <script lang="ts" setup>
-import { Sparkles, PlugZap } from '@lucide/vue'
+import { watch, ref, nextTick, computed } from 'vue'
+import { PlugZap, Sparkles, RefreshCw } from '@lucide/vue'
+import { useChatStore } from '@/stores/chat.store'
+import { useDocumentStore } from '@/stores/document.store'
+import { useModelStore } from '@/stores/model.store'
+import ChatMessage from '@/components/workspace/ChatMessage.vue'
+import RekaButton from '@/components/ui/RekaButton.vue'
+
+const chatStore = useChatStore()
+const documentStore = useDocumentStore()
+const modelStore = useModelStore()
+
+const scrollContainer = ref<HTMLElement | null>(null)
+
+const contextDoc = computed(() =>
+  documentStore.pageDocument || documentStore.currentDocument,
+)
+
+const contextTitle = computed(() => contextDoc.value?.title ?? null)
+
+const currentModelName = computed(() => modelStore.currentModel?.name)
+
+function scrollToBottom() {
+  nextTick(() => {
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
+    }
+  })
+}
+
+watch(
+  () => chatStore.messages.length,
+  () => scrollToBottom(),
+)
+
+watch(
+  () => chatStore.messages[chatStore.messages.length - 1]?.content,
+  () => scrollToBottom(),
+)
+
+function handleStop() {
+  chatStore.stopGeneration()
+}
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-5 bg-[#FAFAFA]">
+  <div ref="scrollContainer" class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-5 bg-[#FAFAFA]">
     <!-- Context badge -->
     <div class="flex justify-center">
-      <span class="text-[10px] border border-brand/20 bg-indigo-50 text-brand px-2 py-0.5 rounded-md flex items-center gap-1">
+      <span
+        v-if="contextTitle"
+        class="text-[10px] border border-brand/20 bg-indigo-50 text-brand px-2 py-0.5 rounded-md flex items-center gap-1"
+      >
         <PlugZap class="w-3 h-3" />
-        已挂载当前网页上下文
+        已挂载：{{ contextTitle }}
+      </span>
+      <span
+        v-else
+        class="text-[10px] border border-zinc-200 bg-zinc-50 text-zinc-400 px-2 py-0.5 rounded-md flex items-center gap-1"
+      >
+        <PlugZap class="w-3 h-3" />
+        未挂载上下文
       </span>
     </div>
 
-    <!-- User message 1 -->
-    <div class="flex justify-end">
-      <div class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
-        帮我总结这篇文章里关于 CRDT 和 Local-First 的核心观点。
-      </div>
+    <!-- Empty state -->
+    <div
+      v-if="chatStore.messages.length === 0"
+      class="flex-1 flex flex-col items-center justify-center text-center gap-3"
+    >
+      <Sparkles class="w-8 h-8 text-brand/40" />
+      <p class="text-[13px] text-zinc-500">
+        基于当前网页的内容开始对话
+      </p>
+      <p class="text-[11px] text-zinc-400">
+        打开网页并点击"抓取"后, AI 将理解全文内容进行回答
+      </p>
     </div>
 
-    <!-- AI response 1 -->
-    <div class="flex flex-col gap-2 max-w-[95%]">
-      <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
-        <Sparkles class="w-3.5 h-3.5 text-brand" />
-        AuraMind
-        <span class="text-[10px] text-zinc-400 font-normal">Claude 3.5 Sonnet</span>
-      </div>
-      <div class="bg-white border border-zinc-200 rounded-2xl rounded-tl-sm px-3.5 py-3 text-[13px] leading-relaxed text-zinc-800 shadow-sm">
-        <p class="mb-2">这篇文章的核心观点是：Local-First 并不是"离线缓存"，而是把本地设备视为数据的第一写入源。</p>
-        <p class="mb-2">CRDT 的作用类似"自动合并的 Git"。不同设备即使离线修改同一份数据，恢复网络后也能合并，而不需要用户手动解决冲突。</p>
-        <div class="mt-3 p-2 rounded-lg bg-indigo-50 border border-indigo-100 text-brand text-[12px]">
-          关键句：云端不再是唯一真相，本地副本也拥有完整主权。
-        </div>
-      </div>
+    <!-- Messages -->
+    <ChatMessage
+      v-for="msg in chatStore.messages"
+      :key="msg.id"
+      :message="msg"
+      :model-name="msg.role === 'assistant' ? currentModelName : undefined"
+    />
+
+    <!-- Stop button -->
+    <div v-if="chatStore.isStreaming" class="flex justify-center">
+      <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-500" @click="handleStop">
+        停止生成
+      </RekaButton>
     </div>
 
-    <!-- User message 2 -->
-    <div class="flex justify-end">
-      <div class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
-        用一个生活化比喻解释 CRDT。
-      </div>
-    </div>
-
-    <!-- AI response 2 -->
-    <div class="flex flex-col gap-2 max-w-[95%]">
-      <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
-        <Sparkles class="w-3.5 h-3.5 text-brand" />
-        AuraMind
-      </div>
-      <div class="bg-white border border-zinc-200 rounded-2xl rounded-tl-sm px-3.5 py-3 text-[13px] leading-relaxed text-zinc-800 shadow-sm">
-        可以把 CRDT 想象成两个人分别在同一张购物清单上加东西：<br><br>
-        你离线加了"牛奶"，我离线加了"鸡蛋"。同步时，系统不是问"保留谁的版本"，而是自动得到"牛奶 + 鸡蛋"。
-      </div>
+    <!-- Regenerate button (after last assistant message, when not streaming) -->
+    <div
+      v-if="!chatStore.isStreaming && chatStore.messages.length > 0"
+      class="flex justify-center"
+    >
+      <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-400" @click="chatStore.regenerate()">
+        <RefreshCw class="w-3 h-3 mr-1" />
+        重新生成
+      </RekaButton>
     </div>
   </div>
 </template>

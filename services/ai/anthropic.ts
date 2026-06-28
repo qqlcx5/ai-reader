@@ -61,7 +61,7 @@ export const AnthropicProvider: AIProvider = {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      throw new Error(`Anthropic API error: HTTP ${response.status} - ${text.slice(0, 300)}`)
+      throw new Error(`Anthropic error: ${response.statusText} ${text.slice(0, 300)}`)
     }
 
     const data = await response.json()
@@ -102,7 +102,7 @@ export const AnthropicProvider: AIProvider = {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      callbacks.onError(new Error(`Anthropic API error: HTTP ${response.status} - ${text.slice(0, 300)}`))
+      callbacks.onError(new Error(`Anthropic error: ${response.statusText} ${text.slice(0, 300)}`))
       return
     }
 

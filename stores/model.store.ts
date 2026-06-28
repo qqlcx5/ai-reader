@@ -12,6 +12,10 @@ export const useModelStore = defineStore('model', () => {
     models.value.find((m) => m.id === currentModelId.value) ?? null,
   )
 
+  const enabledModels = computed(() =>
+    models.value.filter((m) => m.enabled),
+  )
+
   const defaultModel = computed(() =>
     models.value.find((m) => m.isDefault) ?? null,
   )
@@ -83,6 +87,7 @@ export const useModelStore = defineStore('model', () => {
     models,
     currentModelId,
     currentModel,
+    enabledModels,
     defaultModel,
     loadModels,
     addModel,

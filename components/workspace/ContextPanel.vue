@@ -1,11 +1,8 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
-import {
-  TabsRoot,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from 'reka-ui'
+import TabsRoot from '@/components/ui/Tabs.vue'
+import TabsList from '@/components/ui/TabsList.vue'
+import TabsTrigger from '@/components/ui/TabsTrigger.vue'
 import { Copy, RefreshCw } from '@lucide/vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'

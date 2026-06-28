@@ -50,8 +50,16 @@ export const OllamaProvider: AIProvider = {
     })
 
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`Ollama API error: HTTP ${response.status} - ${text.slice(0, 300)}`)
+      const errorText = await response.text().catch(() => '')
+
+      if (response.status === 403) {
+        throw new Error(
+          `Ollama cannot process requests originating from a browser extension without setting OLLAMA_ORIGINS. ` +
+          `See instructions at https://help.obsidian.md/web-clipper/interpreter`
+        )
+      }
+
+      throw new Error(`Ollama error: ${response.statusText} ${errorText.slice(0, 300)}`)
     }
 
     const data = await response.json()
@@ -99,8 +107,17 @@ export const OllamaProvider: AIProvider = {
     }
 
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      callbacks.onError(new Error(`Ollama API error: HTTP ${response.status} - ${text.slice(0, 300)}`))
+      const errorText = await response.text().catch(() => '')
+
+      if (response.status === 403) {
+        callbacks.onError(new Error(
+          `Ollama cannot process requests originating from a browser extension without setting OLLAMA_ORIGINS. ` +
+          `See instructions at https://help.obsidian.md/web-clipper/interpreter`
+        ))
+        return
+      }
+
+      callbacks.onError(new Error(`Ollama error: ${response.statusText} ${errorText.slice(0, 300)}`))
       return
     }
 

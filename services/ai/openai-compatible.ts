@@ -38,7 +38,7 @@ export const OpenAICompatibleProvider: AIProvider = {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      throw new Error(`OpenAI Compatible API error: HTTP ${response.status} - ${text.slice(0, 300)}`)
+      throw new Error(`OpenAI Compatible error: ${response.statusText} ${text.slice(0, 300)}`)
     }
 
     const data = await response.json()
@@ -95,7 +95,7 @@ export const OpenAICompatibleProvider: AIProvider = {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '')
-      callbacks.onError(new Error(`OpenAI Compatible API error: HTTP ${response.status} - ${text.slice(0, 300)}`))
+      callbacks.onError(new Error(`OpenAI Compatible error: ${response.statusText} ${text.slice(0, 300)}`))
       return
     }
 

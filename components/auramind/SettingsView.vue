@@ -1,13 +1,14 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { SlidersHorizontal, Plus, RefreshCw, Trash2 } from '@lucide/vue'
-import Switch from '@/components/ui/Switch.vue'
-import Slider from '@/components/ui/Slider.vue'
+import { SlidersHorizontal, Plus, RefreshCw } from '@lucide/vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
 import RekaTextarea from '@/components/ui/RekaTextarea.vue'
 import ModelCard from './ModelCard.vue'
 import ModelEditorDialog from './ModelEditorDialog.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import ContextSettings from '@/components/settings/ContextSettings.vue'
+import CaptureSettings from '@/components/settings/CaptureSettings.vue'
+import StorageSettings from '@/components/settings/StorageSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 
@@ -22,11 +23,6 @@ const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<string | undefined>(undefined)
 const deleteTargetName = ref('')
 const showDefaultBlocked = ref(false)
-
-const tokenLimit = computed({
-  get: () => settingsStore.settings.context.maxContextTokens / 1000,
-  set: (val: number) => settingsStore.updateContextSettings({ maxContextTokens: val * 1000 }),
-})
 
 const globalSystemPrompt = computed({
   get: () => settingsStore.settings.globalSystemPrompt || '',
@@ -124,18 +120,6 @@ async function testModelConnection(id: string) {
         <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">上下文与系统指令</h2>
 
         <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
-          <div class="p-3 border-b border-zinc-100 flex flex-col gap-2">
-            <div class="flex justify-between items-center">
-              <span class="text-zinc-700">注入窗口大小限制</span>
-              <span class="text-brand font-mono font-medium text-[12px]">{{ tokenLimit }}K Tokens</span>
-            </div>
-            <Slider v-model="tokenLimit" :min="4" :max="128" :step="4" />
-            <div class="flex justify-between text-[10px] text-zinc-400">
-              <span>4K 快速</span>
-              <span>128K 深度</span>
-            </div>
-          </div>
-
           <div class="p-3 flex flex-col gap-1.5">
             <span class="text-zinc-700">全局系统指令</span>
             <RekaTextarea
@@ -145,6 +129,9 @@ async function testModelConnection(id: string) {
             />
           </div>
         </div>
+
+        <ContextSettings />
+        <CaptureSettings />
       </section>
 
       <!-- WebDAV 同步 — 当前不在任务范围内，暂时注释 -->
@@ -155,29 +142,10 @@ async function testModelConnection(id: string) {
       </section>
       -->
 
-      <!-- 本地存储（占位） -->
+      <!-- 本地存储 -->
       <section class="flex flex-col gap-2.5 pb-8">
         <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">本地存储</h2>
-
-        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
-          <div class="p-3 border-b border-zinc-100 flex justify-between">
-            <span class="text-zinc-700">IndexedDB 占用</span>
-            <span class="font-mono text-[12px] text-zinc-500">—</span>
-          </div>
-          <div class="p-3 border-b border-zinc-100 flex justify-between">
-            <span class="text-zinc-700">文档数量</span>
-            <span class="font-mono text-[12px] text-zinc-500">—</span>
-          </div>
-          <div class="p-3 flex justify-between">
-            <span class="text-zinc-700">向量索引</span>
-            <span class="font-mono text-[12px] text-zinc-500">—</span>
-          </div>
-        </div>
-
-        <RekaButton variant="danger" size="lg" class="w-full">
-          <Trash2 class="w-4 h-4" />
-          清空本地数据
-        </RekaButton>
+        <StorageSettings />
       </section>
     </main>
 

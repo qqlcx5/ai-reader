@@ -1,7 +1,12 @@
 import { db } from '../index'
 import type { ConversationEntity } from '../../types/chat'
+import type { IRepository } from '../repository'
 
-export const ChatRepository = {
+export const ChatRepository: IRepository<ConversationEntity> & {
+  findByDocumentId(documentId: string): Promise<ConversationEntity[]>
+  findAllSorted(): Promise<ConversationEntity[]>
+  save(conv: ConversationEntity): Promise<string>
+} = {
   async findById(id: string): Promise<ConversationEntity | undefined> {
     return db.conversations.get(id)
   },
@@ -11,6 +16,10 @@ export const ChatRepository = {
   },
 
   async findAll(): Promise<ConversationEntity[]> {
+    return db.conversations.toArray()
+  },
+
+  async findAllSorted(): Promise<ConversationEntity[]> {
     return db.conversations.orderBy('updatedAt').reverse().toArray()
   },
 
@@ -21,5 +30,9 @@ export const ChatRepository = {
 
   async delete(id: string): Promise<void> {
     await db.conversations.delete(id)
+  },
+
+  async count(): Promise<number> {
+    return db.conversations.count()
   },
 }

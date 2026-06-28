@@ -4,8 +4,8 @@ export default defineConfig({
   presets: [presetWind3()],
   theme: {
     fontFamily: {
-      sans: ['Inter', 'system-ui', 'sans-serif'],
-      mono: ['JetBrains Mono', 'monospace'],
+      sans: 'Inter, system-ui, sans-serif',
+      mono: 'JetBrains Mono, monospace',
     },
     colors: {
       brand: '#6366F1',

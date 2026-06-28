@@ -11,8 +11,12 @@ export default defineBackground(() => {
     })
   }
 
-  // Tab activated: broadcast TAB_ACTIVATED
+  // Tab activated: reopen side panel + broadcast TAB_ACTIVATED
   b.tabs.onActivated.addListener((activeInfo: any) => {
+    // Reopen side panel on the new tab to keep it visible across tab switches
+    if (sidePanel) {
+      sidePanel.open({ tabId: activeInfo.tabId }).catch(() => {})
+    }
     b.tabs.get(activeInfo.tabId, (tab: any) => {
       if (b.runtime.lastError || !tab) return
       b.runtime
