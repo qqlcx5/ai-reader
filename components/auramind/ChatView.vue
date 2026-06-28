@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { watch, ref, nextTick, computed } from 'vue'
-import { PlugZap, Sparkles, RefreshCw } from '@lucide/vue'
+import { PlugZap, Sparkles } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
+import { useAppStore } from '@/stores/app.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
@@ -11,6 +12,7 @@ import type { ChatMessage as ChatMessageType } from '@/types/chat'
 const chatStore = useChatStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
+const appStore = useAppStore()
 
 const scrollContainer = ref<HTMLElement | null>(null)
 
@@ -93,6 +95,39 @@ watch(
 function handleStop() {
   chatStore.stopGeneration()
 }
+
+function handleCopy(content: string) {
+  navigator.clipboard.writeText(content).catch(() => {
+    // Fallback for older browsers / non-HTTPS
+    const textarea = document.createElement('textarea')
+    textarea.value = content
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+  })
+  appStore.showToast('已复制到剪贴板', 'success')
+}
+
+function handleDeleteMessage(id: string) {
+  chatStore.deleteMessage(id)
+  appStore.showToast('消息已删除', 'success')
+}
+
+function handleRegenerate(id: string) {
+  chatStore.regenerate(id)
+}
+
+// ── Last assistant message ID ────────────────────────────
+const lastAssistantMsgId = computed<string | null>(() => {
+  const msgs = chatStore.messages
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'assistant') return msgs[i].id
+  }
+  return null
+})
 </script>
 
 <template>
@@ -136,6 +171,8 @@ function handleStop() {
         v-if="round.userMsg.content"
         :message="round.userMsg"
         :model-name="modelNameFor(round.userMsg.modelId)"
+        @copy="handleCopy"
+        @delete="handleDeleteMessage"
       />
 
       <!-- Single assistant: normal flow -->
@@ -143,6 +180,10 @@ function handleStop() {
         v-if="round.assistantMsgs.length === 1"
         :message="round.assistantMsgs[0]"
         :model-name="modelNameFor(round.assistantMsgs[0].modelId)"
+        :is-last-assistant="round.assistantMsgs[0].id === lastAssistantMsgId"
+        @regenerate="handleRegenerate"
+        @copy="handleCopy"
+        @delete="handleDeleteMessage"
       />
 
       <!-- Multi-assistant: side-by-side card layout -->
@@ -161,6 +202,10 @@ function handleStop() {
           :message="amsg"
           :model-name="modelNameFor(amsg.modelId)"
           :is-multi-model="true"
+          :is-last-assistant="amsg.id === lastAssistantMsgId"
+          @regenerate="handleRegenerate"
+          @copy="handleCopy"
+          @delete="handleDeleteMessage"
         />
       </div>
     </template>
@@ -169,17 +214,6 @@ function handleStop() {
     <div v-if="chatStore.isStreaming" class="flex justify-center">
       <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-500" @click="handleStop">
         停止生成
-      </RekaButton>
-    </div>
-
-    <!-- Regenerate button (after last assistant message, when not streaming) -->
-    <div
-      v-if="!chatStore.isStreaming && chatStore.messages.length > 0"
-      class="flex justify-center"
-    >
-      <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-400" @click="chatStore.regenerate()">
-        <RefreshCw class="w-3 h-3 mr-1" />
-        重新生成
       </RekaButton>
     </div>
   </div>

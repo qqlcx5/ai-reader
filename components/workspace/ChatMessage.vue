@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick } from 'vue'
-import { Sparkles, ChevronDown, ChevronRight } from '@lucide/vue'
+import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2 } from '@lucide/vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
@@ -11,6 +11,14 @@ const props = defineProps<{
   modelName?: string
   /** Whether this message is part of a multi-model round (influences layout) */
   isMultiModel?: boolean
+  /** Whether this is the last assistant message (to show regenerate) */
+  isLastAssistant?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'regenerate', id: string): void
+  (e: 'copy', content: string): void
+  (e: 'delete', id: string): void
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
@@ -18,6 +26,7 @@ const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
 
+const isHovered = ref(false)
 const thinkingExpanded = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
@@ -50,7 +59,32 @@ watch(renderedHtml, async () => {
 
 <template>
   <!-- User message -->
-  <div v-if="isUser" class="flex justify-end">
+  <div
+    v-if="isUser"
+    class="flex justify-end group"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
+  >
+    <!-- Action buttons (appear on hover, left side) -->
+    <div
+      v-show="isHovered"
+      class="flex items-center gap-0.5 mr-1 self-center opacity-0 group-hover:opacity-100 transition-opacity"
+    >
+      <button
+        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+        title="复制"
+        @click.stop="emit('copy', message.content)"
+      >
+        <Copy class="w-3 h-3" />
+      </button>
+      <button
+        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        title="删除"
+        @click.stop="emit('delete', message.id)"
+      >
+        <Trash2 class="w-3 h-3" />
+      </button>
+    </div>
     <div
       class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm whitespace-pre-wrap"
     >
@@ -59,7 +93,13 @@ watch(renderedHtml, async () => {
   </div>
 
   <!-- AI message -->
-  <div v-else class="flex flex-col gap-2" :class="isMultiModel ? 'max-w-full' : 'max-w-[95%]'">
+  <div
+    v-else
+    class="flex flex-col gap-2 group"
+    :class="isMultiModel ? 'max-w-full' : 'max-w-[95%]'"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
+  >
     <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
       <Sparkles class="w-3.5 h-3.5 text-brand" />
       <template v-if="modelName">
@@ -69,6 +109,33 @@ watch(renderedHtml, async () => {
         >{{ modelName }}</span>
       </template>
       <span v-else class="text-[12px]">AuraMind</span>
+      <!-- Action buttons (appear on hover, right side of header) -->
+      <div
+        v-show="isHovered"
+        class="flex items-center gap-0.5 ml-auto"
+      >
+        <button
+          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          title="重新生成"
+          @click.stop="emit('regenerate', message.id)"
+        >
+          <RefreshCw class="w-3 h-3" />
+        </button>
+        <button
+          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          title="复制"
+          @click.stop="emit('copy', message.content)"
+        >
+          <Copy class="w-3 h-3" />
+        </button>
+        <button
+          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          title="删除"
+          @click.stop="emit('delete', message.id)"
+        >
+          <Trash2 class="w-3 h-3" />
+        </button>
+      </div>
     </div>
 
     <div

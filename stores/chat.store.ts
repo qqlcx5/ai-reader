@@ -191,24 +191,43 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function regenerate(): Promise<void> {
-    const lastUserIdx = findLastUserMessageIndex()
-    if (lastUserIdx === -1) return
-
-    // Remove the last assistant message (if any)
-    if (messages.value.length > lastUserIdx + 1) {
-      const lastAsst = messages.value[messages.value.length - 1]
-      if (lastAsst.role === 'assistant') {
-        messages.value.pop()
-      }
-    }
-
-    const lastUserMsg = messages.value[lastUserIdx]
-
+  async function regenerate(targetAssistantId?: string): Promise<void> {
     const modelStore = useModelStore()
     const settingsStore = useSettingsStore()
     const model = modelStore.currentModel
     if (!model) return
+
+    let userMsg: ChatMessage | undefined
+
+    if (targetAssistantId) {
+      // Regenerate a specific assistant message: find its corresponding user message
+      const asstIdx = messages.value.findIndex((m) => m.id === targetAssistantId)
+      if (asstIdx === -1) return
+
+      // Walk backwards to find the preceding user message
+      for (let i = asstIdx - 1; i >= 0; i--) {
+        if (messages.value[i].role === 'user') {
+          userMsg = messages.value[i]
+          // Truncate all messages from this user onward
+          messages.value.splice(i)
+          break
+        }
+      }
+      if (!userMsg) return
+    } else {
+      const lastUserIdx = findLastUserMessageIndex()
+      if (lastUserIdx === -1) return
+
+      // Remove the last assistant message (if any)
+      if (messages.value.length > lastUserIdx + 1) {
+        const lastAsst = messages.value[messages.value.length - 1]
+        if (lastAsst.role === 'assistant') {
+          messages.value.pop()
+        }
+      }
+
+      userMsg = messages.value[lastUserIdx]
+    }
 
     // Create a fresh assistant message for re-generation
     const assistantMsg: ChatMessage = {
@@ -229,7 +248,7 @@ export const useChatStore = defineStore('chat', () => {
     streamStates.value.set(cid, state)
 
     try {
-      await streamToProvider(lastUserMsg.content, lastUserMsg.id, assistantMsg, model, settingsStore.settings, state)
+      await streamToProvider(userMsg.content, userMsg.id, assistantMsg, model, settingsStore.settings, state)
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
@@ -642,6 +661,13 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function deleteMessage(id: string): void {
+    const idx = messages.value.findIndex((m) => m.id === id)
+    if (idx === -1) return
+    messages.value.splice(idx, 1)
+    persistConversation()
+  }
+
   async function persistConversation(): Promise<void> {
     if (!currentConversationId.value) return
 
@@ -743,6 +769,7 @@ export const useChatStore = defineStore('chat', () => {
     sendMessage,
     stopGeneration,
     regenerate,
+    deleteMessage,
     loadConversation,
     loadConversations,
     createConversation,
