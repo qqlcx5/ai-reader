@@ -11,7 +11,7 @@ function mockModelConfig(overrides: Partial<import('@/types/model').ModelConfig>
     enabled: true,
     isDefault: false,
     contextWindow: 4096,
-    temperature: 0.7,
+    temperature: 0.9,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,

@@ -36,8 +36,8 @@ const provider = ref<'openai-compatible' | 'anthropic' | 'ollama'>('openai-compa
 const modelId = ref('')
 const baseUrl = ref('')
 const apiKey = ref('')
-const contextWindow = ref(32000)
-const temperature = ref(0.7)
+const contextWindow = ref(1050000)
+const temperature = ref(0.9)
 const systemPrompt = ref('')
 const enabled = ref(true)
 const isDefault = ref(false)
@@ -53,8 +53,8 @@ function resetForm() {
   modelId.value = ''
   baseUrl.value = ''
   apiKey.value = ''
-  contextWindow.value = 32000
-  temperature.value = 0.7
+  contextWindow.value = 1050000
+  temperature.value = 0.9
   systemPrompt.value = ''
   enabled.value = true
   isDefault.value = false
@@ -241,7 +241,7 @@ watch(() => props.open, (val) => {
               :model-value="String(contextWindow)"
               type="number"
               class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
-              placeholder="32000"
+              placeholder="1050000"
               @update:model-value="contextWindow = Number($event)"
             />
             <p v-if="errors.contextWindow" class="text-[10px] text-red-400 mt-0.5">{{ errors.contextWindow }}</p>

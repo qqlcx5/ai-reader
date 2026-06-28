@@ -52,10 +52,10 @@ const maxHistory = computed({
         <span class="text-zinc-700">注入窗口大小限制</span>
         <span class="text-brand font-mono font-medium text-[12px]">{{ tokenLimit }}K Tokens</span>
       </div>
-      <Slider v-model="tokenLimit" :min="4" :max="128" :step="4" />
+      <Slider v-model="tokenLimit" :min="4" :max="10500" :step="4" />
       <div class="flex justify-between text-[10px] text-zinc-400">
         <span>4K 快速</span>
-        <span>128K 深度</span>
+        <span>1050K 深度</span>
       </div>
     </div>
 

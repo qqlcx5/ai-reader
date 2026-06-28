@@ -808,8 +808,8 @@ export interface ModelConfig {
 | modelId | 是 | 模型 ID |
 | baseUrl | 条件必填 | OpenAI Compatible / Ollama 需要 |
 | apiKey | 条件必填 | Anthropic / OpenAI Compatible 通常需要 |
-| contextWindow | 否 | 默认 32000 |
-| temperature | 否 | 默认 0.7 |
+| contextWindow | 否 | 默认 1050000 |
+| temperature | 否 | 默认 0.9 |
 | systemPrompt | 否 | 当前模型系统提示词 |
 | enabled | 否 | 默认 true |
 | isDefault | 否 | 默认 false |
@@ -901,7 +901,7 @@ export interface ContextSettings {
 
 | 配置 | 默认值 |
 |---|---|
-| maxContextTokens | 32000 |
+| maxContextTokens | 1050000 |
 | includeMetadataInPrompt | true |
 | includeUrlInPrompt | true |
 | includeTitleInPrompt | true |

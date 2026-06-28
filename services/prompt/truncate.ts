@@ -23,13 +23,13 @@ export function truncateContext(markdown: string, maxTokens: number): string {
   const truncated = markdown.slice(0, targetLength)
   const lastParaBreak = truncated.lastIndexOf('\n\n')
 
-  if (lastParaBreak > targetLength * 0.7) {
+  if (lastParaBreak > targetLength * 0.9) {
     return truncated.slice(0, lastParaBreak)
   }
 
   // Fallback: cut at last newline
   const lastNewline = truncated.lastIndexOf('\n')
-  if (lastNewline > targetLength * 0.7) {
+  if (lastNewline > targetLength * 0.9) {
     return truncated.slice(0, lastNewline)
   }
 

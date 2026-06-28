@@ -1,7 +1,7 @@
 # 模型配置 (model-config)
 
 - [x] 模型池 UI — 模型列表卡片：`src/components/settings/ModelPool.vue` + `ModelCard.vue`，每张卡片展示 name / provider / modelId / baseUrl（截断）/ 启用状态 Switch / 默认标识 Badge / 测试状态指示灯（untested/testing/success/failed）+ 编辑/删除按钮
-- [x] 添加模型弹窗：`src/components/settings/ModelEditorDialog.vue`，表单字段：name (text) / provider (select: openai-compatible / anthropic / ollama) / modelId (text) / baseUrl (text, 仅 openai-compatible 和 ollama 显示) / apiKey (password) / contextWindow (number, 默认 32000) / temperature (slider 0-2, 默认 0.7) / systemPrompt (textarea) / enabled (switch, 默认 true) / isDefault (switch, 默认 false)
+- [x] 添加模型弹窗：`src/components/settings/ModelEditorDialog.vue`，表单字段：name (text) / provider (select: openai-compatible / anthropic / ollama) / modelId (text) / baseUrl (text, 仅 openai-compatible 和 ollama 显示) / apiKey (password) / contextWindow (number, 默认 1050000) / temperature (slider 0-2, 默认 0.9) / systemPrompt (textarea) / enabled (switch, 默认 true) / isDefault (switch, 默认 false)
 - [x] 添加模型校验：name 非空；provider 必选；modelId 非空；baseUrl 若填写需合法 URL（允许 localhost）；temperature 范围 0-2；contextWindow > 0；若 isDefault 为 true 则其他模型取消默认；若是第一个模型自动设为默认
 - [x] 编辑模型弹窗：复用 ModelEditorDialog，打开时预填当前模型所有字段数据，保存时更新 `updatedAt`
 - [x] 删除模型：点击删除按钮 → `ConfirmDialog` 二次确认，若删除的是默认模型则提示"请先设置其他模型为默认"，删除后更新 `modelStore.models`

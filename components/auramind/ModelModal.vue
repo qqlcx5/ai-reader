@@ -18,7 +18,7 @@ const provider = ref('OpenAI Compatible')
 const baseUrl = ref('')
 const apiKey = ref('')
 const contextSize = ref('128000')
-const temperature = ref('0.7')
+const temperature = ref('0.9')
 
 const providers = [
   { value: 'OpenAI Compatible', label: 'OpenAI Compatible' },

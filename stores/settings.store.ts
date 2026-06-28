@@ -4,7 +4,7 @@ import { SettingsRepository } from '../db/repositories/settings.repository'
 import type { AppSettings, ContextSettings, CaptureSettings } from '../types/settings'
 
 const defaultContextSettings: ContextSettings = {
-  maxContextTokens: 8000,
+  maxContextTokens: 1050000,
   includeMetadataInPrompt: true,
   includeUrlInPrompt: true,
   includeTitleInPrompt: true,
