@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
+import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import TopBar from '@/components/auramind/TopBar.vue'
@@ -20,6 +21,7 @@ const workspaceStore = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
+const chatStore = useChatStore()
 
 // Toast notification state
 const toastVisible = ref(false)
@@ -82,6 +84,13 @@ async function triggerAutoExtract(tabId: number) {
     documentStore.setPageDocument(doc)
     await documentStore.saveDocument(doc)
     workspaceStore.setCaptureStatus('ready')
+
+    // Load conversations associated with this document
+    try {
+      await chatStore.loadConversations(doc.id)
+    } catch {
+      // non-critical
+    }
   } catch (err) {
     console.error('[triggerAutoExtract] capture failed for tab', tabId, err)
     workspaceStore.setCaptureStatus('failed')

@@ -6,6 +6,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity } from '@/types/document'
@@ -14,6 +15,7 @@ const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
 const appStore = useAppStore()
 const settingsStore = useSettingsStore()
+const chatStore = useChatStore()
 
 const isRefreshing = ref(false)
 
@@ -141,6 +143,12 @@ async function handleRefresh() {
 
     workspaceStore.setCaptureStatus('ready')
     appStore.showToast('抓取完成', 'success')
+
+    try {
+      await chatStore.loadConversations(doc.id)
+    } catch {
+      // non-critical
+    }
   } catch (err: any) {
     workspaceStore.setCaptureStatus('failed')
     appStore.showToast(err.message || '抓取失败', 'error')
