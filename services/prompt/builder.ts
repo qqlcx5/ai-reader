@@ -14,9 +14,10 @@ export class PromptBuilder {
   build(input: PromptInput): PromptOutput {
     const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = []
 
-    // Inject context as a system message (before history and user input)
+    // Inject page context as a user-role message (not system),
+    // placing it before conversation history and the user's actual input.
     if (input.context) {
-      messages.push({ role: 'system', content: input.context })
+      messages.push({ role: 'user', content: input.context })
     }
 
     // Append conversation history

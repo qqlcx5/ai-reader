@@ -4,8 +4,10 @@ import type { ConversationEntity, ChatMessage } from '../types/chat'
 import { ChatRepository } from '../db/repositories/chat.repository'
 import { useModelStore } from './model.store'
 import { useSettingsStore } from './settings.store'
+import { useDocumentStore } from './document.store'
 import { PromptBuilder } from '../services/prompt/builder'
 import type { PromptInput } from '../services/prompt/builder'
+import { buildPageContext } from '../services/prompt/context'
 import { truncateContext } from '../services/prompt/truncate'
 import { createProvider } from '../services/ai/factory'
 import type { ModelConfig } from '../types/model'
@@ -109,7 +111,7 @@ export const useChatStore = defineStore('chat', () => {
     abortController = new AbortController()
 
     try {
-      await streamToProvider(content, assistantMsg, model, settingsStore.settings)
+      await streamToProvider(content, userMsg.id, assistantMsg, model, settingsStore.settings)
     } finally {
       isSending.value = false
       isStreaming.value = false
@@ -171,7 +173,7 @@ export const useChatStore = defineStore('chat', () => {
     abortController = new AbortController()
 
     try {
-      await streamToProvider(lastUserMsg.content, assistantMsg, model, settingsStore.settings)
+      await streamToProvider(lastUserMsg.content, lastUserMsg.id, assistantMsg, model, settingsStore.settings)
     } finally {
       isSending.value = false
       isStreaming.value = false
@@ -217,57 +219,90 @@ export const useChatStore = defineStore('chat', () => {
 
   async function streamToProvider(
     userContent: string,
+    currentUserMsgId: string,
     assistantMsg: ChatMessage,
     model: ModelConfig,
     settings: AppSettings,
   ): Promise<void> {
+    // Build page context from current document
+    const documentStore = useDocumentStore()
+    const doc = documentStore.pageDocument || documentStore.currentDocument
+    let context: string | undefined
+    if (doc?.markdown) {
+      context = buildPageContext({
+        title: doc.title,
+        url: doc.url,
+        markdown: doc.markdown,
+        wordCount: doc.wordCount,
+        tokenCount: doc.tokenCount,
+        siteName: doc.siteName,
+        capturedAt: doc.capturedAt,
+      })
+    }
+
+    // Truncate context before building the prompt (was previously done
+    // post-build by checking m.role === 'system', but context is now user-role).
+    const maxTokens = Math.min(
+      model.contextWindow,
+      settings.context.maxContextTokens,
+    )
+    if (context) {
+      context = truncateContext(context, maxTokens)
+    }
+
     // Build prompt
     const builder = new PromptBuilder()
-    const history = buildHistory(messages.value.filter((m) => m.id !== assistantMsg.id))
+    const history = buildHistory(
+      messages.value.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
+    )
 
     const promptInput: PromptInput = {
       systemPrompt: model.systemPrompt || settings.globalSystemPrompt,
-      context: undefined,
+      context,
       history,
       userInput: userContent,
     }
 
     const promptOutput = builder.build(promptInput)
 
-    // Truncate context if needed
-    const maxTokens = Math.min(
-      model.contextWindow,
-      settings.context.maxContextTokens,
-    )
-
-    const processedMessages = promptOutput.messages.map((m) => {
-      if (m.role === 'system') {
-        return { ...m, content: truncateContext(m.content, maxTokens) }
-      }
-      return m
-    })
-
     // Call provider stream
+    // IMPORTANT: Access assistantMsg through messages.value (reactive proxy) so Vue can
+    // track mutations for re-rendering. Directly mutating the raw object bypasses reactivity.
+    const assistantId = assistantMsg.id
     provider = createProvider(model)
     await provider.streamChat(
       {
         model,
         systemPrompt: promptOutput.system,
-        messages: processedMessages,
+        messages: promptOutput.messages,
         signal: abortController!.signal,
       },
       {
         onToken(text: string) {
-          assistantMsg.content += text
+          const msg = messages.value.find((m) => m.id === assistantId)
+          if (msg) msg.content += text
+        },
+        onReasoning(text: string) {
+          const msg = messages.value.find((m) => m.id === assistantId)
+          if (msg) {
+            if (!msg.reasoningContent) msg.reasoningContent = ''
+            msg.reasoningContent += text
+          }
         },
         onDone() {
-          assistantMsg.status = 'success'
-          assistantMsg.updatedAt = new Date().toISOString()
+          const msg = messages.value.find((m) => m.id === assistantId)
+          if (msg) {
+            msg.status = 'success'
+            msg.updatedAt = new Date().toISOString()
+          }
         },
         onError(error: Error) {
-          assistantMsg.status = 'failed'
-          assistantMsg.error = error.message || String(error)
-          assistantMsg.updatedAt = new Date().toISOString()
+          const msg = messages.value.find((m) => m.id === assistantId)
+          if (msg) {
+            msg.status = 'failed'
+            msg.error = error.message || String(error)
+            msg.updatedAt = new Date().toISOString()
+          }
         },
       },
     )

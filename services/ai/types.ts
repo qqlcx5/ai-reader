@@ -28,6 +28,7 @@ export interface ChatInput {
 
 export interface StreamCallbacks {
   onToken: (text: string) => void
+  onReasoning?: (text: string) => void
   onDone: () => void
   onError: (error: Error) => void
 }

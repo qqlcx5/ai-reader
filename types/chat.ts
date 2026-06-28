@@ -4,6 +4,9 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   content: string
 
+  /** Thinking / reasoning content from models that support it (DeepSeek R1, OpenAI o1, etc.) */
+  reasoningContent?: string
+
   modelId?: string
 
   status?: 'pending' | 'sending' | 'streaming' | 'success' | 'failed' | 'aborted'

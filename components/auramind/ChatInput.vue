@@ -47,7 +47,7 @@ function handleStop() {
 <template>
   <div class="absolute left-0 right-0 bottom-0 p-3 bg-gradient-to-t from-[#FAFAFA] via-[#FAFAFA] to-transparent z-20">
     <div class="bg-white border border-zinc-200 rounded-2xl shadow-lg overflow-hidden">
-      <div class="flex items-center justify-between px-3 pt-2 w-[200px]">
+      <div class="flex items-center justify-between px-3 pt-2">
         <ModelSelect
           v-if="modelStore.models.length > 0"
           :model-value="modelStore.currentModelId ?? ''"

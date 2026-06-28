@@ -145,7 +145,15 @@ export const OllamaProvider: AIProvider = {
 
           try {
             const event = JSON.parse(trimmed)
-            const content = event.message?.content
+            const msgField = event.message
+            // Thinking / reasoning content (some models via Ollama)
+            if (msgField?.thinking) {
+              callbacks.onReasoning?.(msgField.thinking)
+            }
+            if (msgField?.reasoning_content) {
+              callbacks.onReasoning?.(msgField.reasoning_content)
+            }
+            const content = msgField?.content
             if (content) {
               callbacks.onToken(content)
             }
@@ -155,6 +163,26 @@ export const OllamaProvider: AIProvider = {
           } catch {
             // ignore malformed NDJSON lines
           }
+        }
+      }
+      // Flush any remaining bytes in decoder and buffer
+      buffer += decoder.decode()
+      if (buffer.trim()) {
+        try {
+          const event = JSON.parse(buffer.trim())
+          const msgField = event.message
+          if (msgField?.thinking) {
+            callbacks.onReasoning?.(msgField.thinking)
+          }
+          if (msgField?.reasoning_content) {
+            callbacks.onReasoning?.(msgField.reasoning_content)
+          }
+          const content = msgField?.content
+          if (content) {
+            callbacks.onToken(content)
+          }
+        } catch {
+          // ignore final partial line
         }
       }
       callbacks.onDone()

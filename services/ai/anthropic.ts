@@ -117,7 +117,22 @@ export const AnthropicProvider: AIProvider = {
       onEvent: (event: EventSourceMessage) => {
         try {
           const parsed = JSON.parse(event.data)
-          if (parsed.type === 'content_block_delta') {
+
+          if (parsed.type === 'content_block_start') {
+            // Track if this block is a thinking block via its index
+            const block = parsed.content_block
+            if (block?.type === 'thinking') {
+              // Thinking blocks may have initial thinking text
+              if (block.thinking) {
+                callbacks.onReasoning?.(block.thinking)
+              }
+            }
+          } else if (parsed.type === 'content_block_delta') {
+            // Thinking delta
+            if (parsed.delta?.thinking) {
+              callbacks.onReasoning?.(parsed.delta.thinking)
+            }
+            // Normal text delta
             const text = parsed.delta?.text
             if (text) {
               callbacks.onToken(text)
@@ -136,6 +151,11 @@ export const AnthropicProvider: AIProvider = {
         const { done, value } = await reader.read()
         if (done) break
         parser.feed(decoder.decode(value, { stream: true }))
+      }
+      // Flush any remaining bytes buffered in the decoder
+      const remainder = decoder.decode()
+      if (remainder) {
+        parser.feed(remainder)
       }
       callbacks.onDone()
     } catch (e: unknown) {

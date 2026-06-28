@@ -111,9 +111,20 @@ export const OpenAICompatibleProvider: AIProvider = {
         if (event.data === '[DONE]') return
         try {
           const parsed = JSON.parse(event.data)
-          const delta = parsed.choices?.[0]?.delta?.content
-          if (delta) {
-            callbacks.onToken(delta)
+          const delta = parsed.choices?.[0]?.delta
+
+          // Reasoning / thinking content (DeepSeek R1, OpenAI o1 via compatible API)
+          if (delta?.reasoning_content) {
+            callbacks.onReasoning?.(delta.reasoning_content)
+          }
+          // Anthropic-style thinking via OpenAI-compatible proxy
+          if (delta?.thinking) {
+            callbacks.onReasoning?.(delta.thinking)
+          }
+
+          // Normal content
+          if (delta?.content) {
+            callbacks.onToken(delta.content)
           }
         } catch {
           // ignore malformed chunks
@@ -126,6 +137,11 @@ export const OpenAICompatibleProvider: AIProvider = {
         const { done, value } = await reader.read()
         if (done) break
         parser.feed(decoder.decode(value, { stream: true }))
+      }
+      // Flush any remaining bytes buffered in the decoder
+      const remainder = decoder.decode()
+      if (remainder) {
+        parser.feed(remainder)
       }
       callbacks.onDone()
     } catch (e: any) {
