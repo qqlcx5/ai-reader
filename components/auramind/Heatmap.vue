@@ -122,7 +122,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="px-4 py-5 border-b border-zinc-100">
+  <div class="px-4 border-b border-zinc-100">
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-[12px] font-medium flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>

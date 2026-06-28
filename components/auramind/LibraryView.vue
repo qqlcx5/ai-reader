@@ -1,7 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
-import { Database, CloudSync, ExternalLink } from '@lucide/vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -20,33 +18,24 @@ const documentStore = useDocumentStore()
 const chatStore = useChatStore()
 
 const searchQuery = ref('')
-const displayedDocs = ref<DocumentEntity[]>([])
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<string | undefined>(undefined)
 const deleteTargetName = ref('')
 
-const docCount = computed(() => documentStore.documents.length)
-
-onMounted(async () => {
-  await documentStore.refreshDocuments()
-  showRecentDocs()
+const displayedDocs = computed(() => {
+  const docs = [...documentStore.documents]
+  if (!searchQuery.value.trim()) {
+    return docs
+      .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+      .slice(0, 20)
+  }
+  const results = searchDocuments(searchQuery.value)
+  const idSet = new Set(results.map((r) => r.id))
+  return docs.filter((d) => idSet.has(d.id))
 })
-
-function showRecentDocs() {
-  displayedDocs.value = [...documentStore.documents]
-    .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
-    .slice(0, 20)
-}
 
 function onSearch(query: string) {
   searchQuery.value = query
-  if (!query.trim()) {
-    showRecentDocs()
-    return
-  }
-  const results = searchDocuments(query)
-  const idSet = new Set(results.map((r) => r.id))
-  displayedDocs.value = documentStore.documents.filter((d) => idSet.has(d.id))
 }
 
 async function handleDocumentClick(doc: DocumentEntity) {
@@ -99,8 +88,6 @@ async function confirmDelete() {
 
   await documentStore.deleteDocument(id)
   await documentStore.refreshDocuments()
-  // Refresh displayed list
-  displayedDocs.value = displayedDocs.value.filter((d) => d.id !== id)
 
   showDeleteConfirm.value = false
   deleteTargetId.value = undefined
@@ -114,18 +101,6 @@ function cancelDelete() {
 
 <template>
   <div class="flex-1 min-h-0 flex-col bg-[#FCFCFC] flex">
-    <!-- Header -->
-    <div class="h-12 shrink-0 px-4 flex items-center justify-between border-b border-zinc-200 bg-white/80 backdrop-blur-md">
-      <div class="text-[14px] font-semibold text-zinc-900 flex items-center gap-2">
-        <Database class="w-4 h-4 text-brand" />
-        记忆库
-        <span class="text-[11px] font-normal text-zinc-400">{{ docCount }} 篇</span>
-      </div>
-      <button class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100">
-        <CloudSync class="w-4 h-4" />
-      </button>
-    </div>
-
     <div class="flex-1 min-h-0 overflow-y-auto">
       <!-- Search -->
       <div class="sticky top-0 z-10 p-4 pb-3 bg-[#FCFCFC]/95 backdrop-blur-md border-b border-zinc-100">

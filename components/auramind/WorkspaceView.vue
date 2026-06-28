@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
-import WorkspaceHeader from '@/components/workspace/WorkspaceHeader.vue'
 import ChatView from './ChatView.vue'
 import ContextView from './ContextView.vue'
 import ChatInput from './ChatInput.vue'
@@ -11,7 +10,6 @@ const activeTab = ref<'chat' | 'context'>('chat')
 
 <template>
   <div class="flex-1 flex flex-col min-h-0 relative">
-    <WorkspaceHeader />
     <ConversationList />
 
     <!-- Chat/Context Tabs -->
