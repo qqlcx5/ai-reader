@@ -155,7 +155,7 @@ async function handleRefresh() {
     appStore.showToast('抓取完成', 'success')
 
     try {
-      await chatStore.loadConversations(doc.id)
+      await chatStore.loadConversations(documentStore.currentDocument?.id || doc.id)
     } catch {
       // non-critical
     }

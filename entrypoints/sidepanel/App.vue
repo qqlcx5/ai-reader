@@ -85,9 +85,12 @@ async function triggerAutoExtract(tabId: number) {
     await documentStore.saveDocument(doc)
     workspaceStore.setCaptureStatus('ready')
 
-    // Load conversations associated with this document
+    // Load conversations associated with this document.
+    // Use the merged doc id (saveDocument may have merged into an existing record
+    // with a different id, and conversations are keyed by that original id).
+    const savedId = documentStore.currentDocument?.id || doc.id
     try {
-      await chatStore.loadConversations(doc.id)
+      await chatStore.loadConversations(savedId)
     } catch {
       // non-critical
     }
