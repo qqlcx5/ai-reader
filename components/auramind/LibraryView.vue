@@ -5,6 +5,7 @@ import RekaButton from '@/components/ui/RekaButton.vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
+import { useChatStore } from '@/stores/chat.store'
 import { searchDocuments } from '@/services/search'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import type { DocumentEntity } from '@/types/document'
@@ -16,6 +17,7 @@ import Heatmap from './Heatmap.vue'
 const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
 const documentStore = useDocumentStore()
+const chatStore = useChatStore()
 
 const searchQuery = ref('')
 const displayedDocs = ref<DocumentEntity[]>([])
@@ -50,12 +52,22 @@ function onSearch(query: string) {
 async function handleDocumentClick(doc: DocumentEntity) {
   await documentStore.loadDocument(doc.id)
   workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // Even if DB fails, currentDocumentId is already set; proceed to workspace.
+  }
   appStore.setCurrentView('workspace')
 }
 
-function handleChatClick(doc: DocumentEntity) {
+async function handleChatClick(doc: DocumentEntity) {
   documentStore.setCurrentDocument(doc)
   workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // currentDocumentId is set synchronously inside loadConversations before any DB call.
+  }
   appStore.setCurrentView('workspace')
 }
 

@@ -11,6 +11,9 @@ vi.mock('../db/repositories/chat.repository', () => ({
   ChatRepository: {
     findById: vi.fn(async (id: string) => chatDb.get(id)),
     findAll: vi.fn(async () => Array.from(chatDb.values())),
+    findByDocumentId: vi.fn(async (documentId: string) =>
+      Array.from(chatDb.values()).filter((c) => c.documentId === documentId),
+    ),
     save: vi.fn(async (conv: ConversationEntity) => {
       chatDb.set(conv.id, { ...conv })
       return conv.id
@@ -149,7 +152,9 @@ describe('stores/chat.store', () => {
   it('should initialize with default values', () => {
     const store = useChatStore()
     expect(store.messages).toEqual([])
+    expect(store.conversations).toEqual([])
     expect(store.currentConversationId).toBeNull()
+    expect(store.currentDocumentId).toBeNull()
     expect(store.inputText).toBe('')
     expect(store.isStreaming).toBe(false)
     expect(store.isSending).toBe(false)
@@ -381,6 +386,106 @@ describe('stores/chat.store', () => {
     expect(conv.documentId).toBe('doc-abc')
     expect(conv.title).toBe('My Chat')
     expect(store.currentConversationId).toBe(conv.id)
+    expect(store.currentDocumentId).toBe('doc-abc')
+    expect(store.messages).toEqual([])
+  })
+
+  // 13b. createConversation defaults title to '新对话'
+  it('createConversation should default title to 新对话', async () => {
+    const store = useChatStore()
+    const conv = await store.createConversation('doc-xyz')
+
+    expect(conv.title).toBe('新对话')
+  })
+
+  // 13c. loadConversations loads all conversations for a document
+  it('loadConversations should load and sort conversations for a document', async () => {
+    const conv1 = makeConv('c1', 'doc-load')
+    conv1.updatedAt = '2026-02-01T00:00:00.000Z'
+    conv1.messages = [{ id: 'm1', role: 'user', content: 'Hi', status: 'success', createdAt: '2026-02-01T00:00:00.000Z' }]
+    const conv2 = makeConv('c2', 'doc-load')
+    conv2.updatedAt = '2026-03-01T00:00:00.000Z'
+    conv2.messages = [{ id: 'm2', role: 'user', content: 'Hello', status: 'success', createdAt: '2026-03-01T00:00:00.000Z' }]
+    const conv3 = makeConv('c3', 'doc-other')
+    chatDb.set(conv1.id, conv1)
+    chatDb.set(conv2.id, conv2)
+    chatDb.set(conv3.id, conv3)
+
+    const store = useChatStore()
+    await store.loadConversations('doc-load')
+
+    expect(store.conversations).toHaveLength(2)
+    // Most recent first
+    expect(store.conversations[0].id).toBe('c2')
+    expect(store.conversations[1].id).toBe('c1')
+    // Default to most recent conversation
+    expect(store.currentConversationId).toBe('c2')
+    expect(store.messages).toHaveLength(1)
+    expect(store.currentDocumentId).toBe('doc-load')
+  })
+
+  // 13d. loadConversations with no history creates none
+  it('loadConversations with no history should leave empty state', async () => {
+    const store = useChatStore()
+    await store.loadConversations('doc-empty')
+
+    expect(store.conversations).toHaveLength(0)
+    expect(store.currentConversationId).toBeNull()
+    expect(store.messages).toEqual([])
+    expect(store.currentDocumentId).toBe('doc-empty')
+  })
+
+  // 13e. switchConversation switches active conversation
+  it('switchConversation should switch active conversation and load messages', async () => {
+    const conv1 = makeConv('c1', 'doc-1')
+    conv1.updatedAt = '2026-01-01T00:00:00.000Z'
+    conv1.messages = [{ id: 'm1', role: 'user', content: 'Message in C1', status: 'success', createdAt: '2026-01-01T00:00:00.000Z' }]
+    const conv2 = makeConv('c2', 'doc-1')
+    conv2.updatedAt = '2026-02-01T00:00:00.000Z'
+    conv2.messages = [{ id: 'm2', role: 'user', content: 'Message in C2', status: 'success', createdAt: '2026-02-01T00:00:00.000Z' }]
+    chatDb.set(conv1.id, conv1)
+    chatDb.set(conv2.id, conv2)
+
+    const store = useChatStore()
+    await store.loadConversations('doc-1')
+    expect(store.currentConversationId).toBe('c2') // most recent
+
+    await store.switchConversation('c1')
+    expect(store.currentConversationId).toBe('c1')
+    expect(store.messages[0].content).toBe('Message in C1')
+  })
+
+  // 13f. deleteConversation removes from list and switches to next
+  it('deleteConversation should remove and switch to next conversation', async () => {
+    const conv1 = makeConv('c1', 'doc-1')
+    conv1.updatedAt = '2026-01-01T00:00:00.000Z'
+    const conv2 = makeConv('c2', 'doc-1')
+    conv2.updatedAt = '2026-02-01T00:00:00.000Z'
+    chatDb.set(conv1.id, conv1)
+    chatDb.set(conv2.id, conv2)
+
+    const store = useChatStore()
+    await store.loadConversations('doc-1')
+    expect(store.conversations).toHaveLength(2)
+
+    // Delete active (most recent = c2)
+    await store.deleteConversation('c2')
+    expect(store.conversations).toHaveLength(1)
+    expect(store.conversations[0].id).toBe('c1')
+    expect(store.currentConversationId).toBe('c1')
+  })
+
+  // 13g. deleteConversation clears state when last conversation deleted
+  it('deleteConversation should clear state when last conversation deleted', async () => {
+    const conv = makeConv('c1', 'doc-1')
+    chatDb.set(conv.id, conv)
+
+    const store = useChatStore()
+    await store.loadConversations('doc-1')
+    await store.deleteConversation('c1')
+
+    expect(store.conversations).toHaveLength(0)
+    expect(store.currentConversationId).toBeNull()
     expect(store.messages).toEqual([])
   })
 

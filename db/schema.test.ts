@@ -3,8 +3,8 @@ import { DB_VERSION, STORE_MAP } from './schema'
 import { AuraMindDB } from './index'
 
 describe('db/schema', () => {
-  it('should define version 1', () => {
-    expect(DB_VERSION).toBe(1)
+  it('should define version 2', () => {
+    expect(DB_VERSION).toBe(2)
   })
 
   it('should define all required stores', () => {

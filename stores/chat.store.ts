@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import type { ConversationEntity, ChatMessage } from '../types/chat'
 import { ChatRepository } from '../db/repositories/chat.repository'
 import { useModelStore } from './model.store'
@@ -24,10 +24,13 @@ export function resetRateLimit() {
 export const useChatStore = defineStore('chat', () => {
   // ── State ──────────────────────────────────────────────
   const messages = ref<ChatMessage[]>([])
+  const conversations = ref<ConversationEntity[]>([])
   const currentConversationId = ref<string | null>(null)
+  const currentDocumentId = ref<string | null>(null)
   const inputText = ref('')
   const isStreaming = ref(false)
   const isSending = ref(false)
+  const lastError = ref<string | null>(null)
 
   let abortController: AbortController | null = null
   let provider: AIProvider | null = null
@@ -52,9 +55,15 @@ export const useChatStore = defineStore('chat', () => {
   // ── Actions ────────────────────────────────────────────
   function setInputText(text: string) {
     inputText.value = text
+    // Clear error when user starts typing
+    if (lastError.value) lastError.value = null
   }
 
-  async function sendMessage(content: string): Promise<void> {
+  function clearError() {
+    lastError.value = null
+  }
+
+  async function sendMessage(content: string, modelIds?: string[]): Promise<void> {
     // ── Rate limit check ─────────────────────────────────
     const now = Date.now()
     if (now - lastRequestTime < RATE_LIMIT_RESET_TIME) {
@@ -70,19 +79,54 @@ export const useChatStore = defineStore('chat', () => {
     const modelStore = useModelStore()
     const settingsStore = useSettingsStore()
 
-    // ── Validation ───────────────────────────────────────
-    const model = modelStore.currentModel
-    if (!model) {
-      throw new Error('No model selected. Please select a model before sending.')
+    // ── Resolve models to use ────────────────────────────
+    const resolvedModelIds = modelIds && modelIds.length > 0
+      ? modelIds
+      : modelStore.currentModelId
+        ? [modelStore.currentModelId]
+        : []
+
+    if (resolvedModelIds.length === 0) {
+      throw new Error('No model selected. Please select at least one model before sending.')
     }
-    if (!model.enabled) {
-      throw new Error(`Model "${model.name}" is disabled. Enable it in Settings.`)
+
+    const resolvedModels: ModelConfig[] = []
+    for (const id of resolvedModelIds) {
+      const m = modelStore.models.find((mod) => mod.id === id)
+      if (!m) {
+        throw new Error(`Model not found: ${id}`)
+      }
+      if (!m.enabled) {
+        throw new Error(`Model "${m.name}" is disabled. Enable it in Settings.`)
+      }
+      if (!m.baseUrl) {
+        throw new Error(`Model "${m.name}" has no base URL configured.`)
+      }
+      if (m.provider !== 'ollama' && !m.apiKey) {
+        throw new Error(`API key is not set for provider "${m.name}". Set it in Settings.`)
+      }
+      resolvedModels.push(m)
     }
-    if (!model.baseUrl) {
-      throw new Error(`Model "${model.name}" has no base URL configured.`)
+
+    // ── Ensure active conversation ───────────────────────
+    if (!currentConversationId.value) {
+      let docId = currentDocumentId.value
+      // Fallback: try document store if currentDocumentId is not set
+      if (!docId) {
+        const documentStore = useDocumentStore()
+        docId = documentStore.pageDocument?.id || documentStore.currentDocument?.id || null
+      }
+      if (!docId) {
+        throw new Error('No document context. Open a page or select a document from Library.')
+      }
+      await createConversation(docId)
     }
-    if (model.provider !== 'ollama' && !model.apiKey) {
-      throw new Error(`API key is not set for provider "${model.name}". Set it in Settings.`)
+
+    // ── Set title from first user message ────────────────
+    const isFirstMessage = messages.value.length === 0
+    if (isFirstMessage) {
+      const title = content.slice(0, 40) + (content.length > 40 ? '...' : '')
+      await updateConversationTitle(title)
     }
 
     // ── Create user message ──────────────────────────────
@@ -95,32 +139,14 @@ export const useChatStore = defineStore('chat', () => {
     }
     messages.value.push(userMsg)
 
-    // ── Create assistant message (streaming) ─────────────
-    const assistantMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: '',
-      modelId: model.modelId,
-      status: 'streaming',
-      createdAt: new Date().toISOString(),
+    // ── Single model path ────────────────────────────────
+    if (resolvedModels.length === 1) {
+      await sendSingleModel(content, userMsg.id, resolvedModels[0], settingsStore.settings)
+      return
     }
-    messages.value.push(assistantMsg)
 
-    isSending.value = true
-    isStreaming.value = true
-    abortController = new AbortController()
-
-    try {
-      await streamToProvider(content, userMsg.id, assistantMsg, model, settingsStore.settings)
-    } finally {
-      isSending.value = false
-      isStreaming.value = false
-      abortController = null
-      provider = null
-      lastRequestTime = Date.now()
-
-      await persistConversation()
-    }
+    // ── Multi-model path ─────────────────────────────────
+    await sendMultiModel(content, userMsg.id, resolvedModels, settingsStore.settings)
   }
 
   function stopGeneration() {
@@ -128,14 +154,19 @@ export const useChatStore = defineStore('chat', () => {
       abortController.abort()
       abortController = null
     }
-    const lastMsg = messages.value[messages.value.length - 1]
-    if (lastMsg && lastMsg.role === 'assistant' && lastMsg.status === 'streaming') {
-      lastMsg.status = 'aborted'
-      if (!lastMsg.content) {
-        lastMsg.content = '(stopped)'
+    // Mark all streaming assistant messages as aborted (handles multi-model)
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+      const msg = messages.value[i]
+      if (msg.role === 'assistant' && msg.status === 'streaming') {
+        msg.status = 'aborted'
+        if (!msg.content) {
+          msg.content = '(stopped)'
+        }
+        msg.updatedAt = new Date().toISOString()
       }
-      lastMsg.updatedAt = new Date().toISOString()
     }
+    isSending.value = false
+    isStreaming.value = false
   }
 
   async function regenerate(): Promise<void> {
@@ -192,11 +223,28 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  async function loadConversations(documentId: string): Promise<void> {
+    currentDocumentId.value = documentId
+    const all = await ChatRepository.findByDocumentId(documentId)
+    conversations.value = all.sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+
+    if (all.length > 0) {
+      const mostRecent = conversations.value[0]
+      messages.value = [...mostRecent.messages]
+      currentConversationId.value = mostRecent.id
+    } else {
+      messages.value = []
+      currentConversationId.value = null
+    }
+  }
+
   async function createConversation(documentId: string, title?: string): Promise<ConversationEntity> {
     const conv: ConversationEntity = {
       id: crypto.randomUUID(),
       documentId,
-      title,
+      title: title || '新对话',
       messages: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -204,18 +252,161 @@ export const useChatStore = defineStore('chat', () => {
     await ChatRepository.save(conv)
     messages.value = []
     currentConversationId.value = conv.id
+    currentDocumentId.value = documentId
+
+    // Add to conversations list
+    conversations.value.unshift(conv)
+
     return conv
   }
 
+  async function switchConversation(conversationId: string): Promise<void> {
+    // Persist current before switching
+    await persistConversation()
+
+    const conv = await ChatRepository.findById(conversationId)
+    if (conv) {
+      messages.value = [...conv.messages]
+      currentConversationId.value = conv.id
+    }
+  }
+
   async function deleteConversation(id: string): Promise<void> {
+    // Persist current conversation first (unless we're deleting it — no point)
+    if (currentConversationId.value && currentConversationId.value !== id) {
+      await persistConversation()
+    }
+
     await ChatRepository.delete(id)
+    conversations.value = conversations.value.filter((c) => c.id !== id)
+
     if (currentConversationId.value === id) {
-      messages.value = []
-      currentConversationId.value = null
+      if (conversations.value.length > 0) {
+        const next = conversations.value[0]
+        // Load next conversation's messages from DB (not from stale list copy)
+        const nextConv = await ChatRepository.findById(next.id)
+        messages.value = nextConv ? [...nextConv.messages] : []
+        currentConversationId.value = next.id
+      } else {
+        messages.value = []
+        currentConversationId.value = null
+      }
+    }
+  }
+
+  async function updateConversationTitle(title: string): Promise<void> {
+    if (!currentConversationId.value) return
+    const conv = await ChatRepository.findById(currentConversationId.value)
+    if (conv) {
+      conv.title = title
+      conv.updatedAt = new Date().toISOString()
+      await ChatRepository.save(conv)
+
+      // Update in conversations list
+      const idx = conversations.value.findIndex((c) => c.id === conv.id)
+      if (idx !== -1) {
+        conversations.value[idx] = { ...conv, messages: conversations.value[idx].messages }
+      }
     }
   }
 
   // ── Internal helpers ───────────────────────────────────
+
+  /**
+   * Single-model streaming path (original behavior).
+   */
+  async function sendSingleModel(
+    userContent: string,
+    userMsgId: string,
+    model: ModelConfig,
+    settings: AppSettings,
+  ): Promise<void> {
+    const assistantMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content: '',
+      modelId: model.modelId,
+      status: 'streaming',
+      createdAt: new Date().toISOString(),
+    }
+    messages.value.push(assistantMsg)
+
+    isSending.value = true
+    isStreaming.value = true
+    abortController = new AbortController()
+
+    try {
+      await streamToProvider(userContent, userMsgId, assistantMsg, model, settings)
+    } finally {
+      isSending.value = false
+      isStreaming.value = false
+      abortController = null
+      provider = null
+      lastRequestTime = Date.now()
+      await persistConversation()
+    }
+  }
+
+  /**
+   * Multi-model streaming: fire all models concurrently.
+   */
+  async function sendMultiModel(
+    userContent: string,
+    userMsgId: string,
+    models: ModelConfig[],
+    settings: AppSettings,
+  ): Promise<void> {
+    // Create placeholder assistant message for each model
+    const assistantMsgs: ChatMessage[] = models.map((m) => ({
+      id: crypto.randomUUID(),
+      role: 'assistant' as const,
+      content: '',
+      modelId: m.modelId,
+      status: 'streaming' as const,
+      createdAt: new Date().toISOString(),
+    }))
+
+    // Push all at once so UI renders them together
+    for (const msg of assistantMsgs) {
+      messages.value.push(msg)
+    }
+
+    isSending.value = true
+    isStreaming.value = true
+    abortController = new AbortController()
+
+    const signal = abortController.signal
+
+    // Fire all streams concurrently
+    const tasks = models.map((model, i) =>
+      streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings).catch(
+        (err) => {
+          // Mark the specific assistant message as failed
+          const targetId = assistantMsgs[i].id
+          const msg = messages.value.find((m) => m.id === targetId)
+          if (msg && msg.status === 'streaming') {
+            msg.status = 'failed'
+            msg.error = err?.message || String(err)
+            msg.updatedAt = new Date().toISOString()
+          }
+        },
+      ),
+    )
+
+    try {
+      await Promise.allSettled(tasks)
+    } finally {
+      // Only mark as done if ALL streams completed (not aborted mid-way)
+      if (!signal.aborted) {
+        isSending.value = false
+        isStreaming.value = false
+        abortController = null
+        provider = null
+        lastRequestTime = Date.now()
+        await persistConversation()
+      }
+    }
+  }
 
   async function streamToProvider(
     userContent: string,
@@ -324,30 +515,47 @@ export const useChatStore = defineStore('chat', () => {
     return -1
   }
 
+  /**
+   * Deep-clone store messages to plain objects so IndexedDB structured clone doesn't
+   * fail on Vue reactive Proxy objects (DataCloneError).
+   */
+  function cloneMessages(msgs: ChatMessage[]): ChatMessage[] {
+    return structuredClone(toRaw(msgs))
+  }
+
   async function persistConversation(): Promise<void> {
     if (!currentConversationId.value) return
 
     const conv = await ChatRepository.findById(currentConversationId.value)
     if (conv) {
-      conv.messages = [...messages.value]
+      conv.messages = cloneMessages(messages.value)
       conv.updatedAt = new Date().toISOString()
       await ChatRepository.save(conv)
     }
   }
 
   return {
+    // state
     messages,
+    conversations,
     currentConversationId,
+    currentDocumentId,
     inputText,
     isStreaming,
     isSending,
+    lastError,
+    // computed
     canSend,
+    // actions
     setInputText,
+    clearError,
     sendMessage,
     stopGeneration,
     regenerate,
     loadConversation,
+    loadConversations,
     createConversation,
+    switchConversation,
     deleteConversation,
   }
 })

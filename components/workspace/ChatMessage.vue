@@ -9,6 +9,8 @@ import type { ChatMessage } from '@/types/chat'
 const props = defineProps<{
   message: ChatMessage
   modelName?: string
+  /** Whether this message is part of a multi-model round (influences layout) */
+  isMultiModel?: boolean
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
@@ -57,11 +59,16 @@ watch(renderedHtml, async () => {
   </div>
 
   <!-- AI message -->
-  <div v-else class="flex flex-col gap-2 max-w-[95%]">
+  <div v-else class="flex flex-col gap-2" :class="isMultiModel ? 'max-w-full' : 'max-w-[95%]'">
     <div class="flex items-center gap-1.5 text-[12px] font-medium text-zinc-900">
       <Sparkles class="w-3.5 h-3.5 text-brand" />
-      AuraMind
-      <span v-if="modelName" class="text-[10px] text-zinc-400 font-normal">{{ modelName }}</span>
+      <template v-if="modelName">
+        <span
+          class="text-[10px] px-1.5 py-0.5 rounded font-medium"
+          :class="isMultiModel ? 'bg-brand/10 text-brand border border-brand/20' : 'text-zinc-400 font-normal'"
+        >{{ modelName }}</span>
+      </template>
+      <span v-else class="text-[12px]">AuraMind</span>
     </div>
 
     <div

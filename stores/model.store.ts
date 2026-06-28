@@ -7,9 +7,14 @@ import { testConnection as runTestConnection } from '../services/ai/test-connect
 export const useModelStore = defineStore('model', () => {
   const models = ref<ModelConfig[]>([])
   const currentModelId = ref<string | null>(null)
+  const selectedModelIds = ref<string[]>([])
 
   const currentModel = computed(() =>
     models.value.find((m) => m.id === currentModelId.value) ?? null,
+  )
+
+  const selectedModels = computed(() =>
+    models.value.filter((m) => selectedModelIds.value.includes(m.id)),
   )
 
   const enabledModels = computed(() =>
@@ -59,6 +64,32 @@ export const useModelStore = defineStore('model', () => {
 
   function selectModel(id: string) {
     currentModelId.value = id
+    // Sync single-select to multi-select for consistency
+    selectedModelIds.value = [id]
+  }
+
+  function toggleModelSelection(id: string) {
+    const idx = selectedModelIds.value.indexOf(id)
+    if (idx === -1) {
+      selectedModelIds.value = [...selectedModelIds.value, id]
+    } else {
+      selectedModelIds.value = selectedModelIds.value.filter((mid) => mid !== id)
+    }
+    // Sync: if only 1 selected, also set as currentModelId
+    if (selectedModelIds.value.length === 1) {
+      currentModelId.value = selectedModelIds.value[0]
+    } else {
+      currentModelId.value = null
+    }
+  }
+
+  function setSelectedModelIds(ids: string[]) {
+    selectedModelIds.value = ids
+    if (ids.length === 1) {
+      currentModelId.value = ids[0]
+    } else {
+      currentModelId.value = null
+    }
   }
 
   async function testConnection(id: string): Promise<boolean> {
@@ -86,7 +117,9 @@ export const useModelStore = defineStore('model', () => {
   return {
     models,
     currentModelId,
+    selectedModelIds,
     currentModel,
+    selectedModels,
     enabledModels,
     defaultModel,
     loadModels,
@@ -94,6 +127,8 @@ export const useModelStore = defineStore('model', () => {
     editModel,
     deleteModel,
     selectModel,
+    toggleModelSelection,
+    setSelectedModelIds,
     testConnection,
   }
 })

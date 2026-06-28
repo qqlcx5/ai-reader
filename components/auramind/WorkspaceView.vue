@@ -4,17 +4,15 @@ import WorkspaceHeader from '@/components/workspace/WorkspaceHeader.vue'
 import ChatView from './ChatView.vue'
 import ContextView from './ContextView.vue'
 import ChatInput from './ChatInput.vue'
+import ConversationList from '@/components/workspace/ConversationList.vue'
 
 const activeTab = ref<'chat' | 'context'>('chat')
-
-function handleSend(_text: string) {
-  // Placeholder for actual send logic
-}
 </script>
 
 <template>
   <div class="flex-1 flex flex-col min-h-0 relative">
     <WorkspaceHeader />
+    <ConversationList />
 
     <!-- Chat/Context Tabs -->
     <div class="flex p-0.5 mx-3 mt-2 bg-zinc-100 border border-zinc-200 rounded-[9px] self-start">
@@ -36,6 +34,6 @@ function handleSend(_text: string) {
 
     <ChatView v-show="activeTab === 'chat'" />
     <ContextView v-show="activeTab === 'context'" />
-    <ChatInput v-show="activeTab === 'chat'" @send="handleSend" />
+    <ChatInput v-show="activeTab === 'chat'" />
   </div>
 </template>

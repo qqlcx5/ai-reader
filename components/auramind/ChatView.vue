@@ -6,6 +6,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
+import type { ChatMessage as ChatMessageType } from '@/types/chat'
 
 const chatStore = useChatStore()
 const documentStore = useDocumentStore()
@@ -19,7 +20,57 @@ const contextDoc = computed(() =>
 
 const contextTitle = computed(() => contextDoc.value?.title ?? null)
 
-const currentModelName = computed(() => modelStore.currentModel?.name)
+// ── Model name lookup ───────────────────────────────────
+function modelNameFor(modelId?: string): string | undefined {
+  if (!modelId) return undefined
+  const m = modelStore.models.find((mod) => mod.modelId === modelId)
+  return m?.name
+}
+
+// ── Round grouping ──────────────────────────────────────
+// A round = 1 user message + all consecutive assistant messages that follow
+interface MessageRound {
+  userMsg: ChatMessageType
+  assistantMsgs: ChatMessageType[]
+}
+
+const rounds = computed<MessageRound[]>(() => {
+  const result: MessageRound[] = []
+  const msgs = chatStore.messages
+  let i = 0
+
+  while (i < msgs.length) {
+    if (msgs[i].role === 'user') {
+      const userMsg = msgs[i]
+      const assistantMsgs: ChatMessageType[] = []
+      i++
+      while (i < msgs.length && msgs[i].role === 'assistant') {
+        assistantMsgs.push(msgs[i])
+        i++
+      }
+      result.push({ userMsg, assistantMsgs })
+    } else {
+      // Standalone assistant message (e.g., restored from DB out of order)
+      // Treat as a round with a synthetic empty user
+      const assistantMsgs: ChatMessageType[] = [msgs[i]]
+      // Find preceding user message if any, or create synthetic
+      const lastRound = result[result.length - 1]
+      result.push({
+        userMsg: lastRound?.userMsg ?? {
+          id: '',
+          role: 'user',
+          content: '',
+          status: 'success',
+          createdAt: '',
+        },
+        assistantMsgs,
+      })
+      i++
+    }
+  }
+
+  return result
+})
 
 function scrollToBottom() {
   nextTick(() => {
@@ -78,13 +129,41 @@ function handleStop() {
       </p>
     </div>
 
-    <!-- Messages -->
-    <ChatMessage
-      v-for="msg in chatStore.messages"
-      :key="msg.id"
-      :message="msg"
-      :model-name="msg.role === 'assistant' ? currentModelName : undefined"
-    />
+    <!-- Rounds -->
+    <template v-for="(round, ri) in rounds" :key="round.userMsg.id || ri">
+      <!-- User message -->
+      <ChatMessage
+        v-if="round.userMsg.content"
+        :message="round.userMsg"
+        :model-name="modelNameFor(round.userMsg.modelId)"
+      />
+
+      <!-- Single assistant: normal flow -->
+      <ChatMessage
+        v-if="round.assistantMsgs.length === 1"
+        :message="round.assistantMsgs[0]"
+        :model-name="modelNameFor(round.assistantMsgs[0].modelId)"
+      />
+
+      <!-- Multi-assistant: side-by-side card layout -->
+      <div
+        v-else-if="round.assistantMsgs.length > 1"
+        class="grid gap-3"
+        :class="{
+          'grid-cols-2': round.assistantMsgs.length === 2,
+          'grid-cols-2': round.assistantMsgs.length === 3,
+          'grid-cols-2': round.assistantMsgs.length >= 4,
+        }"
+      >
+        <ChatMessage
+          v-for="amsg in round.assistantMsgs"
+          :key="amsg.id"
+          :message="amsg"
+          :model-name="modelNameFor(amsg.modelId)"
+          :is-multi-model="true"
+        />
+      </div>
+    </template>
 
     <!-- Stop button -->
     <div v-if="chatStore.isStreaming" class="flex justify-center">
