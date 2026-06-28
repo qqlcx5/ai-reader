@@ -8,7 +8,7 @@ describe('IRepository Contract', () => {
     const repo: IRepository<{ id: string }> = {
       findById: async (id: string) => ({ id }),
       findAll: async () => [],
-      save: async (e: { id: string }) => e.id,
+      save: async (e: { id: string }) => e,
       delete: async (_id: string) => {},
       count: async () => 0,
     }
@@ -19,15 +19,16 @@ describe('IRepository Contract', () => {
     expect(repo.count).toBeDefined()
   })
 
-  it('save returns the entity id as string', async () => {
+  it('save returns the entity itself', async () => {
     const repo: IRepository<{ id: string; name: string }> = {
       findById: async (_id: string) => undefined,
       findAll: async () => [],
-      save: async (e: { id: string; name: string }) => e.id,
+      save: async (e: { id: string; name: string }) => e,
       delete: async () => {},
       count: async () => 0,
     }
     const result = await repo.save({ id: 'test-1', name: 'Test' })
-    expect(typeof result).toBe('string')
+    expect(result.id).toBe('test-1')
+    expect(result.name).toBe('Test')
   })
 })

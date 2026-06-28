@@ -7,7 +7,6 @@ export const ModelRepository: IRepository<ModelConfig> & {
   findDefault(): Promise<ModelConfig | undefined>
   setDefault(id: string): Promise<void>
   updateLastUsedAt(id: string): Promise<void>
-  save(model: ModelConfig): Promise<string>
 } = {
   async findById(id: string): Promise<ModelConfig | undefined> {
     return db.models.get(id)
@@ -41,9 +40,9 @@ export const ModelRepository: IRepository<ModelConfig> & {
     await db.models.update(id, { lastUsedAt: new Date().toISOString() })
   },
 
-  async save(model: ModelConfig): Promise<string> {
+  async save(model: ModelConfig): Promise<ModelConfig> {
     await db.models.put(model)
-    return model.id
+    return model
   },
 
   async delete(id: string): Promise<void> {

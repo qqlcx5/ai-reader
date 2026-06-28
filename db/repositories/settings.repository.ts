@@ -22,7 +22,6 @@ const defaultCaptureSettings: CaptureSettings = {
 
 export const SettingsRepository: IRepository<AppSettings> & {
   get(): Promise<AppSettings | undefined>
-  save(settings: AppSettings): Promise<string>
   migrate(oldVersion: number): Promise<void>
 } = {
   async findById(id: string): Promise<AppSettings | undefined> {
@@ -37,9 +36,9 @@ export const SettingsRepository: IRepository<AppSettings> & {
     return db.settings.get('app-settings')
   },
 
-  async save(settings: AppSettings): Promise<string> {
+  async save(settings: AppSettings): Promise<AppSettings> {
     await db.settings.put(settings)
-    return settings.id
+    return settings
   },
 
   async delete(id: string): Promise<void> {

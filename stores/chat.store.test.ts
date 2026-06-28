@@ -16,7 +16,7 @@ vi.mock('../db/repositories/chat.repository', () => ({
     ),
     save: vi.fn(async (conv: ConversationEntity) => {
       chatDb.set(conv.id, { ...conv })
-      return conv.id
+      return { ...conv }
     }),
     delete: vi.fn(async (id: string) => {
       chatDb.delete(id)
@@ -33,7 +33,7 @@ vi.mock('../db/repositories/model.repository', () => ({
     findById: vi.fn(async (id: string) => modelDb.get(id)),
     save: vi.fn(async (model: ModelConfig) => {
       modelDb.set(model.id, { ...model })
-      return model.id
+      return { ...model }
     }),
     delete: vi.fn(async (id: string) => {
       modelDb.delete(id)

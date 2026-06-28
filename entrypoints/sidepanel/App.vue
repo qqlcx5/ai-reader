@@ -65,7 +65,8 @@ async function triggerAutoExtract(tabId: number) {
     documentStore.setPageDocument(doc)
     await documentStore.saveDocument(doc)
     workspaceStore.setCaptureStatus('ready')
-  } catch {
+  } catch (err) {
+    console.error('[triggerAutoExtract] capture failed for tab', tabId, err)
     workspaceStore.setCaptureStatus('failed')
   } finally {
     workspaceStore.setExtracting(false)
@@ -110,18 +111,12 @@ onMounted(async () => {
     removeListener = () => browser.runtime.onMessage.removeListener(handleBackgroundMessage)
   }
 
-  // Auto-extract on open
-  if (settingsStore.settings.capture.autoExtractOnOpen && appStore.activeTab?.id) {
-    triggerAutoExtract(appStore.activeTab.id)
-  }
-
-  // Get current tab info
+  // Get current tab info and auto-extract on open
   if (browser?.runtime?.sendMessage) {
     browser.runtime
       .sendMessage({ type: 'GET_CURRENT_TAB' })
       .then((tab: any) => {
         if (tab) appStore.setActiveTab(tab)
-        // Try auto-extract after getting tab info
         if (settingsStore.settings.capture.autoExtractOnOpen && tab?.id) {
           triggerAutoExtract(tab.id)
         }

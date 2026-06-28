@@ -5,7 +5,6 @@ import type { IRepository } from '../repository'
 export const ChatRepository: IRepository<ConversationEntity> & {
   findByDocumentId(documentId: string): Promise<ConversationEntity[]>
   findAllSorted(): Promise<ConversationEntity[]>
-  save(conv: ConversationEntity): Promise<string>
 } = {
   async findById(id: string): Promise<ConversationEntity | undefined> {
     return db.conversations.get(id)
@@ -23,9 +22,9 @@ export const ChatRepository: IRepository<ConversationEntity> & {
     return db.conversations.orderBy('updatedAt').reverse().toArray()
   },
 
-  async save(conv: ConversationEntity): Promise<string> {
+  async save(conv: ConversationEntity): Promise<ConversationEntity> {
     await db.conversations.put(conv)
-    return conv.id
+    return conv
   },
 
   async delete(id: string): Promise<void> {

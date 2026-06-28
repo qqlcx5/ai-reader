@@ -29,8 +29,21 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   async function saveDocument(doc: DocumentEntity) {
-    await DocumentRepository.save(doc)
-    replaceInIndex(doc)
+    const saved = await DocumentRepository.save(doc)
+    try {
+      replaceInIndex(saved)
+    } catch (err) {
+      console.error('[document.store] replaceInIndex failed for', saved.id, err)
+    }
+    // If URL-based dedup merged into an existing document (different id),
+    // sync the in-memory refs so currentDocument / pageDocument point to
+    // the correct merged record.
+    if (currentDocument.value && currentDocument.value.url === saved.url && currentDocument.value.id !== saved.id) {
+      currentDocument.value = saved
+    }
+    if (pageDocument.value && pageDocument.value.url === saved.url && pageDocument.value.id !== saved.id) {
+      pageDocument.value = saved
+    }
   }
 
   async function deleteDocument(id: string) {

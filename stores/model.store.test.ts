@@ -16,7 +16,7 @@ vi.mock('../db/repositories/model.repository', () => {
       }),
       save: vi.fn(async (model: ModelConfig) => {
         store.set(model.id, { ...model })
-        return model.id
+        return { ...model }
       }),
       delete: vi.fn(async (id: string) => {
         store.delete(id)
