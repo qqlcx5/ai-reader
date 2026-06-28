@@ -2,14 +2,26 @@
 import { computed } from 'vue'
 import { MessageSquare, Plus, Trash2 } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
+import { useDocumentStore } from '@/stores/document.store'
 import RekaButton from '@/components/ui/RekaButton.vue'
 
 const chatStore = useChatStore()
+const documentStore = useDocumentStore()
 
-function handleNewConversation() {
+async function handleNewConversation() {
   const docId = chatStore.currentDocumentId
+    || documentStore.pageDocument?.id
+    || documentStore.currentDocument?.id
+    || null
+
   if (!docId) return
-  chatStore.createConversation(docId)
+
+  try {
+    await chatStore.createConversation(docId)
+  } catch (err) {
+    console.error('[ConversationList] Failed to create conversation:', err)
+    chatStore.lastError = '新建会话失败，请重试'
+  }
 }
 
 async function handleSwitchConversation(id: string) {

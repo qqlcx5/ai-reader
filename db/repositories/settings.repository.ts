@@ -3,7 +3,7 @@ import type { AppSettings, ContextSettings, CaptureSettings } from '../../types/
 import type { IRepository } from '../repository'
 
 const defaultContextSettings: ContextSettings = {
-  maxContextTokens: 8000,
+  maxContextTokens: 128000,
   includeMetadataInPrompt: true,
   includeUrlInPrompt: true,
   includeTitleInPrompt: true,

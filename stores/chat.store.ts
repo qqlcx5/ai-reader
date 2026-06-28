@@ -211,6 +211,7 @@ export const useChatStore = defineStore('chat', () => {
       abortController = null
       provider = null
       lastRequestTime = Date.now()
+      resetRateLimit()
       await persistConversation()
     }
   }
@@ -246,6 +247,11 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function createConversation(documentId: string, title?: string): Promise<ConversationEntity> {
+    // Persist the current conversation before creating a new one.
+    // This prevents data loss when the user clicks "New Conversation"
+    // before the previous stream's persistConversation() has completed.
+    await persistConversation()
+
     const conv: ConversationEntity = {
       id: crypto.randomUUID(),
       documentId,
@@ -254,10 +260,20 @@ export const useChatStore = defineStore('chat', () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
-    await ChatRepository.save(conv)
+
+    try {
+      await ChatRepository.save(conv)
+    } catch (err) {
+      console.error(`[chat.store] Failed to save new conversation to IndexedDB:`, err)
+      throw new Error('Failed to create conversation. Please try again.')
+    }
+
     messages.value = []
     currentConversationId.value = conv.id
     currentDocumentId.value = documentId
+
+    // Reset rate limit when switching to a new conversation
+    resetRateLimit()
 
     // Add to conversations list
     conversations.value.unshift(conv)
@@ -273,6 +289,8 @@ export const useChatStore = defineStore('chat', () => {
     if (conv) {
       messages.value = [...conv.messages]
       currentConversationId.value = conv.id
+      // Reset rate limit when switching conversations
+      resetRateLimit()
     }
   }
 
@@ -539,7 +557,10 @@ export const useChatStore = defineStore('chat', () => {
     if (!currentConversationId.value) return
 
     const conv = await ChatRepository.findById(currentConversationId.value)
-    if (!conv) return
+    if (!conv) {
+      console.error(`[chat.store] persistConversation: conversation ${currentConversationId.value} not found in IndexedDB`)
+      return
+    }
 
     const clonedMsgs = cloneMessages(messages.value)
     conv.messages = clonedMsgs
