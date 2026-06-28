@@ -224,6 +224,11 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function loadConversations(documentId: string): Promise<void> {
+    // Persist any active conversation before switching document context.
+    // This prevents data loss when the user navigates away mid-stream
+    // (component unmount may orphan the streaming Promise and skip persistConversation).
+    await persistConversation()
+
     currentDocumentId.value = documentId
     const all = await ChatRepository.findByDocumentId(documentId)
     conversations.value = all.sort(
@@ -277,7 +282,14 @@ export const useChatStore = defineStore('chat', () => {
       await persistConversation()
     }
 
-    await ChatRepository.delete(id)
+    try {
+      await ChatRepository.delete(id)
+    } catch (err) {
+      console.error(`[chat.store] Failed to delete conversation ${id} from IndexedDB:`, err)
+      // Still update the UI so the user sees the conversation removed.
+      // If the DB delete failed, the conversation will reappear on next loadConversations.
+    }
+
     conversations.value = conversations.value.filter((c) => c.id !== id)
 
     if (currentConversationId.value === id) {
@@ -527,10 +539,23 @@ export const useChatStore = defineStore('chat', () => {
     if (!currentConversationId.value) return
 
     const conv = await ChatRepository.findById(currentConversationId.value)
-    if (conv) {
-      conv.messages = cloneMessages(messages.value)
-      conv.updatedAt = new Date().toISOString()
-      await ChatRepository.save(conv)
+    if (!conv) return
+
+    const clonedMsgs = cloneMessages(messages.value)
+    conv.messages = clonedMsgs
+    conv.updatedAt = new Date().toISOString()
+    await ChatRepository.save(conv)
+
+    // Sync back to conversations list so messageCount stays correct in UI.
+    // Without this, newly created conversations always show 0 messages
+    // because the object in conversations.value was pushed with messages: [].
+    const idx = conversations.value.findIndex((c) => c.id === conv.id)
+    if (idx !== -1) {
+      conversations.value[idx] = {
+        ...conversations.value[idx],
+        messages: clonedMsgs,
+        updatedAt: conv.updatedAt,
+      }
     }
   }
 
