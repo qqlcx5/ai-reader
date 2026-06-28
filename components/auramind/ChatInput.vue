@@ -22,16 +22,24 @@ const newTemplateContent = ref('')
 const editingTemplateId = ref<string | null>(null)
 const editTemplateTitle = ref('')
 const editTemplateContent = ref('')
+const templateDirectSend = ref(false)
 
 function toggleTemplatePanel() {
   showTemplatePanel.value = !showTemplatePanel.value
   showTemplateManager.value = false
   if (showTemplatePanel.value) {
-    promptTemplateStore.initBuiltinTemplates()
+    promptTemplateStore.initTemplates()
   }
 }
 
 function applyTemplate(content: string) {
+  if (templateDirectSend.value) {
+    chatStore.setInputText(content)
+    showTemplatePanel.value = false
+    showTemplateManager.value = false
+    submit()
+    return
+  }
   const current = chatStore.inputText.trim()
   if (current) {
     chatStore.setInputText(current + '\n\n' + content)
@@ -172,39 +180,30 @@ function handleStop() {
       <!-- Header -->
       <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 shrink-0">
         <span class="text-[12px] font-semibold text-zinc-700">提示词模板</span>
-        <RekaButton variant="ghost" size="sm" class="p-0.5" @click="showTemplatePanel = false">
-          <X class="w-3.5 h-3.5" />
-        </RekaButton>
+        <div class="flex items-center gap-1.5">
+          <button
+            class="text-[10px] px-1.5 py-0.5 rounded border text-zinc-400 hover:text-zinc-600 hover:border-zinc-300 transition-colors"
+            :class="templateDirectSend ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-zinc-200'"
+            @click="templateDirectSend = !templateDirectSend"
+          >
+            {{ templateDirectSend ? '立即发送' : '二次编辑' }}
+          </button>
+          <RekaButton variant="ghost" size="sm" class="p-0.5" @click="showTemplatePanel = false">
+            <X class="w-3.5 h-3.5" />
+          </RekaButton>
+        </div>
       </div>
 
       <!-- Template list -->
       <div v-if="!showTemplateManager" class="flex-1 overflow-y-auto px-1 py-1">
-        <!-- Builtin section -->
-        <div v-if="promptTemplateStore.builtinTemplates.length > 0">
-          <div class="text-[10px] text-zinc-400 font-medium px-2 py-1">内置模板</div>
-          <div
-            v-for="t in promptTemplateStore.builtinTemplates"
-            :key="t.id"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 cursor-pointer group"
-            @click="applyTemplate(t.content)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            <span class="text-[12px] text-zinc-700 flex-1 truncate">{{ t.title }}</span>
-          </div>
-        </div>
-
-        <!-- Custom section -->
-        <div v-if="promptTemplateStore.customTemplates.length > 0">
-          <div class="text-[10px] text-zinc-400 font-medium px-2 py-1 mt-1">自定义模板</div>
-          <div
-            v-for="t in promptTemplateStore.customTemplates"
-            :key="t.id"
-            class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 cursor-pointer group"
-            @click="applyTemplate(t.content)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-            <span class="text-[12px] text-zinc-700 flex-1 truncate">{{ t.title }}</span>
-          </div>
+        <div
+          v-for="t in promptTemplateStore.templates"
+          :key="t.id"
+          class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 cursor-pointer group"
+          @click="applyTemplate(t.content)"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
+          <span class="text-[12px] text-zinc-700 flex-1 truncate">{{ t.title }}</span>
         </div>
 
         <!-- Empty state -->
@@ -244,33 +243,18 @@ function handleStop() {
           </RekaButton>
         </div>
 
-        <!-- Builtin templates (read-only) -->
-        <div v-if="promptTemplateStore.builtinTemplates.length > 0">
-          <div class="text-[10px] text-zinc-400 font-medium mb-1">内置模板（不可编辑/删除）</div>
+        <!-- Template list with edit/delete -->
+        <div v-if="promptTemplateStore.templates.length > 0">
+          <div class="text-[10px] text-zinc-400 font-medium mb-1">管理模板</div>
           <div
-            v-for="t in promptTemplateStore.builtinTemplates"
-            :key="t.id"
-            class="flex items-center justify-between px-2 py-1 rounded-lg"
-          >
-            <div class="flex items-center gap-2 flex-1 min-w-0">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-              <span class="text-[12px] text-zinc-400 truncate">{{ t.title }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Custom templates list with edit/delete -->
-        <div v-if="promptTemplateStore.customTemplates.length > 0">
-          <div class="text-[10px] text-zinc-400 font-medium mb-1">管理自定义模板</div>
-          <div
-            v-for="t in promptTemplateStore.customTemplates"
+            v-for="t in promptTemplateStore.templates"
             :key="t.id"
             class="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-zinc-50"
           >
             <!-- Non-editing state -->
             <template v-if="editingTemplateId !== t.id">
               <div class="flex items-center gap-2 flex-1 min-w-0">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                <span class="w-1.5 h-1.5 rounded-full bg-zinc-400 shrink-0" />
                 <span class="text-[12px] text-zinc-700 truncate">{{ t.title }}</span>
               </div>
               <div class="flex items-center gap-0.5 shrink-0">

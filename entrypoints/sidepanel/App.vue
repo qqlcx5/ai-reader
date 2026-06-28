@@ -111,7 +111,7 @@ onMounted(async () => {
   await modelStore.loadModels()
 
   // Initialize prompt templates (writes builtins on first run)
-  await promptTemplateStore.initBuiltinTemplates()
+  await promptTemplateStore.initTemplates()
 
   // Restore persisted selections. The pinia-plugin-persistedstate plugin
   // restores currentModelId / selectedModelIds from localStorage before
