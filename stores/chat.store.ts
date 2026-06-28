@@ -27,6 +27,10 @@ export const useChatStore = defineStore('chat', () => {
   interface StreamState {
     controller: AbortController
     provider: AIProvider | null
+    /** Captured messages array for this conversation. Used so background
+     *  streams continue updating the correct array even after the user
+     *  switches to another conversation (which replaces messages.value). */
+    messages: ChatMessage[]
   }
   const streamStates = ref<Map<string, StreamState>>(new Map())
 
@@ -209,8 +213,10 @@ export const useChatStore = defineStore('chat', () => {
     messages.value.push(assistantMsg)
 
     const cid = currentConversationId.value!
+    const capturedMessages = messages.value
+
     const controller = new AbortController()
-    const state: StreamState = { controller, provider: null }
+    const state: StreamState = { controller, provider: null, messages: capturedMessages }
     streamStates.value.set(cid, state)
 
     try {
@@ -218,7 +224,7 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
-        await persistConversation()
+        await persistConversationForId(cid, capturedMessages)
       }
     }
   }
@@ -288,6 +294,16 @@ export const useChatStore = defineStore('chat', () => {
   async function switchConversation(conversationId: string): Promise<void> {
     // Persist current before switching
     await persistConversation()
+
+    // If the target conversation has an active background stream, use its
+    // live in-memory messages array (which has been receiving tokens while
+    // the user was on another conversation) instead of the stale IndexedDB copy.
+    const activeStream = streamStates.value.get(conversationId)
+    if (activeStream) {
+      messages.value = activeStream.messages
+      currentConversationId.value = conversationId
+      return
+    }
 
     const conv = await ChatRepository.findById(conversationId)
     if (conv) {
@@ -364,8 +380,13 @@ export const useChatStore = defineStore('chat', () => {
     messages.value.push(assistantMsg)
 
     const cid = currentConversationId.value!
+    // Capture the messages array reference so background stream callbacks
+    // continue updating this array even if the user switches conversations
+    // (which replaces messages.value).
+    const capturedMessages = messages.value
+
     const controller = new AbortController()
-    const state: StreamState = { controller, provider: null }
+    const state: StreamState = { controller, provider: null, messages: capturedMessages }
     streamStates.value.set(cid, state)
 
     try {
@@ -373,7 +394,7 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
-        await persistConversation()
+        await persistConversationForId(cid, capturedMessages)
       }
     }
   }
@@ -403,8 +424,11 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const cid = currentConversationId.value!
+    // Capture the messages array reference (see sendSingleModel for rationale).
+    const capturedMessages = messages.value
+
     const controller = new AbortController()
-    const state: StreamState = { controller, provider: null }
+    const state: StreamState = { controller, provider: null, messages: capturedMessages }
     streamStates.value.set(cid, state)
 
     const signal = controller.signal
@@ -413,9 +437,11 @@ export const useChatStore = defineStore('chat', () => {
     const tasks = models.map((model, i) =>
       streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings, state).catch(
         (err) => {
-          // Mark the specific assistant message as failed
+          // Mark the specific assistant message as failed.
+          // Use capturedMessages so we target the correct conversation even
+          // if the user has switched away.
           const targetId = assistantMsgs[i].id
-          const msg = messages.value.find((m) => m.id === targetId)
+          const msg = capturedMessages.find((m) => m.id === targetId)
           if (msg && msg.status === 'streaming') {
             msg.status = 'failed'
             msg.error = err?.message || String(err)
@@ -431,7 +457,7 @@ export const useChatStore = defineStore('chat', () => {
       // Only mark as done if ALL streams completed (not aborted mid-way)
       if (!signal.aborted) {
         streamStates.value.delete(cid)
-        await persistConversation()
+        await persistConversationForId(cid, capturedMessages)
       } else {
         streamStates.value.delete(cid)
       }
@@ -472,10 +498,13 @@ export const useChatStore = defineStore('chat', () => {
       context = truncateContext(context, maxTokens)
     }
 
-    // Build prompt
+    // Build prompt using the captured messages array (streamState.messages)
+    // rather than messages.value, so history stays correct even if the user
+    // switches to another conversation mid-stream.
     const builder = new PromptBuilder()
+    const capturedMessages = streamState.messages
     const history = buildHistory(
-      messages.value.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
+      capturedMessages.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
     )
 
     const promptInput: PromptInput = {
@@ -487,9 +516,9 @@ export const useChatStore = defineStore('chat', () => {
 
     const promptOutput = builder.build(promptInput)
 
-    // Call provider stream
-    // IMPORTANT: Access assistantMsg through messages.value (reactive proxy) so Vue can
-    // track mutations for re-rendering. Directly mutating the raw object bypasses reactivity.
+    // Call provider stream.
+    // Use capturedMessages (not messages.value) for all callbacks so tokens
+    // continue flowing into the correct conversation even after a switch.
     const assistantId = assistantMsg.id
     streamState.provider = createProvider(model)
     await streamState.provider.streamChat(
@@ -501,26 +530,33 @@ export const useChatStore = defineStore('chat', () => {
       },
       {
         onToken(text: string) {
-          const msg = messages.value.find((m) => m.id === assistantId)
+          const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) msg.content += text
         },
         onReasoning(text: string) {
-          const msg = messages.value.find((m) => m.id === assistantId)
+          const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) {
             if (!msg.reasoningContent) msg.reasoningContent = ''
             msg.reasoningContent += text
           }
         },
         onDone() {
-          const msg = messages.value.find((m) => m.id === assistantId)
+          const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) {
             msg.status = 'success'
             msg.updatedAt = new Date().toISOString()
           }
         },
         onError(error: Error) {
-          const msg = messages.value.find((m) => m.id === assistantId)
+          const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) {
+            // stopGeneration() synchronously marks messages as 'aborted' and
+            // aborts the controller.  The provider's abort-triggered onError
+            // fires asynchronously — it must not overwrite 'aborted' with
+            // 'failed'.
+            if (streamState.controller.signal.aborted) {
+              return
+            }
             msg.status = 'failed'
             msg.error = error.message || String(error)
             msg.updatedAt = new Date().toISOString()
@@ -587,6 +623,47 @@ export const useChatStore = defineStore('chat', () => {
     // Without this, newly created conversations always show 0 messages
     // because the object in conversations.value was pushed with messages: [].
     const idx = conversations.value.findIndex((c) => c.id === conv.id)
+    if (idx !== -1) {
+      conversations.value[idx] = {
+        ...conversations.value[idx],
+        messages: clonedMsgs,
+        updatedAt: conv.updatedAt,
+      }
+    }
+  }
+
+  /**
+   * Persist a specific conversation by ID using the given messages array.
+   * Used by background streams that complete after the user has switched
+   * to another conversation (so currentConversationId no longer matches).
+   */
+  async function persistConversationForId(cid: string, msgs: ChatMessage[]): Promise<void> {
+    let conv: ConversationEntity | undefined
+    try {
+      conv = await ChatRepository.findById(cid)
+    } catch (err) {
+      console.error(`[chat.store] persistConversationForId: DB read failed for ${cid}`, err)
+      return
+    }
+
+    if (!conv) {
+      console.warn(`[chat.store] persistConversationForId: conversation ${cid} not found in IndexedDB`)
+      return
+    }
+
+    const clonedMsgs = cloneMessages(msgs)
+    conv.messages = clonedMsgs
+    conv.updatedAt = new Date().toISOString()
+
+    try {
+      await ChatRepository.save(conv)
+    } catch (err) {
+      console.error(`[chat.store] persistConversationForId: DB write failed for ${cid}`, err)
+      return
+    }
+
+    // Sync back to conversations list
+    const idx = conversations.value.findIndex((c) => c.id === cid)
     if (idx !== -1) {
       conversations.value[idx] = {
         ...conversations.value[idx],

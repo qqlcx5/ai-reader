@@ -78,7 +78,29 @@ onMounted(async () => {
   await settingsStore.loadSettings()
   await modelStore.loadModels()
 
-  // Auto-select default model if none selected
+  // Restore persisted selections. The pinia-plugin-persistedstate plugin
+  // restores currentModelId / selectedModelIds from localStorage before
+  // onMounted runs. After loadModels() populates the model list from
+  // IndexedDB, validate that persisted IDs still reference valid models.
+  if (modelStore.currentModelId) {
+    const exists = modelStore.models.some(m => m.id === modelStore.currentModelId)
+    if (!exists) {
+      modelStore.currentModelId = null
+    }
+  }
+
+  // Filter stale multi-select IDs
+  if (modelStore.selectedModelIds.length > 0) {
+    const valid = modelStore.selectedModelIds.filter(id =>
+      modelStore.models.some(m => m.id === id),
+    )
+    if (valid.length !== modelStore.selectedModelIds.length) {
+      modelStore.selectedModelIds = valid
+    }
+  }
+
+  // Fallback: if no model is selected (neither persisted nor valid),
+  // auto-select the default model.
   if (!modelStore.currentModelId && modelStore.defaultModel) {
     modelStore.selectModel(modelStore.defaultModel.id)
   }

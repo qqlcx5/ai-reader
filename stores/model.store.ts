@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, toRaw } from 'vue'
 import { ModelRepository } from '../db/repositories/model.repository'
 import type { ModelConfig } from '../types/model'
 import { testConnection as runTestConnection } from '../services/ai/test-connection.service'
@@ -31,15 +31,14 @@ export const useModelStore = defineStore('model', () => {
 
   async function addModel(model: ModelConfig) {
     if (model.isDefault) {
-      // unset existing defaults
       for (const m of models.value) {
         if (m.isDefault && m.id !== model.id) {
           m.isDefault = false
-          await ModelRepository.save(m)
+          await ModelRepository.save(toRaw(m) as ModelConfig)
         }
       }
     }
-    await ModelRepository.save(model)
+    await ModelRepository.save(toRaw(model) as ModelConfig)
     await loadModels()
   }
 
@@ -48,11 +47,11 @@ export const useModelStore = defineStore('model', () => {
       for (const m of models.value) {
         if (m.isDefault && m.id !== model.id) {
           m.isDefault = false
-          await ModelRepository.save(m)
+          await ModelRepository.save(toRaw(m) as ModelConfig)
         }
       }
     }
-    await ModelRepository.save(model)
+    await ModelRepository.save(toRaw(model) as ModelConfig)
     await loadModels()
   }
 
@@ -64,7 +63,6 @@ export const useModelStore = defineStore('model', () => {
 
   function selectModel(id: string) {
     currentModelId.value = id
-    // Sync single-select to multi-select for consistency
     selectedModelIds.value = [id]
   }
 
@@ -75,7 +73,6 @@ export const useModelStore = defineStore('model', () => {
     } else {
       selectedModelIds.value = selectedModelIds.value.filter((mid) => mid !== id)
     }
-    // Sync: if only 1 selected, also set as currentModelId
     if (selectedModelIds.value.length === 1) {
       currentModelId.value = selectedModelIds.value[0]
     } else {
@@ -96,7 +93,6 @@ export const useModelStore = defineStore('model', () => {
     const model = models.value.find(m => m.id === id)
     if (!model) return false
 
-    // Set testing status
     model.lastTestStatus = 'testing'
     model.lastTestError = undefined
     model.lastTestLatency = undefined
@@ -131,4 +127,8 @@ export const useModelStore = defineStore('model', () => {
     setSelectedModelIds,
     testConnection,
   }
+}, {
+  persist: {
+    pick: ['currentModelId', 'selectedModelIds'],
+  },
 })

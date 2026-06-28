@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import type { AppSettings, ContextSettings, CaptureSettings } from '../types/settings'
 
@@ -63,7 +63,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function persist() {
-    await SettingsRepository.save(settings.value)
+    await SettingsRepository.save(toRaw(settings.value) as AppSettings)
   }
 
   return {
