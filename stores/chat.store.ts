@@ -585,9 +585,52 @@ export const useChatStore = defineStore('chat', () => {
   /**
    * Deep-clone store messages to plain objects so IndexedDB structured clone doesn't
    * fail on Vue reactive Proxy objects (DataCloneError).
+   *
+   * Strategy: structuredClone is the primary path (preserves Date, etc.).
+   * If it fails (e.g. a non-cloneable property leaked into a message object),
+   * fall back to JSON round-trip which naturally strips functions, Symbols,
+   * and undefined values.
    */
   function cloneMessages(msgs: ChatMessage[]): ChatMessage[] {
-    return structuredClone(toRaw(msgs))
+    const raw = toRaw(msgs)
+    try {
+      return structuredClone(raw) as ChatMessage[]
+    } catch (err) {
+      console.warn(
+        '[chat.store] cloneMessages: structuredClone failed, falling back to JSON serialization.',
+        err,
+      )
+
+      // Diagnostic: try to identify which message / property is non-cloneable
+      if (Array.isArray(raw)) {
+        for (let i = 0; i < raw.length; i++) {
+          const msg = raw[i]
+          try {
+            structuredClone(msg)
+          } catch (e) {
+            console.error(
+              `[chat.store] cloneMessages: message[${i}] (id=${msg?.id}) is not cloneable. Keys:`,
+              msg ? Object.keys(msg) : '(null/undefined)',
+            )
+            if (msg && typeof msg === 'object') {
+              for (const key of Object.keys(msg)) {
+                try {
+                  structuredClone({ [key]: (msg as Record<string, unknown>)[key] })
+                } catch {
+                  console.error(
+                    `[chat.store] cloneMessages: property '${key}' (type=${typeof (msg as Record<string, unknown>)[key]}) is not cloneable`,
+                  )
+                }
+              }
+            }
+            break
+          }
+        }
+      }
+
+      // Fallback: JSON round-trip sanitizes non-cloneable values
+      return JSON.parse(JSON.stringify(raw)) as ChatMessage[]
+    }
   }
 
   async function persistConversation(): Promise<void> {
