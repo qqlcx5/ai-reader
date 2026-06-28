@@ -84,13 +84,13 @@ const excerpt = computed(() => {
     </div>
 
     <div class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
-      <button class="p-1.5 rounded-md text-zinc-500 hover:bg-zinc-100" @click.stop="emit('openUrl', document)">
+      <button class="p-1 rounded-md text-zinc-500 hover:bg-zinc-100" @click.stop="emit('openUrl', document)">
         <ExternalLink class="w-3.5 h-3.5" />
       </button>
-      <button class="p-1.5 rounded-md text-brand hover:bg-indigo-50" @click.stop="emit('chat', document)">
+      <button class="p-1 rounded-md text-brand hover:bg-indigo-50" @click.stop="emit('chat', document)">
         <MessageSquare class="w-3.5 h-3.5" />
       </button>
-      <button class="p-1.5 rounded-md text-red-500 hover:bg-red-50" @click.stop="emit('delete', document)">
+      <button class="p-1 rounded-md text-red-500 hover:bg-red-50" @click.stop="emit('delete', document)">
         <Trash2 class="w-3.5 h-3.5" />
       </button>
     </div>

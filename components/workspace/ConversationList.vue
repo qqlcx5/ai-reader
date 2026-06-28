@@ -81,13 +81,13 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
         <span class="text-[10px] opacity-40 shrink-0 tabular-nums min-w-[20px] text-right">{{ formatTime(conv.updatedAt || conv.createdAt) }}</span>
 
         <!-- Delete button (only show when multiple conversations) -->
-        <button
+        <div
           v-if="chatStore.conversations.length > 1"
-          class="hidden group-hover:flex absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white items-center justify-center"
+          class="hidden group-hover:flex absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 text-white items-center justify-center"
           @click.stop="handleDeleteConversation(conv.id)"
         >
-          <Trash2 class="w-2.5 h-2.5" />
-        </button>
+          <Trash2 class="w-1.7 h-1.7" />
+        </div>
       </button>
 
       <!-- Empty state -->
