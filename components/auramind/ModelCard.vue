@@ -91,8 +91,9 @@ function onToggleEnabled(val: boolean) {
             <span class="truncate">{{ model.name }}</span>
             <span v-if="model.isDefault" class="text-[9px] px-1 bg-emerald-100 text-emerald-600 rounded font-semibold shrink-0">默认</span>
           </div>
-          <div class="text-[11px] text-zinc-400 font-mono truncate">{{ model.modelId }} · {{ providerLabel }}</div>
+          <div class="text-[11px] text-zinc-400 font-mono truncate">{{ model.modelId }}</div>
           <div v-if="model.baseUrl" class="text-[10px] text-zinc-300 font-mono truncate">{{ displayBaseUrl }}</div>
+          <div class="text-[9px]">{{ providerLabel }}</div>
         </div>
       </div>
 

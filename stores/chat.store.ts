@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed, toRaw } from 'vue'
+import { ref, computed, toRaw, watch } from 'vue'
 import type { ConversationEntity, ChatMessage } from '../types/chat'
 import { ChatRepository } from '../db/repositories/chat.repository'
 import { useModelStore } from './model.store'
@@ -14,13 +14,6 @@ import type { ModelConfig } from '../types/model'
 import type { AIProvider } from '../services/ai/types'
 import type { AppSettings } from '../types/settings'
 
-const RATE_LIMIT_RESET_TIME = 60000 // 1 minute in milliseconds
-let lastRequestTime = 0
-
-export function resetRateLimit() {
-  lastRequestTime = 0
-}
-
 export const useChatStore = defineStore('chat', () => {
   // ── State ──────────────────────────────────────────────
   const messages = ref<ChatMessage[]>([])
@@ -28,14 +21,37 @@ export const useChatStore = defineStore('chat', () => {
   const currentConversationId = ref<string | null>(null)
   const currentDocumentId = ref<string | null>(null)
   const inputText = ref('')
-  const isStreaming = ref(false)
-  const isSending = ref(false)
   const lastError = ref<string | null>(null)
 
-  let abortController: AbortController | null = null
-  let provider: AIProvider | null = null
+  /** Per-conversation stream state. Key = conversationId. */
+  interface StreamState {
+    controller: AbortController
+    provider: AIProvider | null
+  }
+  const streamStates = ref<Map<string, StreamState>>(new Map())
 
   // ── Computed ───────────────────────────────────────────
+  /**
+   * Whether the CURRENT conversation is streaming/sending.
+   *
+   * These are ref (not computed) because Pinia 3.x may not reliably unwrap
+   * ComputedRef across component boundaries.  The watch below keeps them in
+   * sync with streamStates + currentConversationId.
+   */
+  const isStreaming = ref(false)
+  const isSending = ref(false)
+
+  watch(
+    [currentConversationId, () => streamStates.value.size],
+    () => {
+      const cid = currentConversationId.value
+      const active = cid ? streamStates.value.has(cid) : false
+      isStreaming.value = active
+      isSending.value = active
+    },
+    { immediate: true },
+  )
+
   const canSend = computed<boolean>(() => {
     if (isSending.value || isStreaming.value) return false
     if (!inputText.value.trim()) return false
@@ -64,13 +80,6 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function sendMessage(content: string, modelIds?: string[]): Promise<void> {
-    // ── Rate limit check ─────────────────────────────────
-    const now = Date.now()
-    if (now - lastRequestTime < RATE_LIMIT_RESET_TIME) {
-      const remaining = Math.ceil((RATE_LIMIT_RESET_TIME - (now - lastRequestTime)) / 1000)
-      throw new Error(`Rate limit: please wait ${remaining} seconds before sending another request.`)
-    }
-
     // ── Guard: prevent concurrent sends ──────────────────
     if (isSending.value || isStreaming.value) {
       throw new Error('A message is already in progress. Please wait or stop the current generation.')
@@ -150,11 +159,13 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function stopGeneration() {
-    if (abortController) {
-      abortController.abort()
-      abortController = null
-    }
-    // Mark all streaming assistant messages as aborted (handles multi-model)
+    const cid = currentConversationId.value
+    if (!cid) return
+    const state = streamStates.value.get(cid)
+    if (!state) return
+    state.controller.abort()
+    streamStates.value.delete(cid)
+    // Mark streaming assistant messages in the CURRENT conversation as aborted
     for (let i = messages.value.length - 1; i >= 0; i--) {
       const msg = messages.value[i]
       if (msg.role === 'assistant' && msg.status === 'streaming') {
@@ -165,8 +176,6 @@ export const useChatStore = defineStore('chat', () => {
         msg.updatedAt = new Date().toISOString()
       }
     }
-    isSending.value = false
-    isStreaming.value = false
   }
 
   async function regenerate(): Promise<void> {
@@ -199,20 +208,18 @@ export const useChatStore = defineStore('chat', () => {
     }
     messages.value.push(assistantMsg)
 
-    isSending.value = true
-    isStreaming.value = true
-    abortController = new AbortController()
+    const cid = currentConversationId.value!
+    const controller = new AbortController()
+    const state: StreamState = { controller, provider: null }
+    streamStates.value.set(cid, state)
 
     try {
-      await streamToProvider(lastUserMsg.content, lastUserMsg.id, assistantMsg, model, settingsStore.settings)
+      await streamToProvider(lastUserMsg.content, lastUserMsg.id, assistantMsg, model, settingsStore.settings, state)
     } finally {
-      isSending.value = false
-      isStreaming.value = false
-      abortController = null
-      provider = null
-      lastRequestTime = Date.now()
-      resetRateLimit()
-      await persistConversation()
+      streamStates.value.delete(cid)
+      if (!controller.signal.aborted) {
+        await persistConversation()
+      }
     }
   }
 
@@ -272,9 +279,6 @@ export const useChatStore = defineStore('chat', () => {
     currentConversationId.value = conv.id
     currentDocumentId.value = documentId
 
-    // Reset rate limit when switching to a new conversation
-    resetRateLimit()
-
     // Add to conversations list
     conversations.value.unshift(conv)
 
@@ -289,8 +293,6 @@ export const useChatStore = defineStore('chat', () => {
     if (conv) {
       messages.value = [...conv.messages]
       currentConversationId.value = conv.id
-      // Reset rate limit when switching conversations
-      resetRateLimit()
     }
   }
 
@@ -361,19 +363,18 @@ export const useChatStore = defineStore('chat', () => {
     }
     messages.value.push(assistantMsg)
 
-    isSending.value = true
-    isStreaming.value = true
-    abortController = new AbortController()
+    const cid = currentConversationId.value!
+    const controller = new AbortController()
+    const state: StreamState = { controller, provider: null }
+    streamStates.value.set(cid, state)
 
     try {
-      await streamToProvider(userContent, userMsgId, assistantMsg, model, settings)
+      await streamToProvider(userContent, userMsgId, assistantMsg, model, settings, state)
     } finally {
-      isSending.value = false
-      isStreaming.value = false
-      abortController = null
-      provider = null
-      lastRequestTime = Date.now()
-      await persistConversation()
+      streamStates.value.delete(cid)
+      if (!controller.signal.aborted) {
+        await persistConversation()
+      }
     }
   }
 
@@ -401,15 +402,16 @@ export const useChatStore = defineStore('chat', () => {
       messages.value.push(msg)
     }
 
-    isSending.value = true
-    isStreaming.value = true
-    abortController = new AbortController()
+    const cid = currentConversationId.value!
+    const controller = new AbortController()
+    const state: StreamState = { controller, provider: null }
+    streamStates.value.set(cid, state)
 
-    const signal = abortController.signal
+    const signal = controller.signal
 
     // Fire all streams concurrently
     const tasks = models.map((model, i) =>
-      streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings).catch(
+      streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings, state).catch(
         (err) => {
           // Mark the specific assistant message as failed
           const targetId = assistantMsgs[i].id
@@ -428,12 +430,10 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       // Only mark as done if ALL streams completed (not aborted mid-way)
       if (!signal.aborted) {
-        isSending.value = false
-        isStreaming.value = false
-        abortController = null
-        provider = null
-        lastRequestTime = Date.now()
+        streamStates.value.delete(cid)
         await persistConversation()
+      } else {
+        streamStates.value.delete(cid)
       }
     }
   }
@@ -444,6 +444,7 @@ export const useChatStore = defineStore('chat', () => {
     assistantMsg: ChatMessage,
     model: ModelConfig,
     settings: AppSettings,
+    streamState: StreamState,
   ): Promise<void> {
     // Build page context from current document
     const documentStore = useDocumentStore()
@@ -490,13 +491,13 @@ export const useChatStore = defineStore('chat', () => {
     // IMPORTANT: Access assistantMsg through messages.value (reactive proxy) so Vue can
     // track mutations for re-rendering. Directly mutating the raw object bypasses reactivity.
     const assistantId = assistantMsg.id
-    provider = createProvider(model)
-    await provider.streamChat(
+    streamState.provider = createProvider(model)
+    await streamState.provider.streamChat(
       {
         model,
         systemPrompt: promptOutput.system,
         messages: promptOutput.messages,
-        signal: abortController!.signal,
+        signal: streamState.controller.signal,
       },
       {
         onToken(text: string) {
@@ -556,16 +557,31 @@ export const useChatStore = defineStore('chat', () => {
   async function persistConversation(): Promise<void> {
     if (!currentConversationId.value) return
 
-    const conv = await ChatRepository.findById(currentConversationId.value)
+    let conv: ConversationEntity | undefined
+    try {
+      conv = await ChatRepository.findById(currentConversationId.value)
+    } catch (err) {
+      console.error(`[chat.store] persistConversation: DB read failed for ${currentConversationId.value}`, err)
+      return
+    }
+
     if (!conv) {
-      console.error(`[chat.store] persistConversation: conversation ${currentConversationId.value} not found in IndexedDB`)
+      // Expected race: new conversation created but DB write hasn't completed yet.
+      console.warn(`[chat.store] persistConversation: conversation ${currentConversationId.value} not found in IndexedDB (may be a new conversation still being created)`)
       return
     }
 
     const clonedMsgs = cloneMessages(messages.value)
     conv.messages = clonedMsgs
     conv.updatedAt = new Date().toISOString()
-    await ChatRepository.save(conv)
+
+    try {
+      await ChatRepository.save(conv)
+    } catch (err) {
+      console.error(`[chat.store] persistConversation: DB write failed for ${conv.id}`, err)
+      // Don't throw — keep UI responsive even if persistence fails.
+      return
+    }
 
     // Sync back to conversations list so messageCount stays correct in UI.
     // Without this, newly created conversations always show 0 messages
