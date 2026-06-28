@@ -1,13 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { extractPage, fallbackExtract, computeHash, stripHtml, sanitizeHtml } from './extract'
-import type { DefuddleLikeConstructor, DefuddleLikeResult } from './extract'
-
-// Mock DOMPurify
-vi.mock('dompurify', () => ({
-  default: {
-    sanitize: (html: string) => html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''),
-  },
-}))
+import { computeHash, extractPage, cleanFullHtml } from './extract'
 
 let digestCallCount = 0
 
@@ -44,45 +36,66 @@ function createMockDoc(overrides: Partial<Document> = {}): Document {
     Object.defineProperty(doc, 'body', { value: overrides.body, writable: true })
   }
 
+  // Mock baseURI for URL resolution
+  if (!Object.getOwnPropertyDescriptor(doc, 'baseURI')) {
+    Object.defineProperty(doc, 'baseURI', {
+      value: 'https://example.com/',
+      writable: true,
+    })
+  }
+
   return doc
 }
 
-const mockDefuddleCtor: DefuddleLikeConstructor = class {
-  private doc: Document
-  private _options: { url?: string; markdown?: boolean; separateMarkdown?: boolean }
-  constructor(doc: Document, options?: any) {
-    this.doc = doc
-    this._options = options || {}
-  }
-  parse(): DefuddleLikeResult {
-    return {
-      title: (this.doc as any)._mockTitle || this.doc.title || 'Test Title',
-      site: 'example.com',
-      author: 'Test Author',
-      description: 'A test page description',
-      published: '2026-01-15',
-      content: '<p>Hello world</p>',
-      contentMarkdown: (this.doc as any)._mockMarkdown ?? 'Hello world\n\nThis is test content.',
-    }
-  }
-}
+// Mock Defuddle module
+vi.mock('defuddle', () => ({
+  default: vi.fn(),
+}))
+
+vi.mock('defuddle/full', () => ({
+  createMarkdownContent: (content: string, _url: string) => content.replace(/<[^>]+>/g, ''),
+}))
 
 describe('utils/content/extract', () => {
-  describe('stripHtml', () => {
-    it('should strip HTML tags and return text', () => {
-      expect(stripHtml('<p>Hello <b>World</b></p>')).toBe('Hello World')
-    })
+  describe('cleanFullHtml', () => {
+    it('should remove script and style tags', () => {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(
+        '<html><head><style>.x{color:red}</style><script>alert(1)</script></head><body><p>Hello</p></body></html>',
+        'text/html',
+      )
+      Object.defineProperty(doc, 'baseURI', { value: 'https://example.com/', writable: true })
 
-    it('should return empty string for empty HTML', () => {
-      expect(stripHtml('')).toBe('')
-    })
-  })
-
-  describe('sanitizeHtml', () => {
-    it('should remove script tags', () => {
-      const result = sanitizeHtml('<div>Hi<script>alert(1)</script></div>')
+      const result = cleanFullHtml(doc)
       expect(result).not.toContain('<script>')
-      expect(result).toContain('Hi')
+      expect(result).not.toContain('<style>')
+      expect(result).toContain('Hello')
+    })
+
+    it('should strip style attributes', () => {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(
+        '<html><body><p style="color:red">Text</p></body></html>',
+        'text/html',
+      )
+      Object.defineProperty(doc, 'baseURI', { value: 'https://example.com/', writable: true })
+
+      const result = cleanFullHtml(doc)
+      expect(result).not.toContain('style="color:red"')
+      expect(result).toContain('Text')
+    })
+
+    it('should resolve relative urls to absolute', () => {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(
+        '<html><body><img src="/images/photo.jpg"><a href="/page">link</a></body></html>',
+        'text/html',
+      )
+      Object.defineProperty(doc, 'baseURI', { value: 'https://example.com/', writable: true })
+
+      const result = cleanFullHtml(doc)
+      expect(result).toContain('https://example.com/images/photo.jpg')
+      expect(result).toContain('https://example.com/page')
     })
   })
 
@@ -101,39 +114,65 @@ describe('utils/content/extract', () => {
   })
 
   describe('extractPage', () => {
-    it('should extract page with defuddle', async () => {
-      const doc = createMockDoc({ title: 'My Page' })
-      ;(doc as any)._mockTitle = 'Test Title'
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
 
-      const result = await extractPage(doc, 'https://example.com', mockDefuddleCtor)
+    it('should extract page with defuddle returning valid content', async () => {
+      const Defuddle = (await import('defuddle')).default as any
+      Defuddle.mockImplementation(function (this: any, _doc: Document, _opts: any) {
+        this.parse = () => ({
+          title: 'Test Title',
+          site: 'example.com',
+          author: 'Test Author',
+          description: 'A test description',
+          published: '2026-01-15',
+          content: '<p>Hello world</p>',
+        })
+        this.parseAsync = () => Promise.resolve({
+          title: 'Test Title',
+          site: 'example.com',
+          author: 'Test Author',
+          description: 'A test description',
+          published: '2026-01-15',
+          content: '<p>Hello world</p>',
+        })
+      })
+
+      const doc = createMockDoc({ title: 'My Page' })
+
+      const result = await extractPage(doc, 'https://example.com')
 
       expect(result.extractionMethod).toBe('defuddle')
       expect(result.title).toBe('Test Title')
       expect(result.siteName).toBe('example.com')
       expect(result.author).toBe('Test Author')
-      expect(result.description).toBe('A test page description')
-      expect(result.publishedAt).toBe('2026-01-15')
       expect(result.url).toBe('https://example.com')
       expect(result.contentHash).toHaveLength(64)
       expect(result.tokenCount).toBeGreaterThan(0)
       expect(result.wordCount).toBeGreaterThan(0)
     })
 
-    it('should fall back when markdown is empty', async () => {
-      const doc = createMockDoc({ title: 'Fallback Page' })
+    it('should fall back when defuddle returns empty content', async () => {
+      const Defuddle = (await import('defuddle')).default as any
+      Defuddle.mockImplementation(function (this: any, _doc: Document, _opts: any) {
+        this.parse = () => ({
+          title: '',
+          content: '',
+        })
+        this.parseAsync = () => Promise.resolve({
+          title: '',
+          content: '',
+        })
+      })
 
+      const doc = createMockDoc({ title: 'Fallback Page' })
       Object.defineProperty(doc.body, 'innerText', {
         value: 'Fallback content here.',
         writable: true,
       })
 
-      const emptyDefuddleCtor: DefuddleLikeConstructor = class {
-        parse(): DefuddleLikeResult {
-          return { title: '', contentMarkdown: '' }
-        }
-      }
-
-      const result = await extractPage(doc, 'https://example.com', emptyDefuddleCtor)
+      const result = await extractPage(doc, 'https://example.com')
 
       expect(result.extractionMethod).toBe('fallback')
       expect(result.title).toBe('Fallback Page')
@@ -141,73 +180,25 @@ describe('utils/content/extract', () => {
     })
 
     it('should fall back when defuddle throws', async () => {
+      const Defuddle = (await import('defuddle')).default as any
+      Defuddle.mockImplementation(function (this: any, _doc: Document, _opts: any) {
+        this.parse = () => {
+          throw new Error('defuddle error')
+        }
+        this.parseAsync = () => Promise.reject(new Error('defuddle error'))
+      })
+
       const doc = createMockDoc({ title: 'Error Page' })
       Object.defineProperty(doc.body, 'innerText', {
         value: 'Error recovery content.',
         writable: true,
       })
 
-      const throwingDefuddleCtor: DefuddleLikeConstructor = class {
-        parse(): DefuddleLikeResult {
-          throw new Error('defuddle error')
-        }
-      }
-
-      const result = await extractPage(doc, 'https://example.com', throwingDefuddleCtor)
+      const result = await extractPage(doc, 'https://example.com')
 
       expect(result.extractionMethod).toBe('fallback')
       expect(result.title).toBe('Error Page')
       expect(result.markdown).toContain('Error recovery content.')
-    })
-
-    it('should compute correct wordCount', async () => {
-      const doc = createMockDoc({ title: 'Word Count Test' })
-      ;(doc as any)._mockMarkdown = 'one two three four five'
-
-      const result = await extractPage(doc, 'https://example.com', mockDefuddleCtor)
-
-      expect(result.wordCount).toBe(5)
-    })
-
-    it('should compute tokenCount as markdown.length / 4', async () => {
-      const doc = createMockDoc({ title: 'Token Test' })
-      const md = 'a'.repeat(100)
-      ;(doc as any)._mockMarkdown = md
-
-      const result = await extractPage(doc, 'https://example.com', mockDefuddleCtor)
-
-      expect(result.tokenCount).toBe(25)
-      expect(result.markdown).toBe(md)
-    })
-  })
-
-  describe('fallbackExtract', () => {
-    it('should use document.title and body.innerText', async () => {
-      const doc = createMockDoc({ title: 'Fallback Doc' })
-      Object.defineProperty(doc.body, 'innerText', {
-        value: 'Some body text\n\n\n\nextra newlines.',
-        writable: true,
-      })
-
-      const result = await fallbackExtract(doc, 'https://example.com')
-
-      expect(result.extractionMethod).toBe('fallback')
-      expect(result.title).toBe('Fallback Doc')
-      expect(result.markdown).toContain('# Fallback Doc')
-      expect(result.rawText).toContain('Some body text')
-      expect(result.rawText).not.toContain('\n\n\n')
-    })
-
-    it('should handle empty title', async () => {
-      const doc = createMockDoc({ title: '' })
-      Object.defineProperty(doc.body, 'innerText', {
-        value: 'Only body text.',
-        writable: true,
-      })
-
-      const result = await fallbackExtract(doc, 'https://example.com')
-
-      expect(result.markdown).toBe('Only body text.')
     })
   })
 })

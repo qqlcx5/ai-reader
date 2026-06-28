@@ -1,6 +1,5 @@
 import { defineContentScript } from 'wxt/utils/define-content-script'
-import Defuddle from 'defuddle'
-import { extractPage, sanitizeHtml } from '@/utils/content/extract'
+import { extractPage, cleanFullHtml } from '@/utils/content/extract'
 
 export default defineContentScript({
   matches: ['*://*/*'],
@@ -49,19 +48,29 @@ export default defineContentScript({
     })
 
     // Handle EXTRACT_PAGE request from background
+    // Aligned with obsidian-clipper's "getPageContent" pattern:
+    //   - No DOMPurify on full HTML (strips too much — images, tables, etc.)
+    //   - Manual cleaning: remove <script>/<style>, strip style attributes,
+    //     resolve relative URLs to absolute (obsidian-clipper pattern)
     browser.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
       if (message.type === 'EXTRACT_PAGE') {
         const url = window.location.href
-        const rawHtml = document.documentElement.outerHTML
-        const sanitized = sanitizeHtml(rawHtml)
 
-        extractPage(document, url, Defuddle).then((data) => {
+        extractPage(document, url).then((data) => {
+          // Clean full HTML obsidian-clipper style (no DOMPurify)
+          const sanitizedHtml = cleanFullHtml(document)
+
           sendResponse({
             type: 'PAGE_EXTRACTED',
             payload: {
               ...data,
-              sanitizedHtml: sanitized,
+              sanitizedHtml,
             },
+          })
+        }).catch((err: Error) => {
+          sendResponse({
+            type: 'EXTRACT_ERROR',
+            payload: { error: err.message || 'Failed to extract page' },
           })
         })
 
