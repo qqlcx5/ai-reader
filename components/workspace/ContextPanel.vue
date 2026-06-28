@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
-import { Copy, RefreshCw } from '@lucide/vue'
+import { Copy, Check, RefreshCw } from '@lucide/vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
@@ -19,6 +19,7 @@ const workspaceStore = useWorkspaceStore()
 const appStore = useAppStore()
 
 const isRefreshing = ref(false)
+const copied = ref(false)
 
 const contextTab = computed({
   get: () => workspaceStore.currentContextTab,
@@ -109,15 +110,53 @@ async function handleRefresh() {
   }
 }
 
+function buildMetadataJSON(): string {
+  const d = documentStore.currentDocument
+  if (!d) return ''
+  const meta: Record<string, unknown> = {
+    title: d.title,
+    url: d.url,
+    canonicalUrl: d.canonicalUrl,
+    siteName: d.siteName,
+    author: d.author,
+    description: d.description,
+    publishedAt: d.publishedAt,
+    capturedAt: d.capturedAt,
+    updatedAt: d.updatedAt,
+    wordCount: d.wordCount,
+    tokenCount: d.tokenCount,
+    extractionMethod: d.extractionMethod,
+    contentHash: d.contentHash,
+    source: d.source,
+  }
+  return JSON.stringify(meta, null, 2)
+}
+
 async function handleCopy() {
-  const markdown = documentStore.currentDocument?.markdown || ''
-  if (!markdown) {
+  let content = ''
+  const tab = contextTab.value
+
+  if (tab === 'markdown') {
+    content = documentStore.currentDocument?.markdown || ''
+  } else if (tab === 'raw') {
+    content = documentStore.currentDocument?.markdown
+      || documentStore.currentDocument?.rawText
+      || documentStore.currentDocument?.rawHtml
+      || ''
+  } else if (tab === 'metadata') {
+    content = buildMetadataJSON()
+  }
+
+  if (!content) {
     appStore.showToast('没有可复制的内容', 'error')
     return
   }
+
   try {
-    await navigator.clipboard.writeText(markdown)
-    appStore.showToast('已复制', 'success')
+    await navigator.clipboard.writeText(content)
+    copied.value = true
+    appStore.showToast('已复制到剪贴板', 'success')
+    setTimeout(() => { copied.value = false }, 2000)
   } catch {
     appStore.showToast('复制失败', 'error')
   }
@@ -161,10 +200,11 @@ const showRefresh = computed(() => {
       <div class="flex items-center gap-1">
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
-          title="复制 Markdown"
+          :title="copied ? '已复制' : '复制当前标签页内容'"
           @click="handleCopy"
         >
-          <Copy class="w-3.5 h-3.5" />
+          <Check v-if="copied" class="w-3.5 h-3.5 text-green-500" />
+          <Copy v-else class="w-3.5 h-3.5" />
         </button>
         <button
           v-if="showRefresh"

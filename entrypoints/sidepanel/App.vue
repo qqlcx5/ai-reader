@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -20,6 +20,23 @@ const workspaceStore = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
+
+// Toast notification state
+const toastVisible = ref(false)
+const toastText = ref('')
+const toastKind = ref<'success' | 'error' | 'info'>('info')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(() => appStore.toastMessage, (msg) => {
+  if (!msg) return
+  toastText.value = msg
+  toastKind.value = appStore.toastType
+  toastVisible.value = true
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+  }, 2500)
+})
 
 function handleBackgroundMessage(
   message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload>,
@@ -127,16 +144,52 @@ onMounted(async () => {
 
 onUnmounted(() => {
   removeListener?.()
+  if (toastTimer) clearTimeout(toastTimer)
 })
 </script>
 
 <template>
-  <div class="h-full w-full bg-[#FAFAFA] soft-shadow border border-zinc-200 overflow-hidden flex flex-col font-sans text-zinc-900">
+  <div class="h-full w-full bg-[#FAFAFA] soft-shadow border border-zinc-200 overflow-hidden flex flex-col font-sans text-zinc-900 relative">
     <TopBar />
     <PageChangeHint v-show="appStore.currentView === 'workspace'" />
 
     <WorkspaceView v-show="appStore.currentView === 'workspace'" />
     <LibraryView v-show="appStore.currentView === 'library'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
+
+    <!-- Toast notification -->
+    <Transition name="toast">
+      <div
+        v-if="toastVisible"
+        class="absolute bottom-4 left-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-medium flex items-center gap-2.5"
+        :class="{
+          'bg-green-600': toastKind === 'success',
+          'bg-red-600': toastKind === 'error',
+          'bg-zinc-800': toastKind === 'info',
+        }"
+      >
+        <span class="text-[15px] leading-none shrink-0">
+          {{ toastKind === 'success' ? '\u2713' : toastKind === 'error' ? '\u2717' : '\u2139' }}
+        </span>
+        <span>{{ toastText }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.toast-enter-active {
+  transition: all 0.24s ease;
+}
+.toast-leave-active {
+  transition: all 0.24s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(18px);
+}
+</style>
