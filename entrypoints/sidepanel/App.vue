@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import { useChatStore } from '@/stores/chat.store'
+import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import TopBar from '@/components/auramind/TopBar.vue'
@@ -22,6 +23,7 @@ const settingsStore = useSettingsStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
 const chatStore = useChatStore()
+const promptTemplateStore = usePromptTemplateStore()
 
 // Toast notification state
 const toastVisible = ref(false)
@@ -107,6 +109,9 @@ let removeListener: (() => void) | null = null
 onMounted(async () => {
   await settingsStore.loadSettings()
   await modelStore.loadModels()
+
+  // Initialize prompt templates (writes builtins on first run)
+  await promptTemplateStore.initBuiltinTemplates()
 
   // Restore persisted selections. The pinia-plugin-persistedstate plugin
   // restores currentModelId / selectedModelIds from localStorage before

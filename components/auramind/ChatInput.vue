@@ -1,9 +1,10 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { Cpu, Paperclip, Send, Square } from '@lucide/vue'
+import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useModelStore } from '@/stores/model.store'
 import { useDocumentStore } from '@/stores/document.store'
+import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import ModelSelect from '@/components/workspace/ModelSelect.vue'
 import RekaButton from '@/components/ui/RekaButton.vue'
 import RekaTextarea from '@/components/ui/RekaTextarea.vue'
@@ -11,6 +12,68 @@ import RekaTextarea from '@/components/ui/RekaTextarea.vue'
 const chatStore = useChatStore()
 const modelStore = useModelStore()
 const documentStore = useDocumentStore()
+const promptTemplateStore = usePromptTemplateStore()
+
+// ── Template popover ─────────────────────────────────────
+const showTemplatePanel = ref(false)
+const showTemplateManager = ref(false)
+const newTemplateTitle = ref('')
+const newTemplateContent = ref('')
+const editingTemplateId = ref<string | null>(null)
+const editTemplateTitle = ref('')
+const editTemplateContent = ref('')
+
+function toggleTemplatePanel() {
+  showTemplatePanel.value = !showTemplatePanel.value
+  showTemplateManager.value = false
+  if (showTemplatePanel.value) {
+    promptTemplateStore.initBuiltinTemplates()
+  }
+}
+
+function applyTemplate(content: string) {
+  const current = chatStore.inputText.trim()
+  if (current) {
+    chatStore.setInputText(current + '\n\n' + content)
+  } else {
+    chatStore.setInputText(content)
+  }
+  showTemplatePanel.value = false
+  showTemplateManager.value = false
+}
+
+async function handleAddTemplate() {
+  const title = newTemplateTitle.value.trim()
+  const content = newTemplateContent.value.trim()
+  if (!title || !content) return
+  await promptTemplateStore.addTemplate(title, content, '自定义')
+  newTemplateTitle.value = ''
+  newTemplateContent.value = ''
+}
+
+async function handleDeleteTemplate(id: string) {
+  await promptTemplateStore.deleteTemplate(id)
+}
+
+function startEditTemplate(t: { id: string; title: string; content: string }) {
+  editingTemplateId.value = t.id
+  editTemplateTitle.value = t.title
+  editTemplateContent.value = t.content
+}
+
+function cancelEditTemplate() {
+  editingTemplateId.value = null
+  editTemplateTitle.value = ''
+  editTemplateContent.value = ''
+}
+
+async function handleUpdateTemplate(id: string) {
+  const title = editTemplateTitle.value.trim()
+  const content = editTemplateContent.value.trim()
+  if (!title || !content) return
+  await promptTemplateStore.updateTemplate(id, { title, content })
+  cancelEditTemplate()
+}
 
 const contextDoc = computed(() =>
   documentStore.pageDocument || documentStore.currentDocument,
@@ -101,19 +164,211 @@ function handleStop() {
 
 <template>
   <div class="absolute left-0 right-0 bottom-0 p-3 bg-gradient-to-t from-[#FAFAFA] via-[#FAFAFA] to-transparent z-20">
+    <!-- Template popover panel -->
+    <div
+      v-if="showTemplatePanel"
+      class="absolute bottom-full left-3 mb-2 w-72 max-h-80 bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden z-30 flex flex-col"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 shrink-0">
+        <span class="text-[12px] font-semibold text-zinc-700">提示词模板</span>
+        <RekaButton variant="ghost" size="sm" class="p-0.5" @click="showTemplatePanel = false">
+          <X class="w-3.5 h-3.5" />
+        </RekaButton>
+      </div>
+
+      <!-- Template list -->
+      <div v-if="!showTemplateManager" class="flex-1 overflow-y-auto px-1 py-1">
+        <!-- Builtin section -->
+        <div v-if="promptTemplateStore.builtinTemplates.length > 0">
+          <div class="text-[10px] text-zinc-400 font-medium px-2 py-1">内置模板</div>
+          <div
+            v-for="t in promptTemplateStore.builtinTemplates"
+            :key="t.id"
+            class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 cursor-pointer group"
+            @click="applyTemplate(t.content)"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+            <span class="text-[12px] text-zinc-700 flex-1 truncate">{{ t.title }}</span>
+          </div>
+        </div>
+
+        <!-- Custom section -->
+        <div v-if="promptTemplateStore.customTemplates.length > 0">
+          <div class="text-[10px] text-zinc-400 font-medium px-2 py-1 mt-1">自定义模板</div>
+          <div
+            v-for="t in promptTemplateStore.customTemplates"
+            :key="t.id"
+            class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-zinc-50 cursor-pointer group"
+            @click="applyTemplate(t.content)"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+            <span class="text-[12px] text-zinc-700 flex-1 truncate">{{ t.title }}</span>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div
+          v-if="promptTemplateStore.templates.length === 0"
+          class="text-[11px] text-zinc-400 text-center py-4"
+        >
+          暂无模板
+        </div>
+      </div>
+
+      <!-- Template manager -->
+      <div v-else class="flex-1 overflow-y-auto px-3 py-2 space-y-3">
+        <!-- Add form -->
+        <div class="space-y-2">
+          <input
+            v-model="newTemplateTitle"
+            type="text"
+            placeholder="模板标题"
+            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 outline-none focus:border-blue-400"
+          />
+          <textarea
+            v-model="newTemplateContent"
+            placeholder="模板内容"
+            rows="3"
+            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 outline-none focus:border-blue-400 resize-none"
+          />
+          <RekaButton
+            variant="primary"
+            size="sm"
+            class="w-full text-[11px]"
+            :disabled="!newTemplateTitle.trim() || !newTemplateContent.trim()"
+            @click="handleAddTemplate"
+          >
+            <Plus class="w-3 h-3" />
+            添加模板
+          </RekaButton>
+        </div>
+
+        <!-- Builtin templates (read-only) -->
+        <div v-if="promptTemplateStore.builtinTemplates.length > 0">
+          <div class="text-[10px] text-zinc-400 font-medium mb-1">内置模板（不可编辑/删除）</div>
+          <div
+            v-for="t in promptTemplateStore.builtinTemplates"
+            :key="t.id"
+            class="flex items-center justify-between px-2 py-1 rounded-lg"
+          >
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              <span class="text-[12px] text-zinc-400 truncate">{{ t.title }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom templates list with edit/delete -->
+        <div v-if="promptTemplateStore.customTemplates.length > 0">
+          <div class="text-[10px] text-zinc-400 font-medium mb-1">管理自定义模板</div>
+          <div
+            v-for="t in promptTemplateStore.customTemplates"
+            :key="t.id"
+            class="flex items-center justify-between px-2 py-1 rounded-lg hover:bg-zinc-50"
+          >
+            <!-- Non-editing state -->
+            <template v-if="editingTemplateId !== t.id">
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
+                <span class="text-[12px] text-zinc-700 truncate">{{ t.title }}</span>
+              </div>
+              <div class="flex items-center gap-0.5 shrink-0">
+                <RekaButton
+                  variant="ghost"
+                  size="sm"
+                  class="p-0.5 text-zinc-400 hover:text-blue-500"
+                  @click="startEditTemplate(t)"
+                >
+                  <Pencil class="w-3 h-3" />
+                </RekaButton>
+                <RekaButton
+                  variant="ghost"
+                  size="sm"
+                  class="p-0.5 text-zinc-400 hover:text-red-500"
+                  @click="handleDeleteTemplate(t.id)"
+                >
+                  <Trash2 class="w-3 h-3" />
+                </RekaButton>
+              </div>
+            </template>
+            <!-- Editing state -->
+            <template v-else>
+              <div class="flex-1 space-y-1.5">
+                <input
+                  v-model="editTemplateTitle"
+                  type="text"
+                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 outline-none focus:border-blue-400"
+                />
+                <textarea
+                  v-model="editTemplateContent"
+                  rows="2"
+                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 outline-none focus:border-blue-400 resize-none"
+                />
+                <div class="flex items-center gap-1">
+                  <RekaButton
+                    variant="primary"
+                    size="sm"
+                    class="text-[10px] py-0.5 px-2"
+                    :disabled="!editTemplateTitle.trim() || !editTemplateContent.trim()"
+                    @click="handleUpdateTemplate(t.id)"
+                  >
+                    保存
+                  </RekaButton>
+                  <RekaButton
+                    variant="ghost"
+                    size="sm"
+                    class="text-[10px] py-0.5 px-2 text-zinc-400"
+                    @click="cancelEditTemplate"
+                  >
+                    取消
+                  </RekaButton>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="border-t border-zinc-100 px-3 py-2 shrink-0">
+        <RekaButton
+          variant="ghost"
+          size="sm"
+          class="w-full text-[11px] text-zinc-500"
+          @click="showTemplateManager = !showTemplateManager"
+        >
+          {{ showTemplateManager ? '返回模板列表' : '管理模板' }}
+        </RekaButton>
+      </div>
+    </div>
+
     <div class="bg-white border border-zinc-200 rounded-2xl shadow-lg overflow-hidden">
       <div class="flex items-center justify-between px-3 pt-2">
-        <ModelSelect
-          v-if="modelStore.models.length > 0"
-          :model-value="multiModelIds"
-          :models="modelStore.models"
-          :multiple="true"
-          @update:model-value="handleModelChange"
-        />
-        <RekaButton v-else variant="ghost" size="sm" class="text-[11px] text-zinc-400">
-          <Cpu class="w-3 h-3" />
-          No model
-        </RekaButton>
+        <div class="flex items-center gap-1">
+          <!-- Template button -->
+          <RekaButton
+            variant="ghost"
+            size="sm"
+            class="p-1.5"
+            @click="toggleTemplatePanel"
+          >
+            <BookTemplate class="w-3.5 h-3.5 text-zinc-500" />
+          </RekaButton>
+          <div class="w-px h-5 bg-zinc-200" />
+
+          <ModelSelect
+            v-if="modelStore.models.length > 0"
+            :model-value="multiModelIds"
+            :models="modelStore.models"
+            :multiple="true"
+            @update:model-value="handleModelChange"
+          />
+          <RekaButton v-else variant="ghost" size="sm" class="text-[11px] text-zinc-400">
+            <Cpu class="w-3 h-3" />
+            No model
+          </RekaButton>
+        </div>
 
         <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-400">
           <Paperclip class="w-3 h-3" />

@@ -4,12 +4,14 @@ import type { DocumentEntity } from '../types/document'
 import type { ConversationEntity } from '../types/chat'
 import type { ModelConfig } from '../types/model'
 import type { AppSettings } from '../types/settings'
+import type { PromptTemplate } from '../types/prompt-template'
 
 export class AuraMindDB extends Dexie {
   documents!: Table<DocumentEntity, string>
   conversations!: Table<ConversationEntity, string>
   models!: Table<ModelConfig, string>
   settings!: Table<AppSettings, 'app-settings'>
+  promptTemplates!: Table<PromptTemplate, string>
 
   constructor() {
     super('AuraMindDB')
