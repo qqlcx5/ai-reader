@@ -22,7 +22,7 @@ vi.mock('../webdav/webdav.client', () => ({
   }),
 }))
 
-import { runSync } from './sync.service'
+import { runSync, forceUpload } from './sync.service'
 import type { WebDAVConfig } from '@/types/sync'
 
 const cfg: WebDAVConfig = { url: 'x', username: 'u', password: 'p', basePath: '/auramind', enabled: true }
@@ -44,8 +44,8 @@ function doc(id: string, updatedAt: string) {
     wordCount: 1,
     tokenCount: 1,
     contentHash: 'h',
-    extractionMethod: 'manual',
-    source: 'library',
+    extractionMethod: 'manual' as const,
+    source: 'library' as const,
     capturedAt: '2026-01-01T00:00:00Z',
     updatedAt,
   }
@@ -92,5 +92,27 @@ describe('runSync (integration)', () => {
     const r = await runSync(cfg)
     expect(r.pulled).toBeGreaterThanOrEqual(1)
     expect(await db.documents.get('d2')).toBeTruthy()
+  })
+
+  it('forceUpload overwrites remote and resets base so a following sync no-ops', async () => {
+    await db.documents.put(doc('d1', '2026-01-01T00:00:00Z'))
+
+    // Seed remote with something else (would normally pull/merge).
+    store['data.json'] = JSON.stringify({
+      version: 1,
+      syncedAt: '2026-01-01T00:00:00Z',
+      data: { ...{ documents: [doc('remote-only', '2026-01-01T00:00:00Z')] } },
+    })
+
+    await forceUpload(cfg)
+
+    const snap = JSON.parse(store['data.json'])
+    expect(snap.data.documents.map((d: any) => d.id).sort()).toEqual(['d1'])
+    expect(snap.data.documents.find((d: any) => d.id === 'remote-only')).toBeUndefined()
+
+    // Next sync is a no-op (local == remote == base).
+    const r = await runSync(cfg)
+    expect(r.pushed).toBe(0)
+    expect(r.pulled).toBe(0)
   })
 })

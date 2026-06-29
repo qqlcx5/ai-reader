@@ -79,6 +79,44 @@ export async function testConnection(cfg: WebDAVConfig) {
   return createWebDAVRemote({ ...cfg, basePath: normalizeBasePath(cfg.basePath) }).test()
 }
 
+/**
+ * Force (full) upload: overwrite the remote snapshot with the entire local
+ * dataset and reset the base to match, so local == remote == base afterwards.
+ * Clobbers any remote state. Use as a manual override when merge is unwanted.
+ */
+export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
+  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
+  const remote = createWebDAVRemote(cfg)
+
+  const test = await remote.test()
+  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
+
+  const data: SyncedDataset = {
+    documents: await db.documents.toArray(),
+    conversations: await db.conversations.toArray(),
+    models: await db.models.toArray(),
+    collections: await db.collections.toArray(),
+    collectionItems: await db.collectionItems.toArray(),
+    settings: (await db.settings.toArray()).filter((s) => s.id === 'app-settings'),
+  }
+
+  await remote.putText(
+    DATA_FILE,
+    JSON.stringify({ version: SYNC_VERSION, syncedAt: new Date().toISOString(), data } satisfies RemoteSnapshot),
+  )
+
+  // Reset base to this dataset so the next merge is consistent.
+  const base: SyncVersions = emptyVersions()
+  for (const cfg2 of TYPE_CONFIGS) {
+    for (const [k, v] of toMap(data[cfg2.type], cfg2)) base[cfg2.type][k] = v.version
+  }
+  await MetaRepository.set(SYNC_STATE_ID, {
+    id: 'sync-state',
+    lastSyncAt: new Date().toISOString(),
+    base,
+  } satisfies SyncState)
+}
+
 export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
   const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
   const remote = createWebDAVRemote(cfg)

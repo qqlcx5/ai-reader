@@ -76,7 +76,7 @@ function resetForm() {
   isDefault.value = false
   thinkingEnabled.value = false
   thinkingBudgetTokens.value = undefined
-  reasoningEffort.value = '__default__'
+  reasoningEffort.value = 'xhigh'
   errors.value = {}
 }
 

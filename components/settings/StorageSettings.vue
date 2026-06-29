@@ -7,6 +7,7 @@ import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
 import { initSearchIndex, searchIndex } from '@/services/search/index'
+import { refreshAfterDataChange } from '@/services/sync/refresh'
 import { db } from '@/db/index'
 
 const docCount = ref(0)
@@ -118,6 +119,7 @@ async function doImport(file: File) {
     })
 
     await refreshStats()
+    await refreshAfterDataChange()
   } catch (e) {
     console.error('Import failed:', e)
     throw e
