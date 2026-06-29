@@ -105,6 +105,43 @@ describe('stores/model.store — add/edit/delete/setDefault', () => {
     expect(store.models[0].name).toBe('GPT-4 Turbo')
   })
 
+  it('duplicateModel should create a copied model with reset test state', async () => {
+    const store = useModelStore()
+    const model = makeModel({
+      id: 'm1',
+      name: 'Claude 3.5',
+      lastTestStatus: 'success',
+      lastTestLatency: 88,
+      lastTestError: 'old-error',
+      lastUsedAt: '2026-06-28T00:00:00.000Z',
+    })
+    await ModelRepository.save(model)
+    await store.loadModels()
+
+    const duplicated = await store.duplicateModel('m1')
+
+    expect(duplicated).not.toBeNull()
+    expect(duplicated?.id).not.toBe('m1')
+    expect(duplicated?.name).toBe('Claude 3.5 副本')
+    expect(duplicated?.isDefault).toBe(false)
+    expect(duplicated?.lastTestStatus).toBe('untested')
+    expect(duplicated?.lastTestLatency).toBeUndefined()
+    expect(duplicated?.lastTestError).toBeUndefined()
+    expect(duplicated?.lastUsedAt).toBeUndefined()
+    expect(store.models).toHaveLength(2)
+  })
+
+  it('duplicateModel should append index when copied name already exists', async () => {
+    const store = useModelStore()
+    await ModelRepository.save(makeModel({ id: 'm1', name: 'DeepSeek Chat' }))
+    await ModelRepository.save(makeModel({ id: 'm2', name: 'DeepSeek Chat 副本', isDefault: false }))
+    await store.loadModels()
+
+    const duplicated = await store.duplicateModel('m1')
+
+    expect(duplicated?.name).toBe('DeepSeek Chat 副本 2')
+  })
+
   it('editModel should unset defaults when another model becomes default', async () => {
     const store = useModelStore()
     const m1 = makeModel({ id: 'm1', isDefault: true, name: 'First' })
@@ -185,5 +222,11 @@ describe('stores/model.store — add/edit/delete/setDefault', () => {
     const store = useModelStore()
     const result = await store.testConnection('nonexistent')
     expect(result).toBe(false)
+  })
+
+  it('duplicateModel should return null for non-existent model', async () => {
+    const store = useModelStore()
+    const duplicated = await store.duplicateModel('missing')
+    expect(duplicated).toBeNull()
   })
 })

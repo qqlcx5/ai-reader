@@ -4,6 +4,10 @@ import { ModelRepository } from '../db/repositories/model.repository'
 import type { ModelConfig } from '../types/model'
 import { testConnection as runTestConnection } from '../services/ai/test-connection.service'
 
+function generateUUID(): string {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+}
+
 export const useModelStore = defineStore('model', () => {
   const models = ref<ModelConfig[]>([])
   const currentModelId = ref<string | null>(null)
@@ -40,6 +44,46 @@ export const useModelStore = defineStore('model', () => {
     }
     await ModelRepository.save(toRaw(model) as ModelConfig)
     await loadModels()
+  }
+
+  function generateDuplicateName(sourceName: string) {
+    const trimmedName = sourceName.trim() || '模型'
+    const baseName = `${trimmedName} 副本`
+    const existingNames = new Set(models.value.map(model => model.name))
+
+    if (!existingNames.has(baseName)) {
+      return baseName
+    }
+
+    let index = 2
+    while (existingNames.has(`${baseName} ${index}`)) {
+      index += 1
+    }
+
+    return `${baseName} ${index}`
+  }
+
+  async function duplicateModel(id: string): Promise<ModelConfig | null> {
+    const source = models.value.find(model => model.id === id)
+    if (!source) return null
+
+    const now = new Date().toISOString()
+    const duplicatedModel: ModelConfig = {
+      ...toRaw(source),
+      id: generateUUID(),
+      name: generateDuplicateName(source.name),
+      isDefault: false,
+      lastTestStatus: 'untested',
+      lastTestLatency: undefined,
+      lastTestError: undefined,
+      lastUsedAt: undefined,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await ModelRepository.save(duplicatedModel)
+    await loadModels()
+    return duplicatedModel
   }
 
   async function editModel(model: ModelConfig) {
@@ -120,6 +164,7 @@ export const useModelStore = defineStore('model', () => {
     defaultModel,
     loadModels,
     addModel,
+    duplicateModel,
     editModel,
     deleteModel,
     selectModel,

@@ -11,6 +11,8 @@ vi.mock('@lucide/vue', () => ({
   Cpu: { name: 'Cpu', template: '<span class="mock-cpu" />', props: ['class', 'size'] },
   Bot: { name: 'Bot', template: '<span class="mock-bot" />', props: ['class', 'size'] },
   Box: { name: 'Box', template: '<span class="mock-box" />', props: ['class', 'size'] },
+  Copy: { name: 'Copy', template: '<span class="mock-copy" />', props: ['class', 'size'] },
+  Activity: { name: 'Activity', template: '<span class="mock-activity" />', props: ['class', 'size'] },
 }))
 
 function makeModel(overrides: Partial<ModelConfig> = {}): ModelConfig {
@@ -117,6 +119,35 @@ describe('ModelCard', () => {
     await wrapper.find('[title="删除"]').trigger('click')
     expect(wrapper.emitted('delete')).toBeTruthy()
     expect(wrapper.emitted('delete')![0]).toEqual(['m2'])
+  })
+
+  it('emits duplicate when copy button clicked', async () => {
+    const wrapper = mount(ModelCard, {
+      props: { model: makeModel({ id: 'm3' }) },
+    })
+
+    await wrapper.find('[title="复制模型"]').trigger('click')
+    expect(wrapper.emitted('duplicate')).toBeTruthy()
+    expect(wrapper.emitted('duplicate')![0]).toEqual(['m3'])
+  })
+
+  it('emits ping when ping button clicked', async () => {
+    const wrapper = mount(ModelCard, {
+      props: { model: makeModel({ id: 'm4', lastTestStatus: 'untested' }) },
+    })
+
+    await wrapper.find('[title="Ping"]').trigger('click')
+    expect(wrapper.emitted('ping')).toBeTruthy()
+    expect(wrapper.emitted('ping')![0]).toEqual(['m4'])
+  })
+
+  it('does not emit ping while testing', async () => {
+    const wrapper = mount(ModelCard, {
+      props: { model: makeModel({ id: 'm5', lastTestStatus: 'testing' }) },
+    })
+
+    await wrapper.find('[title="Ping"]').trigger('click')
+    expect(wrapper.emitted('ping')).toBeFalsy()
   })
 
   it('renders provider label correctly for openai-compatible', () => {

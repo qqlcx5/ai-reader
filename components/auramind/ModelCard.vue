@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
-import { Settings, Trash2, Cpu, Bot, Box } from '@lucide/vue'
+import { Settings, Trash2, Cpu, Bot, Box, Copy, Activity } from '@lucide/vue'
 import Switch from '@/components/ui/Switch.vue'
 import type { ModelConfig } from '@/types/model'
 import { useModelStore } from '@/stores/model.store'
@@ -12,6 +12,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [id: string]
   delete: [id: string]
+  duplicate: [id: string]
+  ping: [id: string]
 }>()
 
 const modelStore = useModelStore()
@@ -71,6 +73,11 @@ const statusLabel = computed(() => {
 function onToggleEnabled(val: boolean) {
   modelStore.editModel({ ...props.model, enabled: val, updatedAt: new Date().toISOString() })
 }
+
+function onPing() {
+  if (props.model.lastTestStatus === 'testing') return
+  emit('ping', props.model.id)
+}
 </script>
 
 <template>
@@ -105,6 +112,23 @@ function onToggleEnabled(val: boolean) {
         />
 
         <Switch :model-value="model.enabled" @update:model-value="onToggleEnabled" />
+
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+          title="复制模型"
+          @click="emit('duplicate', model.id)"
+        >
+          <Copy class="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          :disabled="model.lastTestStatus === 'testing'"
+          title="Ping"
+          @click="onPing"
+        >
+          <Activity class="w-3.5 h-3.5" />
+        </button>
 
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"

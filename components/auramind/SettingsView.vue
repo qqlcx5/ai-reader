@@ -11,9 +11,11 @@ import CaptureSettings from '@/components/settings/CaptureSettings.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useAppStore } from '@/stores/app.store'
 
 const modelStore = useModelStore()
 const settingsStore = useSettingsStore()
+const appStore = useAppStore()
 
 const enabledCount = computed(() => modelStore.models.filter(m => m.enabled).length)
 
@@ -76,7 +78,26 @@ function cancelDelete() {
 }
 
 async function testModelConnection(id: string) {
-  await modelStore.testConnection(id)
+  const success = await modelStore.testConnection(id)
+  const model = modelStore.models.find(m => m.id === id)
+  if (!model) return
+
+  if (success) {
+    appStore.showToast(`Ping 成功${model.lastTestLatency ? `（${model.lastTestLatency}ms）` : ''}`, 'success')
+    return
+  }
+
+  appStore.showToast(model.lastTestError ? `Ping 失败：${model.lastTestError}` : 'Ping 失败', 'error')
+}
+
+async function duplicateModel(id: string) {
+  const duplicated = await modelStore.duplicateModel(id)
+  if (!duplicated) {
+    appStore.showToast('复制模型失败', 'error')
+    return
+  }
+
+  appStore.showToast(`已复制模型：${duplicated.name}`, 'success')
 }
 </script>
 
@@ -104,6 +125,8 @@ async function testModelConnection(id: string) {
             v-for="model in modelStore.models"
             :key="model.id"
             :model="model"
+            @duplicate="duplicateModel"
+            @ping="testModelConnection"
             @edit="openEditDialog"
             @delete="requestDelete"
           />
