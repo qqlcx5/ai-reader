@@ -3,6 +3,14 @@ import type { ModelConfig } from '@/types/model'
 import { createParser, type EventSourceMessage } from 'eventsource-parser'
 import { normalizeBaseUrl, fetchWithTimeout } from './shared'
 
+function buildOpenAIParams(model: ModelConfig): Record<string, unknown> {
+  const params: Record<string, unknown> = {}
+  if (model.temperature != null) params.temperature = model.temperature
+  if (model.maxTokens != null) params.max_tokens = model.maxTokens
+  if (model.reasoningEffort) params.reasoning_effort = model.reasoningEffort
+  return params
+}
+
 export const OpenAICompatibleProvider: AIProvider = {
   async chat(input: ChatInput): Promise<ChatOutput> {
     const baseUrl = normalizeBaseUrl(input.model.baseUrl || 'https://api.openai.com/v1')
@@ -20,8 +28,7 @@ export const OpenAICompatibleProvider: AIProvider = {
     const body = JSON.stringify({
       model: input.model.modelId,
       messages,
-      temperature: input.model.temperature,
-      max_tokens: input.model.contextWindow,
+      ...buildOpenAIParams(input.model),
     })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -70,8 +77,7 @@ export const OpenAICompatibleProvider: AIProvider = {
     const body = JSON.stringify({
       model: input.model.modelId,
       messages,
-      temperature: input.model.temperature,
-      max_tokens: input.model.contextWindow,
+      ...buildOpenAIParams(input.model),
       stream: true,
     })
 

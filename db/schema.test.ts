@@ -4,7 +4,7 @@ import { AuraMindDB } from './index'
 
 describe('db/schema', () => {
   it('should define the current DB version', () => {
-    expect(DB_VERSION).toBe(4)
+    expect(DB_VERSION).toBe(5)
   })
 
   it('should define all required stores', () => {

@@ -9,6 +9,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ContextSettings from '@/components/settings/ContextSettings.vue'
 import CaptureSettings from '@/components/settings/CaptureSettings.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
+import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
@@ -176,13 +177,11 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
         <CaptureSettings />
       </section>
 
-      <!-- WebDAV 同步 — 当前不在任务范围内，暂时注释 -->
-      <!--
+      <!-- WebDAV 同步 -->
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">WebDAV 同步</h2>
-        ...
+        <WebDAVSettings />
       </section>
-      -->
 
       <!-- 本地存储 -->
       <section class="flex flex-col gap-2.5 pb-8">

@@ -159,23 +159,23 @@ describe('ContextPanel', () => {
   it('has copy markdown button', () => {
     const wrapper = mount(ContextPanel)
 
-    const copyBtn = wrapper.find('[title="复制 Markdown"]')
+    const copyBtn = wrapper.find('[title="复制当前标签页内容"]')
     expect(copyBtn.exists()).toBe(true)
   })
 
   it('shows refresh button when source is current-page', () => {
     const wrapper = mount(ContextPanel)
 
-    const refreshBtn = wrapper.find('[title="重新抓取"]')
+    const refreshBtn = wrapper.find('[title="刷新"]')
     expect(refreshBtn.exists()).toBe(true)
   })
 
-  it('hides refresh button when source is library', () => {
+  it('still shows refresh button when source is library', () => {
     const wspStore = createMockWorkspaceStore({ documentSource: 'library' })
     mockWspStore.mockReturnValue(wspStore as any)
 
     const wrapper = mount(ContextPanel)
-    const refreshBtn = wrapper.find('[title="重新抓取"]')
-    expect(refreshBtn.exists()).toBe(false)
+    const refreshBtn = wrapper.find('[title="刷新"]')
+    expect(refreshBtn.exists()).toBe(true)
   })
 })

@@ -340,7 +340,7 @@ function cancelDelete() {
       <Heatmap :selected-key="selectedDate" @select="onHeatmapSelect" />
 
       <!-- Collections -->
-      <div class="px-4 py-2.5 border-b border-zinc-100">
+      <div class="px-4 border-b border-zinc-100">
         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             class="shrink-0 inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] text-zinc-500 border border-dashed border-zinc-300 hover:border-brand hover:text-brand transition-colors"

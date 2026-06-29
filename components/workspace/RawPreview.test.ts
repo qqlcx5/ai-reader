@@ -70,7 +70,7 @@ describe('RawPreview', () => {
     }) as any)
 
     const wrapper = mount(RawPreview)
-    const container = wrapper.find('.bg-gray-900')
+    const container = wrapper.find('.bg-zinc-900')
     expect(container.exists()).toBe(true)
   })
 

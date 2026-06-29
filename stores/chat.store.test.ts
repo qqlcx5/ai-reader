@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
+import { nextTick } from 'vue'
 import type { ConversationEntity, ChatMessage } from '../types/chat'
 import type { ModelConfig } from '../types/model'
 import type { AppSettings } from '../types/settings'
@@ -302,6 +303,8 @@ describe('stores/chat.store', () => {
         _input: any,
         callbacks: { onToken: (t: string) => void; onDone: () => void; onError: (e: Error) => void },
       ) => {
+        // Let the store's reactive watch (which sets isStreaming/isSending) flush.
+        await nextTick()
         capturedDuringStream = {
           isStreaming: store.isStreaming,
           isSending: store.isSending,

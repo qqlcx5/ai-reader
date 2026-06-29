@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
+import { MetaRepository } from '../db/repositories/meta.repository'
 import type { AppSettings, ContextSettings, CaptureSettings } from '../types/settings'
+import type { WebDAVConfig } from '../types/sync'
 
 const defaultContextSettings: ContextSettings = {
   maxContextTokens: 1050000,
@@ -35,13 +37,21 @@ function createDefaultSettings(): AppSettings {
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>(createDefaultSettings())
   const isLoaded = ref(false)
+  const webdav = ref<WebDAVConfig>({ url: '', username: '', password: '', basePath: '/auramind', enabled: false })
 
   async function loadSettings() {
     const saved = await SettingsRepository.get()
     if (saved) {
       settings.value = saved
     }
+    const savedWebdav = await MetaRepository.get<WebDAVConfig>('webdav-config')
+    if (savedWebdav) webdav.value = { ...webdav.value, ...savedWebdav }
     isLoaded.value = true
+  }
+
+  async function updateWebDAVConfig(partial: Partial<WebDAVConfig>) {
+    webdav.value = { ...webdav.value, ...partial }
+    await MetaRepository.set('webdav-config', toRaw(webdav.value))
   }
 
   async function updateGlobalSystemPrompt(prompt: string) {
@@ -69,7 +79,9 @@ export const useSettingsStore = defineStore('settings', () => {
   return {
     settings,
     isLoaded,
+    webdav,
     loadSettings,
+    updateWebDAVConfig,
     updateGlobalSystemPrompt,
     updateContextSettings,
     updateCaptureSettings,

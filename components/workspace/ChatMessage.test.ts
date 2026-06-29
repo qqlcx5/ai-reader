@@ -99,7 +99,7 @@ describe('ChatMessage', () => {
   it('renders multi-line AI content correctly', () => {
     const wrapper = mount(ChatMessage, {
       props: {
-        message: makeMsg({ role: 'assistant', content: 'Line 1\nLine 2\nLine 3' }),
+        message: makeMsg({ role: 'assistant', content: 'Line 1\n\nLine 2\n\nLine 3' }),
       },
     })
     const paragraphs = wrapper.findAll('p')

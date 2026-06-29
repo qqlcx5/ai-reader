@@ -1,3 +1,9 @@
+export interface ThinkingConfig {
+  enabled: boolean
+  /** Thinking token budget. Anthropic requires this > 0 when enabled. */
+  budgetTokens?: number
+}
+
 export interface ModelConfig {
   id: string
   name: string
@@ -11,8 +17,20 @@ export interface ModelConfig {
   enabled: boolean
   isDefault: boolean
 
-  contextWindow: number
-  temperature: number
+  /** Model input context window (tokens). Used locally for truncation math; never sent to the API. */
+  contextWindow?: number
+
+  /** Sampling temperature. Only sent when set. */
+  temperature?: number
+
+  /** Max output tokens. Only sent when set. */
+  maxTokens?: number
+
+  /** Extended thinking (Anthropic-style). Only sent when enabled. */
+  thinking?: ThinkingConfig
+
+  /** OpenAI-style reasoning effort (e.g. minimal/low/medium/high/xhigh). Only sent when set. */
+  reasoningEffort?: string
 
   systemPrompt?: string
 

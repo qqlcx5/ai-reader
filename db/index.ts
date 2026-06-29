@@ -15,6 +15,7 @@ export class AuraMindDB extends Dexie {
   promptTemplates!: Table<PromptTemplate, string>
   collections!: Table<CollectionEntity, string>
   collectionItems!: Table<CollectionItemEntity, string>
+  kvMeta!: Table<{ id: string; value: unknown }, string>
 
   constructor() {
     super('AuraMindDB')

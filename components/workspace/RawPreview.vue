@@ -5,8 +5,8 @@ import { useDocumentStore } from '@/stores/document.store'
 const documentStore = useDocumentStore()
 
 const rawContent = computed(() => {
-  return documentStore.currentDocument?.markdown
-    || documentStore.currentDocument?.rawText
+  return documentStore.currentDocument?.rawText
+    || documentStore.currentDocument?.markdown
     || ''
 })
 </script>

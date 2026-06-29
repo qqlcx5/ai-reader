@@ -10,7 +10,7 @@ describe('stores/settings.store', () => {
   it('should initialize with default settings', () => {
     const store = useSettingsStore()
     expect(store.settings.id).toBe('app-settings')
-    expect(store.settings.context.maxContextTokens).toBe(8000)
+    expect(store.settings.context.maxContextTokens).toBe(1050000)
     expect(store.settings.capture.autoExtractOnOpen).toBe(true)
     expect(store.isLoaded).toBe(false)
   })

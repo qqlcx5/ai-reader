@@ -16,7 +16,12 @@ vi.mock('@/db/repositories/chat.repository', () => ({
   },
 }))
 
-vi.mock('@/services/search', () => ({}))
+vi.mock('@/services/search', () => ({
+  addToIndex: vi.fn(),
+  removeFromIndex: vi.fn(),
+  replaceInIndex: vi.fn(),
+  initSearchIndex: vi.fn().mockResolvedValue(undefined),
+}))
 
 function makeConv(overrides: Partial<ConversationEntity> = {}): ConversationEntity {
   return {

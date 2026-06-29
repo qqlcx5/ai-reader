@@ -19,12 +19,23 @@ function buildAnthropicMessages(input: ChatInput): AnthropicMessage[] {
 
 function buildAnthropicRequestBody(input: ChatInput, stream: boolean) {
   const messages = buildAnthropicMessages(input)
+  const model = input.model
   const body: Record<string, unknown> = {
-    model: input.model.modelId,
-    max_tokens: input.model.contextWindow,
-    temperature: input.model.temperature,
+    model: model.modelId,
     messages,
     stream,
+  }
+  if (model.maxTokens != null) {
+    body.max_tokens = model.maxTokens
+  }
+  if (model.temperature != null) {
+    body.temperature = model.temperature
+  }
+  if (model.thinking?.enabled) {
+    body.thinking = {
+      type: 'enabled',
+      ...(model.thinking.budgetTokens ? { budget_tokens: model.thinking.budgetTokens } : {}),
+    }
   }
   if (input.systemPrompt) {
     body.system = input.systemPrompt

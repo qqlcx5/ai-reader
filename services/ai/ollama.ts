@@ -25,6 +25,13 @@ function buildOllamaMessages(input: ChatInput): OllamaMessage[] {
   return messages
 }
 
+function buildOllamaParams(model: ModelConfig): Record<string, unknown> {
+  const params: Record<string, unknown> = {}
+  if (model.contextWindow != null) params.num_ctx = model.contextWindow
+  if (model.temperature != null) params.temperature = model.temperature
+  return params
+}
+
 export const OllamaProvider: AIProvider = {
   async chat(input: ChatInput): Promise<ChatOutput> {
     const baseUrl = normalizeBaseUrl(input.model.baseUrl || 'http://localhost:11434')
@@ -33,8 +40,7 @@ export const OllamaProvider: AIProvider = {
     const body = JSON.stringify({
       model: input.model.modelId,
       messages: buildOllamaMessages(input),
-      num_ctx: input.model.contextWindow,
-      temperature: input.model.temperature,
+      ...buildOllamaParams(input.model),
       stream: false,
     })
 
@@ -84,8 +90,7 @@ export const OllamaProvider: AIProvider = {
     const body = JSON.stringify({
       model: input.model.modelId,
       messages: buildOllamaMessages(input),
-      num_ctx: input.model.contextWindow,
-      temperature: input.model.temperature,
+      ...buildOllamaParams(input.model),
       stream: true,
     })
 
