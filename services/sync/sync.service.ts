@@ -117,6 +117,42 @@ export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
   } satisfies SyncState)
 }
 
+/**
+ * Force (full) download: overwrite local data with the entire remote snapshot
+ * and reset the base to match. Clobbers any local state. Use as a manual
+ * override (e.g. after the wipe-safeguard aborts, to declare remote the truth).
+ */
+export async function forceDownload(rawCfg: WebDAVConfig): Promise<void> {
+  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
+  const remote = createWebDAVRemote(cfg)
+
+  const test = await remote.test()
+  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
+  if (!(await remote.hasData())) throw new Error('远端没有数据可下载')
+
+  const snap = JSON.parse(await remote.getText(DATA_FILE)) as RemoteSnapshot
+  const data = snap.data ?? emptyDataset()
+
+  for (const cfg2 of TYPE_CONFIGS) {
+    const arr = cfg2.filter ? (data[cfg2.type] ?? []).filter(cfg2.filter) : data[cfg2.type] ?? []
+    await db.transaction('rw', cfg2.table(), async () => {
+      await cfg2.table().clear()
+      if (arr.length) await cfg2.table().bulkPut(arr)
+    })
+  }
+
+  // Reset base to the remote dataset so the next merge is consistent.
+  const base: SyncVersions = emptyVersions()
+  for (const cfg2 of TYPE_CONFIGS) {
+    for (const [k, v] of toMap(data[cfg2.type], cfg2)) base[cfg2.type][k] = v.version
+  }
+  await MetaRepository.set(SYNC_STATE_ID, {
+    id: 'sync-state',
+    lastSyncAt: new Date().toISOString(),
+    base,
+  } satisfies SyncState)
+}
+
 export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
   const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
   const remote = createWebDAVRemote(cfg)
@@ -140,8 +176,10 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
   const deletes: Record<EntityKey, string[]> = { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [] }
 
   // 3. Merge each type.
+  let localTotal = 0
   for (const cfg2 of TYPE_CONFIGS) {
     const localMap = toMap(await cfg2.table().toArray(), cfg2)
+    localTotal += localMap.size
     const remoteMap = toMap(remoteData[cfg2.type], cfg2)
     const out = mergeSet({ local: localMap, remote: remoteMap, base: state.base[cfg2.type] ?? {} })
 
@@ -166,6 +204,18 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
     result.deletedLocal += out.stats.deletedLocal
     result.deletedRemote += out.stats.deletedRemote
     result.conflicts += out.stats.conflicts
+  }
+
+  // Safeguard against accidental remote wipes: if this sync would delete a large
+  // fraction of local data, it's almost certainly an emptied/missing remote (or
+  // the wrong account) rather than a real bulk delete. Abort BEFORE writing
+  // anything — local and remote are both left untouched. The user can override
+  // with forceUpload (local wins) or forceDownload (remote wins).
+  if (result.deletedLocal >= 5 && result.deletedLocal > localTotal * 0.5) {
+    throw new Error(
+      `同步已中止：本次将删除本地 ${result.deletedLocal}/${localTotal} 条数据，疑似远端被清空。` +
+        `若要以本地为准请用「全量上传」，以远端为准请用「全量下载」。`,
+    )
   }
 
   // 4. Apply locally.

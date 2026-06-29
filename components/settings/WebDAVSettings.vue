@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { Cloud, Plug, RefreshCw, UploadCloud } from '@lucide/vue'
+import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
-import { testConnection, runSync, forceUpload, getSyncState } from '@/services/sync/sync.service'
+import { testConnection, runSync, forceUpload, forceDownload, getSyncState } from '@/services/sync/sync.service'
 
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
@@ -16,10 +16,12 @@ const appStore = useAppStore()
 const testing = ref(false)
 const syncing = ref(false)
 const uploading = ref(false)
+const downloading = ref(false)
 const showForceConfirm = ref(false)
+const showDownloadConfirm = ref(false)
 const lastResult = ref('')
 const lastSyncAt = ref('')
-const busy = computed(() => testing.value || syncing.value || uploading.value)
+const busy = computed(() => testing.value || syncing.value || uploading.value || downloading.value)
 
 const url = computed({ get: () => settingsStore.webdav.url, set: (v) => settingsStore.updateWebDAVConfig({ url: v }) })
 const username = computed({ get: () => settingsStore.webdav.username, set: (v) => settingsStore.updateWebDAVConfig({ username: v }) })
@@ -51,6 +53,26 @@ async function onForceUpload() {
     appStore.showToast(`上传失败：${msg}`, 'error')
   } finally {
     uploading.value = false
+  }
+}
+
+async function onForceDownload() {
+  showDownloadConfirm.value = false
+  if (!url.value) {
+    appStore.showToast('请先填写 WebDAV 地址', 'error')
+    return
+  }
+  downloading.value = true
+  try {
+    await forceDownload(settingsStore.webdav)
+    await refreshAfterDataChange()
+    await refreshStatus()
+    appStore.showToast('已从远端全量下载', 'success')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    appStore.showToast(`下载失败：${msg}`, 'error')
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -154,10 +176,16 @@ async function onSync() {
         </UButton>
       </div>
 
-      <UButton variant="dashed" size="md" class="w-full" :disabled="busy" @click="showForceConfirm = true">
-        <UploadCloud class="w-3.5 h-3.5" />
-        {{ uploading ? '上传中…' : '全量上传（覆盖远端）' }}
-      </UButton>
+      <div class="flex items-center gap-2">
+        <UButton variant="dashed" size="md" class="flex-1" :disabled="busy" @click="showForceConfirm = true">
+          <UploadCloud class="w-3.5 h-3.5" />
+          {{ uploading ? '上传中…' : '全量上传' }}
+        </UButton>
+        <UButton variant="dashed" size="md" class="flex-1" :disabled="busy" @click="showDownloadConfirm = true">
+          <DownloadCloud class="w-3.5 h-3.5" />
+          {{ downloading ? '下载中…' : '全量下载' }}
+        </UButton>
+      </div>
 
       <ConfirmModal
         v-if="showForceConfirm"
@@ -165,6 +193,14 @@ async function onSync() {
         desc="将用本地数据完全覆盖远端，远端独有的内容会被删除。建议仅在以本机为准时使用。"
         @confirm="onForceUpload"
         @cancel="showForceConfirm = false"
+      />
+
+      <ConfirmModal
+        v-if="showDownloadConfirm"
+        title="全量下载"
+        desc="将用远端数据完全覆盖本地，本地独有的内容会被删除。建议仅在以远端为准时使用。"
+        @confirm="onForceDownload"
+        @cancel="showDownloadConfirm = false"
       />
 
       <div class="flex items-center justify-between pt-1 text-[11px]">

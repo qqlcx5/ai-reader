@@ -22,7 +22,7 @@ vi.mock('../webdav/webdav.client', () => ({
   }),
 }))
 
-import { runSync, forceUpload } from './sync.service'
+import { runSync, forceUpload, forceDownload } from './sync.service'
 import type { WebDAVConfig } from '@/types/sync'
 
 const cfg: WebDAVConfig = { url: 'x', username: 'u', password: 'p', basePath: '/auramind', enabled: true }
@@ -111,6 +111,40 @@ describe('runSync (integration)', () => {
     expect(snap.data.documents.find((d: any) => d.id === 'remote-only')).toBeUndefined()
 
     // Next sync is a no-op (local == remote == base).
+    const r = await runSync(cfg)
+    expect(r.pushed).toBe(0)
+    expect(r.pulled).toBe(0)
+  })
+
+  it('aborts and preserves local data when the remote is wiped (no mass delete)', async () => {
+    for (let i = 0; i < 6; i++) await db.documents.put(doc(`d${i}`, '2026-01-01T00:00:00Z'))
+    await runSync(cfg) // push
+
+    // Simulate the user deleting everything on the cloud side.
+    Object.keys(store).forEach((k) => delete store[k])
+
+    await expect(runSync(cfg)).rejects.toThrow(/中止/)
+
+    // Local data must be untouched.
+    expect(await db.documents.count()).toBe(6)
+  })
+
+  it('forceDownload overwrites local with remote and resets base', async () => {
+    // Remote has d1+d2; local has a stale doc that should be wiped.
+    await db.documents.put(doc('local-only', '2026-01-01T00:00:00Z'))
+    store['data.json'] = JSON.stringify({
+      version: 1,
+      syncedAt: '2026-01-01T00:00:00Z',
+      data: {
+        ...{ documents: [doc('d1', '2026-01-01T00:00:00Z'), doc('d2', '2026-01-02T00:00:00Z')] },
+      },
+    })
+
+    await forceDownload(cfg)
+    const ids = (await db.documents.toArray()).map((d) => d.id).sort()
+    expect(ids).toEqual(['d1', 'd2'])
+
+    // Next sync is a no-op.
     const r = await runSync(cfg)
     expect(r.pushed).toBe(0)
     expect(r.pulled).toBe(0)
