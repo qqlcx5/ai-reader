@@ -26,7 +26,6 @@ function handleInput(e: Event) {
   }
 }
 
-// 初始/外部赋值后也触发一次高度计算
 watch(() => props.modelValue, () => {
   if (props.autoHeight && ta.value) {
     ta.value.style.height = 'auto'

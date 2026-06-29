@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
 import { SlidersHorizontal, Plus, RefreshCw } from '@lucide/vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
-import RekaTextarea from '@/components/ui/RekaTextarea.vue'
+import UButton from '@/components/ui/UButton.vue'
+import UTextarea from '@/components/ui/UTextarea.vue'
 import ModelCard from './ModelCard.vue'
 import ModelEditorDialog from './ModelEditorDialog.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
@@ -127,7 +127,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
         <SlidersHorizontal class="w-4 h-4 text-brand" />
         核心配置
       </div>
-      <RekaButton variant="link" size="sm">保存</RekaButton>
+      <UButton variant="link" size="sm">保存</UButton>
     </div>
 
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-5 flex flex-col gap-7">
@@ -150,10 +150,10 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
             @delete="requestDelete"
           />
 
-          <RekaButton variant="dashed" size="lg" class="w-full" @click="openAddDialog">
+          <UButton variant="dashed" size="lg" class="w-full" @click="openAddDialog">
             <Plus class="w-3.5 h-3.5" />
             添加模型节点
-          </RekaButton>
+          </UButton>
         </div>
       </section>
 
@@ -164,7 +164,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
         <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
           <div class="p-3 flex flex-col gap-1.5">
             <span class="text-zinc-700">全局系统指令</span>
-            <RekaTextarea
+            <UTextarea
               v-model="globalSystemPrompt"
               :rows="4"
               class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-[11px] text-zinc-600 focus:border-brand font-mono"

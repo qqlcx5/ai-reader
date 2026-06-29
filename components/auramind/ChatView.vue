@@ -6,7 +6,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import { useAppStore } from '@/stores/app.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
+import UButton from '@/components/ui/UButton.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
 
 const chatStore = useChatStore()
@@ -217,9 +217,9 @@ const lastAssistantMsgId = computed<string | null>(() => {
 
     <!-- Stop button -->
     <div v-if="chatStore.isStreaming" class="flex justify-center">
-      <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-500" @click="handleStop">
+      <UButton variant="ghost" size="sm" class="text-[11px] text-zinc-500" @click="handleStop">
         停止生成
-      </RekaButton>
+      </UButton>
     </div>
   </div>
 </template>

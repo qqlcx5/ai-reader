@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { ref } from 'vue'
 import { X } from '@lucide/vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
-import RekaInput from '@/components/ui/RekaInput.vue'
+import UButton from '@/components/ui/UButton.vue'
+import UInput from '@/components/ui/UInput.vue'
 import Select from '@/components/ui/Select.vue'
 
 defineProps<{
@@ -40,15 +40,15 @@ const providers = [
           <h3 class="text-[15px] font-semibold">添加模型节点</h3>
           <p class="text-[11px] text-zinc-400 mt-0.5">支持 OpenAI Compatible / Claude / Ollama</p>
         </div>
-        <RekaButton variant="ghost" @click="emit('close')">
+        <UButton variant="ghost" @click="emit('close')">
           <X class="w-4 h-4" />
-        </RekaButton>
+        </UButton>
       </div>
 
       <div class="space-y-3 text-[13px]">
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">模型名称</label>
-          <RekaInput v-model="modelName" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 DeepSeek Chat" />
+          <UInput v-model="modelName" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 DeepSeek Chat" />
         </div>
 
         <div>
@@ -58,33 +58,33 @@ const providers = [
 
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">Base URL</label>
-          <RekaInput v-model="baseUrl" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="https://api.example.com/v1" />
+          <UInput v-model="baseUrl" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="https://api.example.com/v1" />
         </div>
 
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">API Key</label>
-          <RekaInput v-model="apiKey" type="password" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="sk-..." />
+          <UInput v-model="apiKey" type="password" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="sk-..." />
         </div>
 
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[11px] text-zinc-500 font-medium">上下文</label>
-            <RekaInput v-model="contextSize" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" />
+            <UInput v-model="contextSize" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" />
           </div>
           <div>
             <label class="text-[11px] text-zinc-500 font-medium">温度</label>
-            <RekaInput v-model="temperature" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" />
+            <UInput v-model="temperature" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" />
           </div>
         </div>
       </div>
 
       <div class="flex gap-2 mt-5">
-        <RekaButton variant="secondary" size="lg" class="flex-1" @click="emit('close')">
+        <UButton variant="secondary" size="lg" class="flex-1" @click="emit('close')">
           取消
-        </RekaButton>
-        <RekaButton variant="primary" size="lg" class="flex-1" @click="emit('close')">
+        </UButton>
+        <UButton variant="primary" size="lg" class="flex-1" @click="emit('close')">
           添加模型
-        </RekaButton>
+        </UButton>
       </div>
     </div>
   </div>

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { MessageSquare, Plus, Trash2 } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
-import RekaButton from '@/components/ui/RekaButton.vue'
+import UButton from '@/components/ui/UButton.vue'
 
 const chatStore = useChatStore()
 const documentStore = useDocumentStore()
@@ -101,7 +101,7 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
 
     <!-- Right: New button -->
     <div class="flex items-center px-2 py-2 shrink-0">
-      <RekaButton
+      <UButton
         variant="ghost"
         size="sm"
         class="text-[11px] text-brand"
@@ -109,7 +109,7 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
       >
         <Plus class="w-3.5 h-3.5 mr-0.5" />
         新建
-      </RekaButton>
+      </UButton>
     </div>
   </div>
 </template>

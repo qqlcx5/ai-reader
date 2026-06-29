@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import { ref, watch, computed } from 'vue'
 import { X } from '@lucide/vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
-import RekaInput from '@/components/ui/RekaInput.vue'
-import RekaTextarea from '@/components/ui/RekaTextarea.vue'
+import UButton from '@/components/ui/UButton.vue'
+import UInput from '@/components/ui/UInput.vue'
+import UTextarea from '@/components/ui/UTextarea.vue'
 import Select from '@/components/ui/Select.vue'
 import Slider from '@/components/ui/Slider.vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -194,16 +194,16 @@ watch(() => props.open, (val) => {
           <h3 class="text-[15px] font-semibold">{{ isEdit ? '编辑模型' : '添加模型节点' }}</h3>
           <p class="text-[11px] text-zinc-400 mt-0.5">支持 OpenAI Compatible / Anthropic / Ollama</p>
         </div>
-        <RekaButton variant="ghost" @click="onClose">
+        <UButton variant="ghost" @click="onClose">
           <X class="w-4 h-4" />
-        </RekaButton>
+        </UButton>
       </div>
 
       <div class="space-y-3 text-[13px] overflow-y-auto flex-1">
         <!-- Name -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">模型名称 <span class="text-red-400">*</span></label>
-          <RekaInput v-model="name" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 DeepSeek Chat" />
+          <UInput v-model="name" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 DeepSeek Chat" />
           <p v-if="errors.name" class="text-[10px] text-red-400 mt-0.5">{{ errors.name }}</p>
         </div>
 
@@ -216,28 +216,28 @@ watch(() => props.open, (val) => {
         <!-- Model ID -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">模型 ID <span class="text-red-400">*</span></label>
-          <RekaInput v-model="modelId" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 gpt-4o" />
+          <UInput v-model="modelId" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 gpt-4o" />
           <p v-if="errors.modelId" class="text-[10px] text-red-400 mt-0.5">{{ errors.modelId }}</p>
         </div>
 
         <!-- Base URL (conditional) -->
         <div v-if="showBaseUrl">
           <label class="text-[11px] text-zinc-500 font-medium">Base URL</label>
-          <RekaInput v-model="baseUrl" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="https://api.example.com/v1" />
+          <UInput v-model="baseUrl" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="https://api.example.com/v1" />
           <p v-if="errors.baseUrl" class="text-[10px] text-red-400 mt-0.5">{{ errors.baseUrl }}</p>
         </div>
 
         <!-- API Key -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">API Key</label>
-          <RekaInput v-model="apiKey" type="password" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="sk-..." />
+          <UInput v-model="apiKey" type="password" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" placeholder="sk-..." />
         </div>
 
         <!-- Context Window + Temperature -->
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[11px] text-zinc-500 font-medium">上下文窗口</label>
-            <RekaInput
+            <UInput
               :model-value="String(contextWindow)"
               type="number"
               class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
@@ -256,7 +256,7 @@ watch(() => props.open, (val) => {
         <!-- System Prompt -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">模型 System Prompt</label>
-          <RekaTextarea
+          <UTextarea
             v-model="systemPrompt"
             :rows="3"
             class="mt-1 w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-[11px] text-zinc-600 focus:border-brand font-mono"
@@ -277,12 +277,12 @@ watch(() => props.open, (val) => {
       </div>
 
       <div class="flex gap-2 mt-5 shrink-0">
-        <RekaButton variant="secondary" size="lg" class="flex-1" @click="onClose">
+        <UButton variant="secondary" size="lg" class="flex-1" @click="onClose">
           取消
-        </RekaButton>
-        <RekaButton variant="primary" size="lg" class="flex-1" :disabled="submitting" @click="handleSubmit">
+        </UButton>
+        <UButton variant="primary" size="lg" class="flex-1" :disabled="submitting" @click="handleSubmit">
           {{ submitting ? '保存中...' : (isEdit ? '保存修改' : '添加模型') }}
-        </RekaButton>
+        </UButton>
       </div>
     </div>
   </div>

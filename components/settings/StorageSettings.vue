@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
 import { HardDrive, Download, Upload, Database, FileText, MessageCircle, Cpu, RefreshCw, Trash2 } from '@lucide/vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
+import UButton from '@/components/ui/UButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ChatRepository } from '@/db/repositories/chat.repository'
@@ -193,15 +193,15 @@ onMounted(refreshStats)
     </div>
 
     <div class="flex flex-col gap-2">
-      <RekaButton variant="secondary" size="lg" class="w-full" @click="showExportConfirm = true">
+      <UButton variant="secondary" size="lg" class="w-full" @click="showExportConfirm = true">
         <Download class="w-4 h-4" />
         导出 JSON
-      </RekaButton>
+      </UButton>
 
-      <RekaButton variant="secondary" size="lg" class="w-full" @click="importInput?.click()">
+      <UButton variant="secondary" size="lg" class="w-full" @click="importInput?.click()">
         <Upload class="w-4 h-4" />
         导入 JSON
-      </RekaButton>
+      </UButton>
       <input
         ref="importInput"
         type="file"
@@ -210,15 +210,15 @@ onMounted(refreshStats)
         @change="handleFileChange"
       />
 
-      <RekaButton variant="secondary" size="lg" class="w-full" @click="rebuildIndex">
+      <UButton variant="secondary" size="lg" class="w-full" @click="rebuildIndex">
         <RefreshCw class="w-4 h-4" />
         重建搜索索引
-      </RekaButton>
+      </UButton>
 
-      <RekaButton variant="danger" size="lg" class="w-full" @click="showClearConfirm = true">
+      <UButton variant="danger" size="lg" class="w-full" @click="showClearConfirm = true">
         <Trash2 class="w-4 h-4" />
         清空本地数据
-      </RekaButton>
+      </UButton>
     </div>
 
     <!-- Export confirm -->

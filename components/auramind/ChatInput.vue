@@ -7,8 +7,8 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import ModelSelect from '@/components/workspace/ModelSelect.vue'
-import RekaButton from '@/components/ui/RekaButton.vue'
-import RekaTextarea from '@/components/ui/RekaTextarea.vue'
+import UButton from '@/components/ui/UButton.vue'
+import UTextarea from '@/components/ui/UTextarea.vue'
 
 const chatStore = useChatStore()
 const modelStore = useModelStore()
@@ -200,9 +200,9 @@ function handleStop() {
           >
             {{ templateDirectSend ? '立即发送' : '二次编辑' }}
           </button>
-          <RekaButton variant="ghost" size="sm" class="p-0.5" @click="showTemplatePanel = false">
+          <UButton variant="ghost" size="sm" class="p-0.5" @click="showTemplatePanel = false">
             <X class="w-3.5 h-3.5" />
-          </RekaButton>
+          </UButton>
         </div>
       </div>
 
@@ -243,7 +243,7 @@ function handleStop() {
             rows="3"
             class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 outline-none focus:border-blue-400 resize-none"
           />
-          <RekaButton
+          <UButton
             variant="primary"
             size="sm"
             class="w-full text-[11px]"
@@ -252,7 +252,7 @@ function handleStop() {
           >
             <Plus class="w-3 h-3" />
             添加模板
-          </RekaButton>
+          </UButton>
         </div>
 
         <!-- Template list with edit/delete -->
@@ -270,22 +270,22 @@ function handleStop() {
                 <span class="text-[12px] text-zinc-700 truncate">{{ t.title }}</span>
               </div>
               <div class="flex items-center gap-0.5 shrink-0">
-                <RekaButton
+                <UButton
                   variant="ghost"
                   size="sm"
                   class="p-0.5 text-zinc-400 hover:text-blue-500"
                   @click="startEditTemplate(t)"
                 >
                   <Pencil class="w-3 h-3" />
-                </RekaButton>
-                <RekaButton
+                </UButton>
+                <UButton
                   variant="ghost"
                   size="sm"
                   class="p-0.5 text-zinc-400 hover:text-red-500"
                   @click="handleDeleteTemplate(t.id)"
                 >
                   <Trash2 class="w-3 h-3" />
-                </RekaButton>
+                </UButton>
               </div>
             </template>
             <!-- Editing state -->
@@ -302,7 +302,7 @@ function handleStop() {
                   class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 outline-none focus:border-blue-400 resize-none"
                 />
                 <div class="flex items-center gap-1">
-                  <RekaButton
+                  <UButton
                     variant="primary"
                     size="sm"
                     class="text-[10px] py-0.5 px-2"
@@ -310,15 +310,15 @@ function handleStop() {
                     @click="handleUpdateTemplate(t.id)"
                   >
                     保存
-                  </RekaButton>
-                  <RekaButton
+                  </UButton>
+                  <UButton
                     variant="ghost"
                     size="sm"
                     class="text-[10px] py-0.5 px-2 text-zinc-400"
                     @click="cancelEditTemplate"
                   >
                     取消
-                  </RekaButton>
+                  </UButton>
                 </div>
               </div>
             </template>
@@ -328,14 +328,14 @@ function handleStop() {
 
       <!-- Footer -->
       <div class="border-t border-zinc-100 px-3 py-2 shrink-0">
-        <RekaButton
+        <UButton
           variant="ghost"
           size="sm"
           class="w-full text-[11px] text-zinc-500"
           @click="showTemplateManager = !showTemplateManager"
         >
           {{ showTemplateManager ? '返回模板列表' : '管理模板' }}
-        </RekaButton>
+        </UButton>
       </div>
     </div>
 
@@ -343,14 +343,14 @@ function handleStop() {
       <div class="flex items-center justify-between px-3 pt-2">
         <div class="flex items-center gap-1">
           <!-- Template button -->
-          <RekaButton
+          <UButton
             variant="ghost"
             size="sm"
             class="p-1.5"
             @click="toggleTemplatePanel"
           >
             <BookTemplate class="w-3.5 h-3.5 text-zinc-500" />
-          </RekaButton>
+          </UButton>
           <div class="w-px h-5 bg-zinc-200" />
 
           <ModelSelect
@@ -360,16 +360,16 @@ function handleStop() {
             :multiple="true"
             @update:model-value="handleModelChange"
           />
-          <RekaButton v-else variant="ghost" size="sm" class="text-[11px] text-zinc-400">
+          <UButton v-else variant="ghost" size="sm" class="text-[11px] text-zinc-400">
             <Cpu class="w-3 h-3" />
             No model
-          </RekaButton>
+          </UButton>
         </div>
 
-        <RekaButton variant="ghost" size="sm" class="text-[11px] text-zinc-400">
+        <UButton variant="ghost" size="sm" class="text-[11px] text-zinc-400">
           <Paperclip class="w-3 h-3" />
           {{ contextLabel }}
-        </RekaButton>
+        </UButton>
       </div>
 
       <div class="relative">
@@ -380,7 +380,7 @@ function handleStop() {
         >
           {{ chatStore.lastError }}
         </div>
-        <RekaTextarea
+        <UTextarea
           :model-value="chatStore.inputText"
           :rows="1"
           auto-height
@@ -390,7 +390,7 @@ function handleStop() {
           @keydown="handleKeydown"
         />
         <!-- Send button -->
-        <RekaButton
+        <UButton
           v-if="!chatStore.isStreaming"
           variant="primary"
           class="absolute right-2 bottom-2 p-1.5 !rounded-lg"
@@ -399,16 +399,16 @@ function handleStop() {
         >
           <Send class="w-3.5 h-3.5" />
           <span v-if="sendLabel" class="ml-1 text-[11px]">{{ sendLabel }}</span>
-        </RekaButton>
+        </UButton>
         <!-- Stop button during streaming -->
-        <RekaButton
+        <UButton
           v-else
           variant="ghost"
           class="absolute right-2 bottom-2 p-1.5 !rounded-lg text-red-500"
           @click="handleStop"
         >
           <Square class="w-3.5 h-3.5" />
-        </RekaButton>
+        </UButton>
       </div>
     </div>
   </div>
