@@ -5,6 +5,7 @@ import type { ConversationEntity } from '../types/chat'
 import type { ModelConfig } from '../types/model'
 import type { AppSettings } from '../types/settings'
 import type { PromptTemplate } from '../types/prompt-template'
+import type { CollectionEntity, CollectionItemEntity } from '../types/collection'
 
 export class AuraMindDB extends Dexie {
   documents!: Table<DocumentEntity, string>
@@ -12,6 +13,8 @@ export class AuraMindDB extends Dexie {
   models!: Table<ModelConfig, string>
   settings!: Table<AppSettings, 'app-settings'>
   promptTemplates!: Table<PromptTemplate, string>
+  collections!: Table<CollectionEntity, string>
+  collectionItems!: Table<CollectionItemEntity, string>
 
   constructor() {
     super('AuraMindDB')

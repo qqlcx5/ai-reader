@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
-import { MessageSquare, Trash2, Globe, ExternalLink } from '@lucide/vue'
+import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus } from '@lucide/vue'
 import type { DocumentEntity } from '@/types/document'
 
 const props = defineProps<{
@@ -13,6 +13,7 @@ const emit = defineEmits<{
   chat: [doc: DocumentEntity]
   delete: [doc: DocumentEntity]
   openUrl: [doc: DocumentEntity]
+  addToCollection: [doc: DocumentEntity]
 }>()
 
 const unread = computed(() => !props.document.lastOpenedAt)
@@ -96,13 +97,16 @@ const excerpt = computed(() => {
     </div>
 
     <div class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
-      <button class="p-1 rounded-md text-zinc-500 hover:bg-zinc-100" @click.stop="emit('openUrl', document)">
+      <button class="p-1 rounded-md text-zinc-500 hover:bg-zinc-100" title="打开原网页" @click.stop="emit('openUrl', document)">
         <ExternalLink class="w-3.5 h-3.5" />
       </button>
-      <button class="p-1 rounded-md text-brand hover:bg-indigo-50" @click.stop="emit('chat', document)">
+      <button class="p-1 rounded-md text-amber-600 hover:bg-amber-50" title="加入合集" @click.stop="emit('addToCollection', document)">
+        <FolderPlus class="w-3.5 h-3.5" />
+      </button>
+      <button class="p-1 rounded-md text-brand hover:bg-indigo-50" title="对话" @click.stop="emit('chat', document)">
         <MessageSquare class="w-3.5 h-3.5" />
       </button>
-      <button class="p-1 rounded-md text-red-500 hover:bg-red-50" @click.stop="emit('delete', document)">
+      <button class="p-1 rounded-md text-red-500 hover:bg-red-50" title="删除" @click.stop="emit('delete', document)">
         <Trash2 class="w-3.5 h-3.5" />
       </button>
     </div>

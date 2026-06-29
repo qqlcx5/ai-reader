@@ -41,6 +41,8 @@ const temperature = ref(0.9)
 const systemPrompt = ref('')
 const enabled = ref(true)
 const isDefault = ref(false)
+const thinkingEnabled = ref(false)
+const thinkingBudgetTokens = ref(0)
 
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
@@ -131,6 +133,7 @@ async function handleSubmit() {
         apiKey: apiKey.value || undefined,
         contextWindow: contextWindow.value,
         temperature: temperature.value,
+        thinking: buildThinkingConfig(),
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value,
@@ -147,6 +150,7 @@ async function handleSubmit() {
         apiKey: apiKey.value || undefined,
         contextWindow: contextWindow.value,
         temperature: temperature.value,
+        thinking: buildThinkingConfig(),
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value || modelStore.models.length === 0,

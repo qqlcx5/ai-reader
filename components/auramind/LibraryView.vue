@@ -4,6 +4,7 @@ import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
+import { useCollectionStore } from '@/stores/collection.store'
 import { searchDocuments } from '@/services/search'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import type { DocumentEntity } from '@/types/document'
@@ -11,11 +12,14 @@ import SearchBar from '@/components/library/SearchBar.vue'
 import DocumentItem from '@/components/library/DocumentItem.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import Heatmap from './Heatmap.vue'
+import CollectionDialog from './CollectionDialog.vue'
+import CollectionPickerDialog from './CollectionPickerDialog.vue'
 
 const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
 const documentStore = useDocumentStore()
 const chatStore = useChatStore()
+const collectionStore = useCollectionStore()
 
 const searchQuery = ref('')
 const showDeleteConfirm = ref(false)
@@ -84,11 +88,26 @@ const hasActiveFilter = computed(
     !!searchQuery.value.trim() ||
     statusFilter.value !== 'all' ||
     !!siteFilter.value ||
-    !!tagFilter.value,
+    !!tagFilter.value ||
+    !!collectionStore.selectedCollectionId,
 )
 
 const displayedDocs = computed(() => {
-  const docs = documentStore.documents.filter((d) => {
+  let docs: DocumentEntity[]
+  let preserveOrder = false
+
+  // When a collection is selected, restrict to its docs and keep reading order.
+  if (collectionStore.selectedCollectionId) {
+    const byId = new Map(documentStore.documents.map((d) => [d.id, d]))
+    docs = collectionStore.selectedDocIds
+      .map((id) => byId.get(id))
+      .filter((d): d is DocumentEntity => !!d)
+    preserveOrder = true
+  } else {
+    docs = documentStore.documents
+  }
+
+  docs = docs.filter((d) => {
     if (selectedDate.value && dateKey(new Date(d.capturedAt)) !== selectedDate.value) return false
     if (siteFilter.value && getSite(d) !== siteFilter.value) return false
     if (tagFilter.value && !(d.tags || []).includes(tagFilter.value)) return false
@@ -104,7 +123,9 @@ const displayedDocs = computed(() => {
     filtered = docs.filter((d) => idSet.has(d.id))
   }
 
-  filtered = filtered.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+  if (!preserveOrder) {
+    filtered = filtered.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+  }
   return hasActiveFilter.value ? filtered : filtered.slice(0, 20)
 })
 
@@ -119,6 +140,7 @@ async function loadConversationIndex() {
 
 onMounted(() => {
   loadConversationIndex()
+  collectionStore.loadCollections()
   nextTick(setupLoadMore)
 })
 
@@ -168,6 +190,80 @@ function onHeatmapSelect(key: string) {
 
 function clearDateFilter() {
   selectedDate.value = null
+}
+
+// ── Collections ──
+const showCollectionDialog = ref(false)
+const collectionDialogMode = ref<'create' | 'rename'>('create')
+const renameTargetId = ref<string | undefined>(undefined)
+const showPicker = ref(false)
+const pickerDocumentId = ref<string | null>(null)
+const pickerDocumentTitle = ref('')
+const showDeleteCollectionConfirm = ref(false)
+const deleteCollectionTargetId = ref<string | undefined>(undefined)
+
+function openCreateCollection() {
+  collectionDialogMode.value = 'create'
+  renameTargetId.value = undefined
+  showCollectionDialog.value = true
+}
+
+function openRenameCollection() {
+  if (!collectionStore.selectedCollection) return
+  collectionDialogMode.value = 'rename'
+  renameTargetId.value = collectionStore.selectedCollection.id
+  showCollectionDialog.value = true
+}
+
+async function submitCollection(name: string, description: string) {
+  let created
+  if (collectionDialogMode.value === 'create') {
+    created = await collectionStore.createCollection(name, description)
+  } else if (renameTargetId.value) {
+    await collectionStore.renameCollection(renameTargetId.value, name)
+  }
+  showCollectionDialog.value = false
+
+  // Launched from the picker: add the pending doc to the freshly created collection, then reopen.
+  if (created && pendingPickerDocId.value) {
+    await collectionStore.addDocument(created.id, pendingPickerDocId.value)
+    pickerDocumentId.value = pendingPickerDocId.value
+    pendingPickerDocId.value = null
+    showPicker.value = true
+  }
+}
+
+function requestDeleteCollection() {
+  if (!collectionStore.selectedCollection) return
+  deleteCollectionTargetId.value = collectionStore.selectedCollection.id
+  showDeleteCollectionConfirm.value = true
+}
+
+async function confirmDeleteCollection() {
+  if (!deleteCollectionTargetId.value) return
+  await collectionStore.deleteCollection(deleteCollectionTargetId.value)
+  showDeleteCollectionConfirm.value = false
+  deleteCollectionTargetId.value = undefined
+}
+
+function openPicker(doc: DocumentEntity) {
+  pickerDocumentId.value = doc.id
+  pickerDocumentTitle.value = doc.title || ''
+  showPicker.value = true
+}
+
+// "新建合集" launched from inside the picker: close picker, open create dialog,
+// keep the target doc so we can add it after creation.
+const pendingPickerDocId = ref<string | null>(null)
+function pickerCreateCollection() {
+  pendingPickerDocId.value = pickerDocumentId.value
+  showPicker.value = false
+  openCreateCollection()
+}
+
+async function handleAddToCollection(doc: DocumentEntity) {
+  await collectionStore.loadCollections()
+  openPicker(doc)
 }
 
 async function handleDocumentClick(doc: DocumentEntity) {
@@ -243,6 +339,44 @@ function cancelDelete() {
       <!-- Heatmap -->
       <Heatmap :selected-key="selectedDate" @select="onHeatmapSelect" />
 
+      <!-- Collections -->
+      <div class="px-4 py-2.5 border-b border-zinc-100">
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <button
+            class="shrink-0 inline-flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] text-zinc-500 border border-dashed border-zinc-300 hover:border-brand hover:text-brand transition-colors"
+            @click="openCreateCollection"
+          >
+            + 新建合集
+          </button>
+          <button
+            v-for="c in collectionStore.collections"
+            :key="c.id"
+            class="shrink-0 px-2 py-1 rounded-md text-[11px] transition-colors max-w-[160px]"
+            :class="collectionStore.selectedCollectionId === c.id ? 'bg-brand text-white font-medium' : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'"
+            :title="c.name"
+            @click="collectionStore.selectCollection(c.id)"
+          >
+            <span class="truncate">{{ c.name }}</span>
+            <span class="opacity-60 ml-1">{{ collectionStore.counts[c.id] ?? 0 }}</span>
+          </button>
+        </div>
+
+        <!-- Selected collection manage bar -->
+        <div
+          v-if="collectionStore.selectedCollection"
+          class="mt-2 flex items-center justify-between bg-indigo-50/70 border border-indigo-100 rounded-lg px-2.5 py-1.5"
+        >
+          <span class="text-[11px] text-indigo-700 font-medium truncate">
+            {{ collectionStore.selectedCollection.name }} · {{ collectionStore.selectedDocIds.length }} 篇
+          </span>
+          <span class="flex items-center gap-2 shrink-0 text-[11px]">
+            <button class="text-indigo-600 hover:text-indigo-800" @click="openRenameCollection">重命名</button>
+            <button class="text-red-500 hover:text-red-700" @click="requestDeleteCollection">删除</button>
+            <button class="text-zinc-400 hover:text-zinc-600" @click="collectionStore.clearSelection()">取消</button>
+          </span>
+        </div>
+      </div>
+
       <!-- Facets -->
       <div v-if="documentStore.documents.length" class="px-4 py-2.5 border-b border-zinc-100 space-y-2">
         <div class="inline-flex bg-zinc-100 rounded-lg p-0.5 text-[11px]">
@@ -308,6 +442,7 @@ function cancelDelete() {
           @chat="handleChatClick"
           @open-url="handleOpenUrl"
           @delete="requestDelete"
+          @add-to-collection="handleAddToCollection"
         />
 
         <div v-if="hasMore" ref="sentinelRef" class="flex items-center justify-center py-3 text-[11px] text-zinc-400">
@@ -331,6 +466,33 @@ function cancelDelete() {
       :desc="`确定删除文档「${deleteTargetName}」吗？关联的对话记录也将被删除。此操作不可撤销。`"
       @confirm="confirmDelete"
       @cancel="cancelDelete"
+    />
+
+    <!-- Collection Delete Confirm -->
+    <ConfirmModal
+      v-if="showDeleteCollectionConfirm"
+      title="删除合集"
+      desc="确定删除这个合集吗？合集内的文档不会被删除，只是移出合集。此操作不可撤销。"
+      @confirm="confirmDeleteCollection"
+      @cancel="showDeleteCollectionConfirm = false"
+    />
+
+    <!-- Collection Create / Rename -->
+    <CollectionDialog
+      :open="showCollectionDialog"
+      :mode="collectionDialogMode"
+      :initial-name="collectionDialogMode === 'rename' ? (collectionStore.selectedCollection?.name ?? '') : ''"
+      @close="showCollectionDialog = false"
+      @submit="submitCollection"
+    />
+
+    <!-- Add to Collection Picker -->
+    <CollectionPickerDialog
+      :open="showPicker"
+      :document-id="pickerDocumentId"
+      :document-title="pickerDocumentTitle"
+      @close="showPicker = false"
+      @create="pickerCreateCollection"
     />
   </div>
 </template>
