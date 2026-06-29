@@ -16,7 +16,10 @@ declare module 'webdav/web' {
       data: string | ArrayBuffer,
       options?: { overwrite?: boolean },
     ): Promise<boolean>
-    getFileContents(path: string, options?: { format?: boolean }): Promise<string | ArrayBuffer>
+    getFileContents(
+      path: string,
+      options?: { format?: 'text' | 'binary' },
+    ): Promise<string | ArrayBuffer>
     deleteFile(path: string): Promise<void>
   }
 

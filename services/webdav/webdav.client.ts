@@ -50,7 +50,7 @@ export function createWebDAVRemote(cfg: WebDAVConfig): WebDAVRemote {
       await client.putFileContents(`${base}/${path}`, text, { overwrite: true })
     },
     async getText(path) {
-      const data = await client.getFileContents(`${base}/${path}`, { format: true })
+      const data = await client.getFileContents(`${base}/${path}`, { format: 'text' })
       return typeof data === 'string' ? data : new TextDecoder().decode(data)
     },
     async remove(path) {
