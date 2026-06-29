@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -119,6 +119,43 @@ async function loadConversationIndex() {
 
 onMounted(() => {
   loadConversationIndex()
+  nextTick(setupLoadMore)
+})
+
+// Incremental render: bound DOM nodes by rendering PAGE_SIZE at a time,
+// appending as the user nears the bottom. Avoids windowing jitter on
+// variable-height cards; enough to scale to thousands of captures.
+const PAGE_SIZE = 20
+const visibleCount = ref(PAGE_SIZE)
+const scrollRootRef = ref<HTMLElement | null>(null)
+const sentinelRef = ref<HTMLElement | null>(null)
+let loadMoreObserver: IntersectionObserver | null = null
+
+const pagedDocs = computed(() => displayedDocs.value.slice(0, visibleCount.value))
+const hasMore = computed(() => visibleCount.value < displayedDocs.value.length)
+
+function setupLoadMore() {
+  loadMoreObserver?.disconnect()
+  if (!sentinelRef.value || !scrollRootRef.value) return
+  loadMoreObserver = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting && hasMore.value) {
+        visibleCount.value += PAGE_SIZE
+      }
+    },
+    { root: scrollRootRef.value, rootMargin: '240px' },
+  )
+  loadMoreObserver.observe(sentinelRef.value)
+}
+
+// Reset paging whenever the filtered set changes (filter toggle / search / delete).
+watch(displayedDocs, () => {
+  visibleCount.value = PAGE_SIZE
+  nextTick(setupLoadMore)
+})
+
+onUnmounted(() => {
+  loadMoreObserver?.disconnect()
 })
 
 function onSearch(query: string) {
@@ -197,7 +234,7 @@ function cancelDelete() {
 
 <template>
   <div class="flex-1 min-h-0 flex-col bg-[#FCFCFC] flex">
-    <div class="flex-1 min-h-0 overflow-y-auto">
+    <div ref="scrollRootRef" class="flex-1 min-h-0 overflow-y-auto">
       <!-- Search -->
       <div class="sticky top-0 z-10 p-4 pb-3 bg-[#FCFCFC]/95 backdrop-blur-md border-b border-zinc-100">
         <SearchBar v-model="searchQuery" @search="onSearch" />
@@ -263,7 +300,7 @@ function cancelDelete() {
         </div>
 
         <DocumentItem
-          v-for="doc in displayedDocs"
+          v-for="doc in pagedDocs"
           :key="doc.id"
           :document="doc"
           :has-conversation="conversationDocIds.has(doc.id)"
@@ -272,6 +309,14 @@ function cancelDelete() {
           @open-url="handleOpenUrl"
           @delete="requestDelete"
         />
+
+        <div v-if="hasMore" ref="sentinelRef" class="flex items-center justify-center py-3 text-[11px] text-zinc-400">
+          加载更多…
+        </div>
+
+        <div v-else-if="displayedDocs.length > PAGE_SIZE" class="flex items-center justify-center py-3 text-[11px] text-zinc-300">
+          没有更多了
+        </div>
 
         <div v-if="displayedDocs.length === 0" class="text-center py-8 text-[13px] text-zinc-400">
           {{ selectedDate ? `${formatDateLabel(selectedDate)} 没有捕获` : (hasActiveFilter ? '没有匹配的文档' : '暂无捕获的文档') }}
