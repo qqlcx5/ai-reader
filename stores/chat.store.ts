@@ -517,7 +517,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     // Truncate context before building the prompt (was previously done
-    // post-build by checking m.role === 'system', but context is now assistant-role).
+    // post-build by checking m.role === 'system', but context is now user-role).
     const maxTokens = Math.min(
       model.contextWindow,
       settings.context.maxContextTokens,

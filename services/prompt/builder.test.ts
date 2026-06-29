@@ -23,7 +23,7 @@ describe('PromptBuilder', () => {
     expect(result.messages[0]).toEqual({ role: 'user', content: 'Hi' })
   })
 
-  it('should inject context as an assistant message before history and user input', () => {
+  it('should inject context as an user message before history and user input', () => {
     const result = builder.build({
       context: '# Page Content',
       history: [
@@ -34,7 +34,7 @@ describe('PromptBuilder', () => {
     })
 
     expect(result.messages).toHaveLength(4)
-    expect(result.messages[0]).toEqual({ role: 'assistant', content: '# Page Content' })
+    expect(result.messages[0]).toEqual({ role: 'user', content: '# Page Content' })
     expect(result.messages[1]).toEqual({ role: 'user', content: 'Previous Q' })
     expect(result.messages[2]).toEqual({ role: 'assistant', content: 'Previous A' })
     expect(result.messages[3]).toEqual({ role: 'user', content: 'Current Q' })
@@ -70,7 +70,7 @@ describe('PromptBuilder', () => {
     })
 
     expect(result.messages).toHaveLength(2)
-    expect(result.messages[0]).toEqual({ role: 'assistant', content: 'Ctx' })
+    expect(result.messages[0]).toEqual({ role: 'user', content: 'Ctx' })
     expect(result.messages[1]).toEqual({ role: 'user', content: 'Q' })
   })
 
@@ -94,7 +94,7 @@ describe('PromptBuilder', () => {
 
     expect(result.system).toBe('System prompt')
     expect(result.messages).toHaveLength(3)
-    expect(result.messages[0]).toEqual({ role: 'assistant', content: 'Context info' })
+    expect(result.messages[0]).toEqual({ role: 'user', content: 'Context info' })
     expect(result.messages[1]).toEqual({ role: 'user', content: 'Hist' })
     expect(result.messages[2]).toEqual({ role: 'user', content: 'Question' })
   })
