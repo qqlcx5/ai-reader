@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt'
+import { resolve } from 'node:path';
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -12,7 +13,17 @@ export default defineConfig({
     excludeEntrypoints: ['background'],
   },
   webExt: {
-    chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
+    // Mac
+    // chromiumProfile: './.wxt/chrome-data',
+    // binaries: {
+    //   chrome: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    // },
+    chromiumProfile: resolve('.wxt/chrome-data'),
+    // chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
+    keepProfileChanges: true,
+    startUrls: ['https://www.bestblogs.dev/article/3ff37d3c'],
+    // 保持配置文件变更时重启浏览器
     openDevtools: true,
+    openConsole: true
   },
 })
