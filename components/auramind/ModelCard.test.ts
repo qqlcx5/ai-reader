@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ModelCard from './ModelCard.vue'
 import type { ModelConfig } from '@/types/model'
-import { useModelStore } from '@/stores/model.store'
+import Switch from '@/components/ui/Switch.vue'
 
 vi.mock('@lucide/vue', () => ({
   Settings: { name: 'Settings', template: '<span class="mock-settings" />', props: ['class', 'size'] },
@@ -129,6 +129,18 @@ describe('ModelCard', () => {
     await wrapper.find('[title="复制模型"]').trigger('click')
     expect(wrapper.emitted('duplicate')).toBeTruthy()
     expect(wrapper.emitted('duplicate')![0]).toEqual(['m3'])
+  })
+
+  it('emits toggleEnabled when switch value changes', async () => {
+    const wrapper = mount(ModelCard, {
+      props: { model: makeModel({ id: 'm6', enabled: true }) },
+    })
+
+    wrapper.findComponent(Switch).vm.$emit('update:modelValue', false)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('toggleEnabled')).toBeTruthy()
+    expect(wrapper.emitted('toggleEnabled')![0]).toEqual(['m6', false])
   })
 
   it('emits ping when ping button clicked', async () => {

@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { Settings, Trash2, Cpu, Bot, Box, Copy, Activity } from '@lucide/vue'
 import Switch from '@/components/ui/Switch.vue'
 import type { ModelConfig } from '@/types/model'
-import { useModelStore } from '@/stores/model.store'
 
 const props = defineProps<{
   model: ModelConfig
@@ -14,9 +13,8 @@ const emit = defineEmits<{
   delete: [id: string]
   duplicate: [id: string]
   ping: [id: string]
+  toggleEnabled: [id: string, value: boolean]
 }>()
-
-const modelStore = useModelStore()
 
 const displayBaseUrl = computed(() => {
   const url = props.model.baseUrl || ''
@@ -70,10 +68,6 @@ const statusLabel = computed(() => {
   }
 })
 
-function onToggleEnabled(val: boolean) {
-  modelStore.editModel({ ...props.model, enabled: val, updatedAt: new Date().toISOString() })
-}
-
 function onPing() {
   if (props.model.lastTestStatus === 'testing') return
   emit('ping', props.model.id)
@@ -111,7 +105,10 @@ function onPing() {
           :title="statusLabel"
         />
 
-        <Switch :model-value="model.enabled" @update:model-value="onToggleEnabled" />
+        <Switch
+          :model-value="model.enabled"
+          @update:model-value="emit('toggleEnabled', model.id, $event)"
+        />
 
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"

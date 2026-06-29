@@ -8,6 +8,11 @@ function generateUUID(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
+export interface ToggleEnabledResult {
+  success: boolean
+  reason?: 'not-found' | 'default-model' | 'last-enabled'
+}
+
 export const useModelStore = defineStore('model', () => {
   const models = ref<ModelConfig[]>([])
   const currentModelId = ref<string | null>(null)
@@ -99,6 +104,48 @@ export const useModelStore = defineStore('model', () => {
     await loadModels()
   }
 
+  async function toggleEnabled(id: string, enabled: boolean): Promise<ToggleEnabledResult> {
+    const model = models.value.find(m => m.id === id)
+    if (!model) {
+      return { success: false, reason: 'not-found' }
+    }
+
+    if (model.enabled === enabled) {
+      return { success: true }
+    }
+
+    const enabledModelsBeforeToggle = models.value.filter(m => m.enabled)
+    if (!enabled) {
+      if (model.isDefault) {
+        return { success: false, reason: 'default-model' }
+      }
+
+      if (enabledModelsBeforeToggle.length <= 1) {
+        return { success: false, reason: 'last-enabled' }
+      }
+    }
+
+    await ModelRepository.save({
+      ...toRaw(model),
+      enabled,
+      updatedAt: new Date().toISOString(),
+    } as ModelConfig)
+    await loadModels()
+
+    if (!enabled) {
+      selectedModelIds.value = selectedModelIds.value.filter(mid => mid !== id)
+
+      if (currentModelId.value === id) {
+        const fallbackModel = defaultModel.value?.enabled
+          ? defaultModel.value
+          : models.value.find(m => m.enabled) ?? null
+        currentModelId.value = fallbackModel?.id ?? null
+      }
+    }
+
+    return { success: true }
+  }
+
   async function deleteModel(id: string) {
     await ModelRepository.delete(id)
     if (currentModelId.value === id) currentModelId.value = null
@@ -166,6 +213,7 @@ export const useModelStore = defineStore('model', () => {
     addModel,
     duplicateModel,
     editModel,
+    toggleEnabled,
     deleteModel,
     selectModel,
     toggleModelSelection,

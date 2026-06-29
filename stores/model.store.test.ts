@@ -156,6 +156,64 @@ describe('stores/model.store — add/edit/delete/setDefault', () => {
     expect(store.models.find(m => m.id === 'm2')?.isDefault).toBe(true)
   })
 
+  it('toggleEnabled should disable a non-default model', async () => {
+    const store = useModelStore()
+    const m1 = makeModel({ id: 'm1', isDefault: true, enabled: true })
+    const m2 = makeModel({ id: 'm2', isDefault: false, enabled: true, name: 'Second' })
+    await ModelRepository.save(m1)
+    await ModelRepository.save(m2)
+    await store.loadModels()
+
+    const result = await store.toggleEnabled('m2', false)
+
+    expect(result).toEqual({ success: true })
+    expect(store.models.find(m => m.id === 'm2')?.enabled).toBe(false)
+  })
+
+  it('toggleEnabled should block disabling default model', async () => {
+    const store = useModelStore()
+    const m1 = makeModel({ id: 'm1', isDefault: true, enabled: true })
+    const m2 = makeModel({ id: 'm2', isDefault: false, enabled: true, name: 'Second' })
+    await ModelRepository.save(m1)
+    await ModelRepository.save(m2)
+    await store.loadModels()
+
+    const result = await store.toggleEnabled('m1', false)
+
+    expect(result).toEqual({ success: false, reason: 'default-model' })
+    expect(store.models.find(m => m.id === 'm1')?.enabled).toBe(true)
+  })
+
+  it('toggleEnabled should block disabling last enabled model', async () => {
+    const store = useModelStore()
+    const m1 = makeModel({ id: 'm1', isDefault: false, enabled: true })
+    await ModelRepository.save(m1)
+    await store.loadModels()
+
+    const result = await store.toggleEnabled('m1', false)
+
+    expect(result).toEqual({ success: false, reason: 'last-enabled' })
+    expect(store.models.find(m => m.id === 'm1')?.enabled).toBe(true)
+  })
+
+  it('toggleEnabled should switch current model when current one is disabled', async () => {
+    const store = useModelStore()
+    const m1 = makeModel({ id: 'm1', isDefault: true, enabled: true, name: 'Default' })
+    const m2 = makeModel({ id: 'm2', isDefault: false, enabled: true, name: 'Second' })
+    const m3 = makeModel({ id: 'm3', isDefault: false, enabled: true, name: 'Third' })
+    await ModelRepository.save(m1)
+    await ModelRepository.save(m2)
+    await ModelRepository.save(m3)
+    await store.loadModels()
+    store.selectModel('m2')
+
+    const result = await store.toggleEnabled('m2', false)
+
+    expect(result).toEqual({ success: true })
+    expect(store.currentModelId).toBe('m1')
+    expect(store.selectedModelIds).not.toContain('m2')
+  })
+
   it('deleteModel should remove model', async () => {
     const store = useModelStore()
     const m1 = makeModel({ id: 'm1' })
@@ -228,5 +286,11 @@ describe('stores/model.store — add/edit/delete/setDefault', () => {
     const store = useModelStore()
     const duplicated = await store.duplicateModel('missing')
     expect(duplicated).toBeNull()
+  })
+
+  it('toggleEnabled should return not-found for non-existent model', async () => {
+    const store = useModelStore()
+    const result = await store.toggleEnabled('missing', false)
+    expect(result).toEqual({ success: false, reason: 'not-found' })
   })
 })

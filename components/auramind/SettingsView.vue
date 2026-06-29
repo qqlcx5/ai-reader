@@ -99,6 +99,24 @@ async function duplicateModel(id: string) {
 
   appStore.showToast(`已复制模型：${duplicated.name}`, 'success')
 }
+
+async function handleToggleEnabled(id: string, enabled: boolean) {
+  const result = await modelStore.toggleEnabled(id, enabled)
+  if (result.success) {
+    return
+  }
+
+  switch (result.reason) {
+    case 'default-model':
+      appStore.showToast('默认模型不能直接禁用，请先将其他模型设为默认', 'error')
+      break
+    case 'last-enabled':
+      appStore.showToast('至少需要保留一个启用中的模型', 'error')
+      break
+    default:
+      appStore.showToast('切换模型状态失败', 'error')
+  }
+}
 </script>
 
 <template>
@@ -126,6 +144,7 @@ async function duplicateModel(id: string) {
             :key="model.id"
             :model="model"
             @duplicate="duplicateModel"
+            @toggle-enabled="handleToggleEnabled"
             @ping="testModelConnection"
             @edit="openEditDialog"
             @delete="requestDelete"
