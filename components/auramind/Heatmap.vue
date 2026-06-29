@@ -1,247 +1,209 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useDocumentStore } from '@/stores/document.store'
 
 const documentStore = useDocumentStore()
-const gridRef = ref<HTMLElement | null>(null)
 const scrollRef = ref<HTMLElement | null>(null)
-const weekdayRef = ref<HTMLElement | null>(null)
-const monthRef = ref<HTMLElement | null>(null)
-const tooltipRef = ref<HTMLElement | null>(null)
-const tooltipText = ref('')
-const isReady = ref(false)
 
-const colors = ['bg-zinc-100', 'bg-emerald-200', 'bg-emerald-400', 'bg-emerald-600']
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
-const rows = 7
-const cellSize = 9
-const gridGap = 3
-const weekdayLabelWidth = 28
-const cols = ref(30)
-const totalCells = computed(() => cols.value * rows)
+// GitHub contribution graph: 53 weeks, Mon-start weeks, 5-level green scale.
+const WEEKS = 53
+const CELL = 11
+const GAP = 3
+const STEP = CELL + GAP
+const WEEKDAY_COL = 24
 
-let observer: ResizeObserver | null = null
-let rafId: number | null = null
+const LEVEL_CLASS = [
+  'bg-[#ebedf0]',
+  'bg-[#9be9a8]',
+  'bg-[#40c463]',
+  'bg-[#30a14e]',
+  'bg-[#216e39]',
+]
 
-function updateCols() {
-  const scroll = scrollRef.value
-  if (!scroll) return
-  const newCols = Math.max(1, Math.floor((scroll.clientWidth - weekdayLabelWidth + gridGap) / (cellSize + gridGap)))
-  if (newCols !== cols.value) {
-    cols.value = newCols
-  }
+const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
+const WEEKDAY_ROWS = [
+  { label: '一', show: true },
+  { label: '二', show: false },
+  { label: '三', show: true },
+  { label: '四', show: false },
+  { label: '五', show: true },
+  { label: '六', show: false },
+  { label: '日', show: false },
+]
+
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+function levelFor(count: number) {
+  if (count <= 0) return 0
+  if (count <= 2) return 1
+  if (count <= 4) return 2
+  if (count <= 7) return 3
+  return 4
 }
 
-function getDateKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-function buildCountMap(): Map<string, number> {
-  const map = new Map<string, number>()
+const countMap = computed(() => {
+  const m = new Map<string, number>()
   for (const doc of documentStore.documents) {
     if (!doc.capturedAt) continue
-    const key = getDateKey(new Date(doc.capturedAt))
-    map.set(key, (map.get(key) || 0) + 1)
+    const key = dateKey(new Date(doc.capturedAt))
+    m.set(key, (m.get(key) || 0) + 1)
   }
-  return map
+  return m
+})
+
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+const todayDow = (today.getDay() + 6) % 7 // Mon=0 … Sun=6
+const startDate = new Date(today)
+startDate.setDate(today.getDate() - todayDow - (WEEKS - 1) * 7)
+
+interface Cell {
+  key: string
+  date: Date
+  count: number
+  level: number
+  future: boolean
 }
 
-function intensityFromCount(count: number): number {
-  if (count === 0) return 0
-  if (count <= 2) return 1
-  if (count <= 5) return 2
-  return 3
-}
-
-function buildHeatmap() {
-  const grid = gridRef.value
-  if (!grid || grid.children.length > 0) return
-
-  const countMap = buildCountMap()
-  const today = new Date()
-  const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  const startDate = new Date(endDate)
-  startDate.setDate(startDate.getDate() - totalCells.value + 1)
-
-  // ── Weekday labels ──
-  const wc = weekdayRef.value
-  if (wc) {
-    const startDow = startDate.getDay() // 0=Sun
-    const startIdx = (startDow + 6) % 7 // 0=Mon in WEEKDAYS
-
-    for (let i = 0; i < rows; i++) {
-      const div = document.createElement('div')
-      div.style.cssText = 'height:9px;display:flex;align-items:center;justify-content:flex-end'
-      const wd = (startIdx + i) % 7
-      if (wd === 0 || wd === 2 || wd === 4) {
-        div.textContent = WEEKDAYS[wd]
-        div.className = 'text-[9px] text-zinc-400'
-      }
-      wc.appendChild(div)
-    }
-  }
-
-  // ── Month labels ──
-  const mc = monthRef.value
-  if (mc) {
-    let prevMonth = -1
-    let monthStartCol = 0
-    const months: { label: string; span: number }[] = []
-
-    for (let week = 0; week < cols.value; week++) {
+const cells = computed<Cell[]>(() => {
+  const cm = countMap.value
+  const out: Cell[] = []
+  for (let c = 0; c < WEEKS; c++) {
+    for (let r = 0; r < 7; r++) {
       const d = new Date(startDate)
-      d.setDate(d.getDate() + week * rows)
-      const month = d.getMonth()
-
-      if (month !== prevMonth) {
-        if (prevMonth >= 0) {
-          months.push({ label: `${prevMonth + 1}月`, span: week - monthStartCol })
-        }
-        prevMonth = month
-        monthStartCol = week
-      }
-    }
-    if (prevMonth >= 0) {
-      months.push({ label: `${prevMonth + 1}月`, span: cols.value - monthStartCol })
-    }
-
-    for (const m of months) {
-      const div = document.createElement('div')
-      div.textContent = m.label
-      div.className = 'text-[10px] text-zinc-500 whitespace-nowrap'
-      div.style.width = `${m.span * (cellSize + gridGap) - gridGap}px`
-      mc.appendChild(div)
+      d.setDate(startDate.getDate() + c * 7 + r)
+      const future = d.getTime() > today.getTime()
+      const count = future ? 0 : cm.get(dateKey(d)) || 0
+      out.push({ key: dateKey(d), date: d, count, level: levelFor(count), future })
     }
   }
+  return out
+})
 
-  // ── Cells ──
-  const dateLabels: string[] = []
-  const dayCounts: number[] = []
-  for (let i = 0; i < totalCells.value; i++) {
+const monthLabels = computed(() => {
+  const labels: { label: string; col: number }[] = []
+  let prev = -1
+  for (let c = 0; c < WEEKS; c++) {
     const d = new Date(startDate)
-    d.setDate(d.getDate() + i)
-    const key = getDateKey(d)
-    dateLabels.push(key)
-    dayCounts.push(countMap.get(key) || 0)
-  }
-
-  for (let cellIdx = 0; cellIdx < totalCells.value; cellIdx++) {
-    const count = dayCounts[cellIdx]
-    const intensity = intensityFromCount(count)
-    const dateKey = dateLabels[cellIdx]
-
-    const square = document.createElement('div')
-    square.className = `${colors[intensity]} hover:scale-125 transition-transform cursor-crosshair`
-    square.style.cssText = 'width:9px;height:9px;border-radius:2px;flex-shrink:0'
-
-    square.addEventListener('mouseenter', (e) => {
-      const rect = square.getBoundingClientRect()
-      tooltipText.value = count === 0
-        ? `无捕获 — 这一天没有新增知识`
-        : `捕获 ${count} 篇`
-      const tip = tooltipRef.value
-      if (tip) {
-        tip.style.left = `${rect.left + rect.width / 2}px`
-        tip.style.top = `${rect.top - 8}px`
-        tip.classList.remove('hidden', 'opacity-0')
-      }
-    })
-
-    square.addEventListener('mouseleave', () => {
-      const tip = tooltipRef.value
-      if (tip) {
-        tip.classList.add('opacity-0')
-        setTimeout(() => tip.classList.add('hidden'), 150)
-      }
-    })
-
-    grid.appendChild(square)
-  }
-
-  const scroll = scrollRef.value
-  if (scroll) {
-    setTimeout(() => { scroll.scrollLeft = scroll.scrollWidth }, 0)
-  }
-}
-
-function clearAll() {
-  ;[gridRef.value, weekdayRef.value, monthRef.value].forEach((el) => {
-    if (el) while (el.firstChild) el.removeChild(el.firstChild)
-  })
-}
-
-// Rebuild when cols or documents change
-watch(
-  [() => documentStore.documents.length, cols],
-  () => {
-    if (isReady.value) {
-      clearAll()
-      buildHeatmap()
+    d.setDate(startDate.getDate() + c * 7)
+    const m = d.getMonth()
+    if (m !== prev) {
+      labels.push({ label: MONTH_LABELS[m], col: c })
+      prev = m
     }
-  },
-)
+  }
+  return labels
+})
+
+const yearTotal = computed(() => cells.value.reduce((sum, c) => sum + c.count, 0))
+const gridWidth = WEEKS * STEP - GAP
+
+const tooltip = ref<{ x: number; y: number; text: string } | null>(null)
+
+function onCellEnter(e: MouseEvent, cell: Cell) {
+  const target = e.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  const dateLabel = `${cell.date.getMonth() + 1}月${cell.date.getDate()}日`
+  tooltip.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top,
+    text: cell.future || cell.count === 0 ? `0 篇捕获 · ${dateLabel}` : `${cell.count} 篇捕获 · ${dateLabel}`,
+  }
+}
+function onCellLeave() {
+  tooltip.value = null
+}
 
 onMounted(async () => {
   if (documentStore.documents.length === 0) {
     await documentStore.refreshDocuments()
   }
-
-  if (scrollRef.value) {
-    observer = new ResizeObserver(() => {
-      if (rafId) cancelAnimationFrame(rafId)
-      rafId = requestAnimationFrame(() => updateCols())
-    })
-    observer.observe(scrollRef.value)
-  }
-
-  buildHeatmap()
-  isReady.value = true
-})
-
-onUnmounted(() => {
-  observer?.disconnect()
-  if (rafId) cancelAnimationFrame(rafId)
+  // Anchor to the most recent week (right edge), like GitHub.
+  requestAnimationFrame(() => {
+    if (scrollRef.value) scrollRef.value.scrollLeft = scrollRef.value.scrollWidth
+  })
 })
 </script>
 
 <template>
-  <div class="px-4 border-b border-zinc-100">
+  <div class="px-4 py-3 border-b border-zinc-100">
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-[12px] font-medium flex items-center gap-1.5">
-        <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <svg class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
         知识捕获轨迹
       </h3>
-      <span class="text-[11px] text-zinc-400">近 6 个月</span>
+      <span class="text-[11px] text-zinc-400">过去一年 {{ yearTotal }} 篇</span>
     </div>
 
-    <div ref="scrollRef" class="overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing pb-1">
-      <div class="inline-flex w-max">
-        <div ref="weekdayRef" class="flex flex-col gap-[3px] shrink-0 mr-[3px]" style="width: 25px" />
-        <div>
-          <div ref="monthRef" class="flex gap-[3px] mb-[3px]" style="height: 14px" />
-          <div ref="gridRef" class="grid grid-rows-7 grid-flow-col gap-[3px]" />
+    <div ref="scrollRef" class="overflow-x-auto no-scrollbar pb-1">
+      <div :style="{ width: `${WEEKDAY_COL + GAP + gridWidth}px` }">
+        <!-- Month labels row -->
+        <div class="flex mb-[3px]" style="height: 14px">
+          <div :style="{ width: `${WEEKDAY_COL + GAP}px` }" />
+          <div class="relative" :style="{ width: `${gridWidth}px` }">
+            <span
+              v-for="m in monthLabels"
+              :key="m.col"
+              class="absolute text-[10px] text-zinc-500 whitespace-nowrap"
+              :style="{ left: `${m.col * STEP}px` }"
+            >{{ m.label }}</span>
+          </div>
+        </div>
+
+        <!-- Weekday labels + grid -->
+        <div class="flex">
+          <div class="flex flex-col" :style="{ gap: `${GAP}px`, width: `${WEEKDAY_COL}px`, marginRight: `${GAP}px` }">
+            <div
+              v-for="(w, i) in WEEKDAY_ROWS"
+              :key="i"
+              class="text-[9px] text-zinc-400 leading-none flex items-center"
+              :style="{ height: `${CELL}px` }"
+            >{{ w.show ? w.label : '' }}</div>
+          </div>
+
+          <div
+            class="grid grid-rows-7 grid-flow-col"
+            :style="{ gap: `${GAP}px`, width: `${gridWidth}px` }"
+          >
+            <div
+              v-for="cell in cells"
+              :key="cell.key"
+              :class="[
+                LEVEL_CLASS[cell.level],
+                'rounded-[2px] transition-transform cursor-pointer',
+                cell.future ? 'opacity-40 cursor-default' : 'hover:scale-125',
+              ]"
+              :style="{ width: `${CELL}px`, height: `${CELL}px` }"
+              @mouseenter="onCellEnter($event, cell)"
+              @mouseleave="onCellLeave"
+            />
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Legend -->
     <div class="flex justify-end items-center gap-1.5 mt-2 text-[10px] text-zinc-400">
       <span>少</span>
-      <div class="w-2.5 h-2.5 rounded-[2px] bg-zinc-100" />
-      <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-200" />
-      <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-400" />
-      <div class="w-2.5 h-2.5 rounded-[2px] bg-emerald-600" />
+      <div
+        v-for="(cls, i) in LEVEL_CLASS"
+        :key="i"
+        class="rounded-[2px]"
+        :class="cls"
+        style="width: 10px; height: 10px"
+      />
       <span>多</span>
     </div>
 
     <!-- Tooltip -->
     <div
-      ref="tooltipRef"
-      class="fixed hidden opacity-0 pointer-events-none bg-zinc-900 text-white text-[11px] px-2.5 py-1.5 rounded-md shadow-lg z-50 whitespace-nowrap transition-opacity duration-150 -translate-x-1/2 -translate-y-full"
-    >
-      {{ tooltipText }}
-    </div>
+      v-if="tooltip"
+      class="fixed pointer-events-none bg-zinc-900 text-white text-[11px] px-2.5 py-1.5 rounded-md shadow-lg z-50 whitespace-nowrap -translate-x-1/2 -translate-y-full"
+      :style="{ left: `${tooltip.x}px`, top: `${tooltip.y - 8}px` }"
+    >{{ tooltip.text }}</div>
   </div>
 </template>
