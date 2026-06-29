@@ -1,11 +1,13 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
+import type { AcceptableValue } from 'reka-ui'
 import {
   SelectRoot, SelectTrigger, SelectValue, SelectContent,
   SelectItem, SelectItemText, SelectPortal, SelectIcon, SelectViewport,
 } from 'reka-ui'
 import { ChevronDown } from '@lucide/vue'
 
-defineProps<{
+const props = defineProps<{
   modelValue: string
   options: { value: string; label: string }[]
   placeholder?: string
@@ -14,10 +16,17 @@ defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
+
+const selected = computed<AcceptableValue>({
+  get: () => props.modelValue,
+  set: (value) => {
+    if (typeof value === 'string') emit('update:modelValue', value)
+  },
+})
 </script>
 
 <template>
-  <SelectRoot :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
+  <SelectRoot v-model="selected">
     <SelectTrigger
       class="w-full text-xs bg-zinc-50 border border-zinc-200 rounded-lg pl-2.5 pr-2 py-2 outline-none inline-flex items-center justify-between cursor-pointer focus:border-brand transition"
     >

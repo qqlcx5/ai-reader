@@ -1,7 +1,8 @@
 <script lang="ts" setup>
+import { computed } from 'vue'
 import { SliderRoot, SliderRange, SliderTrack, SliderThumb } from 'reka-ui'
 
-defineProps<{
+const props = defineProps<{
   modelValue: number
   min: number
   max: number
@@ -11,16 +12,23 @@ defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: number]
 }>()
+
+const values = computed<number[]>({
+  get: () => [props.modelValue],
+  set: (next) => {
+    const value = next?.[0]
+    if (value != null) emit('update:modelValue', value)
+  },
+})
 </script>
 
 <template>
   <SliderRoot
-    :model-value="[modelValue]"
+    v-model="values"
     :min="min"
     :max="max"
     :step="step || 1"
     class="relative flex items-center w-full h-6 touch-none select-none"
-    @update:model-value="(v: number[] | undefined) => v?.[0] != null && emit('update:modelValue', v[0])"
   >
     <SliderTrack class="relative h-1.5 w-full grow rounded-full bg-zinc-200 cursor-pointer">
       <SliderRange class="absolute h-full rounded-full bg-brand" />
