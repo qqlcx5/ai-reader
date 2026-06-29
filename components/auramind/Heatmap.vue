@@ -5,6 +5,13 @@ import { useDocumentStore } from '@/stores/document.store'
 const documentStore = useDocumentStore()
 const scrollRef = ref<HTMLElement | null>(null)
 
+const props = defineProps<{
+  selectedKey?: string | null
+}>()
+const emit = defineEmits<{
+  select: [key: string]
+}>()
+
 // GitHub contribution graph: 53 weeks, Mon-start weeks, 5-level green scale.
 const WEEKS = 53
 const CELL = 11
@@ -118,6 +125,11 @@ function onCellLeave() {
   tooltip.value = null
 }
 
+function onCellClick(cell: Cell) {
+  if (cell.future) return
+  emit('select', cell.key)
+}
+
 onMounted(async () => {
   if (documentStore.documents.length === 0) {
     await documentStore.refreshDocuments()
@@ -174,12 +186,14 @@ onMounted(async () => {
               :key="cell.key"
               :class="[
                 LEVEL_CLASS[cell.level],
-                'rounded-[2px] transition-transform cursor-pointer',
-                cell.future ? 'opacity-40 cursor-default' : 'hover:scale-125',
+                'rounded-[2px] transition-transform',
+                cell.future ? 'opacity-40 cursor-default' : 'cursor-pointer hover:scale-125',
+                cell.key === props.selectedKey ? 'ring-2 ring-zinc-800 ring-offset-1 ring-offset-[#FCFCFC]' : '',
               ]"
               :style="{ width: `${CELL}px`, height: `${CELL}px` }"
               @mouseenter="onCellEnter($event, cell)"
               @mouseleave="onCellLeave"
+              @click="onCellClick(cell)"
             />
           </div>
         </div>

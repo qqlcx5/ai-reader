@@ -21,21 +21,52 @@ const searchQuery = ref('')
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<string | undefined>(undefined)
 const deleteTargetName = ref('')
+const selectedDate = ref<string | null>(null)
+
+function pad(n: number) {
+  return String(n).padStart(2, '0')
+}
+function dateKey(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+function formatDateLabel(key: string) {
+  const [, m, d] = key.split('-')
+  return `${Number(m)}月${Number(d)}日`
+}
 
 const displayedDocs = computed(() => {
-  const docs = [...documentStore.documents]
-  if (!searchQuery.value.trim()) {
-    return docs
-      .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
-      .slice(0, 20)
+  let docs = [...documentStore.documents]
+
+  if (selectedDate.value) {
+    docs = docs.filter((d) => dateKey(new Date(d.capturedAt)) === selectedDate.value)
   }
-  const results = searchDocuments(searchQuery.value)
-  const idSet = new Set(results.map((r) => r.id))
-  return docs.filter((d) => idSet.has(d.id))
+
+  if (searchQuery.value.trim()) {
+    const results = searchDocuments(searchQuery.value)
+    const idSet = new Set(results.map((r) => r.id))
+    docs = docs.filter((d) => idSet.has(d.id))
+    return docs.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+  }
+
+  if (selectedDate.value) {
+    return docs.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+  }
+
+  return docs
+    .sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+    .slice(0, 20)
 })
 
 function onSearch(query: string) {
   searchQuery.value = query
+}
+
+function onHeatmapSelect(key: string) {
+  selectedDate.value = selectedDate.value === key ? null : key
+}
+
+function clearDateFilter() {
+  selectedDate.value = null
 }
 
 async function handleDocumentClick(doc: DocumentEntity) {
@@ -108,12 +139,28 @@ function cancelDelete() {
       </div>
 
       <!-- Heatmap -->
-      <Heatmap />
+      <Heatmap :selected-key="selectedDate" @select="onHeatmapSelect" />
 
       <!-- Documents -->
       <div class="p-2 pb-6">
+        <!-- Date filter chip -->
+        <div
+          v-if="selectedDate"
+          class="mx-2 mb-2 flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5"
+        >
+          <span class="text-[11px] text-emerald-700 font-medium">
+            {{ formatDateLabel(selectedDate) }} · {{ displayedDocs.length }} 篇
+          </span>
+          <button
+            class="text-[11px] text-emerald-600 hover:text-emerald-800 flex items-center gap-0.5"
+            @click="clearDateFilter"
+          >
+            清除筛选 ×
+          </button>
+        </div>
+
         <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
-          {{ searchQuery ? '搜索结果' : '最近捕获' }}
+          {{ selectedDate ? formatDateLabel(selectedDate) : (searchQuery ? '搜索结果' : '最近捕获') }}
         </div>
 
         <DocumentItem
@@ -127,7 +174,7 @@ function cancelDelete() {
         />
 
         <div v-if="displayedDocs.length === 0" class="text-center py-8 text-[13px] text-zinc-400">
-          {{ searchQuery ? '未找到匹配的文档' : '暂无捕获的文档' }}
+          {{ selectedDate ? `${formatDateLabel(selectedDate)} 没有捕获` : (searchQuery ? '未找到匹配的文档' : '暂无捕获的文档') }}
         </div>
       </div>
     </div>
