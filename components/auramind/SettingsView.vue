@@ -203,6 +203,8 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       v-if="showDeleteConfirm"
       title="删除模型"
       :desc="`确定删除模型「${deleteTargetName}」吗？此操作不可撤销。`"
+      confirm-text="删除"
+      danger
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
@@ -212,6 +214,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       v-if="showDefaultBlocked"
       title="无法删除默认模型"
       desc="这是当前默认模型，请先将其他模型设为默认后再删除。"
+      confirm-text="知道了"
       @confirm="showDefaultBlocked = false"
       @cancel="showDefaultBlocked = false"
     />

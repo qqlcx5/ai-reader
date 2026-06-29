@@ -464,6 +464,8 @@ function cancelDelete() {
       v-if="showDeleteConfirm"
       title="删除文档"
       :desc="`确定删除文档「${deleteTargetName}」吗？关联的对话记录也将被删除。此操作不可撤销。`"
+      confirm-text="删除"
+      danger
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
@@ -473,6 +475,8 @@ function cancelDelete() {
       v-if="showDeleteCollectionConfirm"
       title="删除合集"
       desc="确定删除这个合集吗？合集内的文档不会被删除，只是移出合集。此操作不可撤销。"
+      confirm-text="删除"
+      danger
       @confirm="confirmDeleteCollection"
       @cancel="showDeleteCollectionConfirm = false"
     />

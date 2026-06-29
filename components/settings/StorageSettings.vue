@@ -8,6 +8,7 @@ import { ChatRepository } from '@/db/repositories/chat.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
 import { initSearchIndex, searchIndex } from '@/services/search/index'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
+import { useAppStore } from '@/stores/app.store'
 import { db } from '@/db/index'
 
 const docCount = ref(0)
@@ -18,6 +19,7 @@ const showExportConfirm = ref(false)
 const showClearConfirm = ref(false)
 const showFinalClearConfirm = ref(false)
 const importInput = ref<HTMLInputElement | null>(null)
+const appStore = useAppStore()
 
 async function refreshStats() {
   try {
@@ -65,20 +67,24 @@ function getBackupFilename(): string {
 async function doExport() {
   showExportConfirm.value = false
   try {
-    const [documents, conversations, models, settings] = await Promise.all([
+    const [documents, conversations, models, settings, collections, collectionItems] = await Promise.all([
       DocumentRepository.findAll(),
       ChatRepository.findAll(),
       ModelRepository.findAll(),
       db.settings.toArray(),
+      db.collections.toArray(),
+      db.collectionItems.toArray(),
     ])
 
     const backup = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       documents,
       conversations,
       models,
       settings,
+      collections,
+      collectionItems,
     }
 
     const json = JSON.stringify(backup, null, 2)
@@ -100,23 +106,35 @@ async function doImport(file: File) {
     const text = await file.text()
     const data = JSON.parse(text)
 
-    // Basic structure validation
     if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure')
     if (!Array.isArray(data.documents)) throw new Error('Missing documents array')
     if (!Array.isArray(data.conversations)) throw new Error('Missing conversations array')
     if (!Array.isArray(data.models)) throw new Error('Missing models array')
 
-    await db.transaction('rw', [db.documents, db.conversations, db.models, db.settings], async () => {
-      await db.documents.clear()
-      await db.conversations.clear()
-      await db.models.clear()
-      await db.settings.clear()
+    const collections = Array.isArray(data.collections) ? data.collections : []
+    const collectionItems = Array.isArray(data.collectionItems) ? data.collectionItems : []
 
-      if (data.documents.length > 0) await db.documents.bulkAdd(data.documents)
-      if (data.conversations.length > 0) await db.conversations.bulkAdd(data.conversations)
-      if (data.models.length > 0) await db.models.bulkAdd(data.models)
-      if (data.settings?.length > 0) await db.settings.bulkAdd(data.settings)
-    })
+    await db.transaction(
+      'rw',
+      [db.documents, db.conversations, db.models, db.settings, db.collections, db.collectionItems],
+      async () => {
+        await Promise.all([
+          db.documents.clear(),
+          db.conversations.clear(),
+          db.models.clear(),
+          db.settings.clear(),
+          db.collections.clear(),
+          db.collectionItems.clear(),
+        ])
+
+        if (data.documents.length > 0) await db.documents.bulkAdd(data.documents)
+        if (data.conversations.length > 0) await db.conversations.bulkAdd(data.conversations)
+        if (data.models.length > 0) await db.models.bulkAdd(data.models)
+        if (data.settings?.length > 0) await db.settings.bulkAdd(data.settings)
+        if (collections.length > 0) await db.collections.bulkAdd(collections)
+        if (collectionItems.length > 0) await db.collectionItems.bulkAdd(collectionItems)
+      },
+    )
 
     await refreshStats()
     await refreshAfterDataChange()
@@ -126,11 +144,19 @@ async function doImport(file: File) {
   }
 }
 
-function handleFileChange(event: Event) {
+async function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
+  // Reset so selecting the same file again still fires change.
+  input.value = ''
   if (!file) return
-  doImport(file)
+  try {
+    await doImport(file)
+    appStore.showToast('导入成功', 'success')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '解析失败'
+    appStore.showToast(`导入失败：${msg}`, 'error')
+  }
 }
 
 async function rebuildIndex() {
@@ -151,7 +177,9 @@ async function rebuildIndex() {
 async function clearAll() {
   showFinalClearConfirm.value = false
   try {
-    await indexedDB.deleteDatabase('AuraMind')
+    // Drop the actual Dexie database (named 'AuraMindDB'). db.delete() closes
+    // the open connection first, then removes the DB; re-created empty on reload.
+    await db.delete()
   } catch (e) {
     console.error('Failed to delete database:', e)
   }
@@ -228,6 +256,7 @@ onMounted(refreshStats)
       v-if="showExportConfirm"
       title="导出备份"
       desc="备份文件将包含所有文档、对话、模型配置和设置数据。请注意：备份文件包含 API 密钥等敏感数据，请妥善保管。"
+      confirm-text="导出"
       @confirm="doExport"
       @cancel="showExportConfirm = false"
     />
@@ -237,6 +266,8 @@ onMounted(refreshStats)
       v-if="showClearConfirm"
       title="清空本地数据"
       desc="此操作将删除所有文档、对话和设置数据。此操作不可撤销！"
+      confirm-text="继续"
+      danger
       @confirm="showClearConfirm = false; showFinalClearConfirm = true"
       @cancel="showClearConfirm = false"
     />
@@ -246,6 +277,8 @@ onMounted(refreshStats)
       v-if="showFinalClearConfirm"
       title="最终确认"
       desc="确定要永久删除所有本地数据吗？这包括全部文档、对话历史、模型配置和设置。确认后会刷新页面。"
+      confirm-text="永久清空"
+      danger
       @confirm="clearAll"
       @cancel="showFinalClearConfirm = false"
     />

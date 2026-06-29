@@ -191,6 +191,7 @@ async function onSync() {
         v-if="showForceConfirm"
         title="全量上传"
         desc="将用本地数据完全覆盖远端，远端独有的内容会被删除。建议仅在以本机为准时使用。"
+        confirm-text="上传"
         @confirm="onForceUpload"
         @cancel="showForceConfirm = false"
       />
@@ -199,6 +200,7 @@ async function onSync() {
         v-if="showDownloadConfirm"
         title="全量下载"
         desc="将用远端数据完全覆盖本地，本地独有的内容会被删除。建议仅在以远端为准时使用。"
+        confirm-text="下载"
         @confirm="onForceDownload"
         @cancel="showDownloadConfirm = false"
       />
