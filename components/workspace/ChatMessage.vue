@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick } from 'vue'
-import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2 } from '@lucide/vue'
+import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil } from '@lucide/vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
@@ -19,6 +19,7 @@ const emit = defineEmits<{
   (e: 'regenerate', id: string): void
   (e: 'copy', content: string): void
   (e: 'delete', id: string): void
+  (e: 'edit', id: string, content: string): void
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
@@ -70,6 +71,13 @@ watch(renderedHtml, async () => {
       v-show="isHovered"
       class="flex items-center gap-0.5 mr-1 self-center opacity-0 group-hover:opacity-100 transition-opacity"
     >
+      <button
+        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+        title="编辑"
+        @click.stop="emit('edit', message.id, message.content)"
+      >
+        <Pencil class="w-3 h-3" />
+      </button>
       <button
         class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
         title="复制"

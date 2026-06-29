@@ -668,6 +668,15 @@ export const useChatStore = defineStore('chat', () => {
     persistConversation()
   }
 
+  function editMessage(id: string, content: string): void {
+    const idx = messages.value.findIndex((m) => m.id === id)
+    if (idx === -1) return
+    // Truncate from this user message onward, then set input to its content
+    messages.value.splice(idx)
+    inputText.value = content
+    persistConversation()
+  }
+
   async function persistConversation(): Promise<void> {
     if (!currentConversationId.value) return
 
@@ -770,6 +779,7 @@ export const useChatStore = defineStore('chat', () => {
     stopGeneration,
     regenerate,
     deleteMessage,
+    editMessage,
     loadConversation,
     loadConversations,
     createConversation,

@@ -116,6 +116,10 @@ function handleDeleteMessage(id: string) {
   appStore.showToast('消息已删除', 'success')
 }
 
+function handleEdit(id: string, content: string) {
+  chatStore.editMessage(id, content)
+}
+
 function handleRegenerate(id: string) {
   chatStore.regenerate(id)
 }
@@ -173,6 +177,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         :model-name="modelNameFor(round.userMsg.modelId)"
         @copy="handleCopy"
         @delete="handleDeleteMessage"
+        @edit="handleEdit"
       />
 
       <!-- Single assistant: normal flow -->
