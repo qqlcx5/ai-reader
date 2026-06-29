@@ -69,7 +69,7 @@ watch(renderedHtml, async () => {
     <!-- Action buttons (appear on hover, left side) -->
     <div
       v-show="isHovered"
-      class="flex items-center gap-0.5 mr-1 self-center opacity-0 group-hover:opacity-100 transition-opacity"
+      class="flex items-center gap-0.1 self-center opacity-0 group-hover:opacity-100 transition-opacity"
     >
       <button
         class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"

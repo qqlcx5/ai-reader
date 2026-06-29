@@ -68,50 +68,60 @@ function buildDocumentEntity(data: {
 }
 
 async function handleRefresh() {
-  const tabId = appStore.activeTab?.id
-  if (!tabId) {
-    appStore.showToast('无法获取当前标签页', 'error')
-    return
-  }
-
   isRefreshing.value = true
-  workspaceStore.setExtracting(true)
 
   try {
-    const extracted = await requestExtract(tabId)
+    if (workspaceStore.documentSource === 'current-page') {
+      const tabId = appStore.activeTab?.id
+      if (!tabId) {
+        appStore.showToast('无法获取当前标签页', 'error')
+        return
+      }
+      workspaceStore.setExtracting(true)
 
-    const doc = buildDocumentEntity({
-      url: extracted.url,
-      title: extracted.title,
-      markdown: extracted.markdown,
-      rawText: extracted.rawText,
-      siteName: extracted.siteName,
-      author: extracted.author,
-      description: extracted.description,
-      publishedAt: extracted.publishedAt,
-      canonicalUrl: extracted.canonicalUrl,
-      contentHash: extracted.contentHash,
-      wordCount: extracted.wordCount,
-      tokenCount: extracted.tokenCount,
-      extractionMethod: extracted.extractionMethod,
-      sanitizedHtml: (extracted as any).sanitizedHtml,
-    })
+      const extracted = await requestExtract(tabId)
 
-    documentStore.setCurrentDocument(doc)
-    documentStore.setPageDocument(doc)
-    await documentStore.saveDocument(doc)
+      const doc = buildDocumentEntity({
+        url: extracted.url,
+        title: extracted.title,
+        markdown: extracted.markdown,
+        rawText: extracted.rawText,
+        siteName: extracted.siteName,
+        author: extracted.author,
+        description: extracted.description,
+        publishedAt: extracted.publishedAt,
+        canonicalUrl: extracted.canonicalUrl,
+        contentHash: extracted.contentHash,
+        wordCount: extracted.wordCount,
+        tokenCount: extracted.tokenCount,
+        extractionMethod: extracted.extractionMethod,
+        sanitizedHtml: (extracted as any).sanitizedHtml,
+      })
 
-    workspaceStore.setCaptureStatus('ready')
-    appStore.showToast('抓取完成', 'success')
+      documentStore.setCurrentDocument(doc)
+      documentStore.setPageDocument(doc)
+      await documentStore.saveDocument(doc)
+      workspaceStore.setCaptureStatus('ready')
+    } else {
+      // Reload from IndexedDB for library-sourced documents
+      const docId = documentStore.currentDocument?.id
+      if (!docId) {
+        appStore.showToast('没有当前文档', 'error')
+        return
+      }
+      await documentStore.loadDocument(docId)
+    }
+
+    appStore.showToast('刷新完成', 'success')
 
     try {
-      await chatStore.loadConversations(documentStore.currentDocument?.id || doc.id)
+      await chatStore.loadConversations(documentStore.currentDocument?.id || '')
     } catch {
       // non-critical
     }
   } catch (err: any) {
     workspaceStore.setCaptureStatus('failed')
-    appStore.showToast(err.message || '抓取失败', 'error')
+    appStore.showToast(err.message || '刷新失败', 'error')
   } finally {
     isRefreshing.value = false
     workspaceStore.setExtracting(false)
@@ -169,10 +179,6 @@ async function handleCopy() {
     appStore.showToast('复制失败', 'error')
   }
 }
-
-const showRefresh = computed(() => {
-  return workspaceStore.documentSource === 'current-page'
-})
 </script>
 
 <template>
@@ -215,10 +221,9 @@ const showRefresh = computed(() => {
           <Copy v-else class="w-3.5 h-3.5" />
         </button>
         <button
-          v-if="showRefresh"
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
           :disabled="isRefreshing"
-          title="重新抓取"
+          title="刷新"
           @click="handleRefresh"
         >
           <RefreshCw

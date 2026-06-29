@@ -24,7 +24,7 @@ const newTemplateContent = ref('')
 const editingTemplateId = ref<string | null>(null)
 const editTemplateTitle = ref('')
 const editTemplateContent = ref('')
-const templateDirectSend = ref(false)
+const templateDirectSend = ref(true)
 
 function toggleTemplatePanel() {
   showTemplatePanel.value = !showTemplatePanel.value
