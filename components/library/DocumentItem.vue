@@ -5,6 +5,7 @@ import type { DocumentEntity } from '@/types/document'
 
 const props = defineProps<{
   document: DocumentEntity
+  hasConversation?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   delete: [doc: DocumentEntity]
   openUrl: [doc: DocumentEntity]
 }>()
+
+const unread = computed(() => !props.document.lastOpenedAt)
 
 const domain = computed(() => {
   if (props.document.siteName) return props.document.siteName
@@ -74,11 +77,20 @@ const excerpt = computed(() => {
     </div>
 
     <div class="flex-1 min-w-0">
-      <div class="text-[13px] font-medium truncate group-hover:text-brand">{{ document.title }}</div>
+      <div class="text-[13px] font-medium truncate group-hover:text-brand flex items-center gap-1.5">
+        <span v-if="unread" class="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
+        <span class="truncate">{{ document.title }}</span>
+      </div>
       <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 truncate mt-1">
-        <span>{{ domain }}</span>
-        <span class="w-[3px] h-[3px] rounded-full bg-zinc-300" />
-        <span>{{ displayTime }}</span>
+        <span class="truncate">{{ domain }}</span>
+        <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+        <span class="shrink-0">{{ displayTime }}</span>
+        <template v-if="hasConversation">
+          <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+          <span class="inline-flex items-center gap-0.5 text-brand shrink-0">
+            <MessageSquare class="w-3 h-3" />已对话
+          </span>
+        </template>
       </div>
       <div v-if="excerpt" class="text-[11px] text-zinc-400 truncate mt-0.5">{{ excerpt }}</div>
     </div>

@@ -115,4 +115,28 @@ describe('DocumentItem', () => {
     expect(wrapper.text()).not.toContain('*')
     expect(wrapper.text()).toContain('Bold')
   })
+
+  it('shows unread dot when lastOpenedAt is absent', () => {
+    const wrapper = mount(DocumentItem, { props: { document: makeDoc() } })
+    expect(wrapper.find('span.bg-brand').exists()).toBe(true)
+  })
+
+  it('hides unread dot when lastOpenedAt is set', () => {
+    const wrapper = mount(DocumentItem, {
+      props: { document: makeDoc({ lastOpenedAt: '2026-06-20T00:00:00Z' }) },
+    })
+    expect(wrapper.find('span.bg-brand').exists()).toBe(false)
+  })
+
+  it('shows 已对话 badge when hasConversation is true', () => {
+    const wrapper = mount(DocumentItem, {
+      props: { document: makeDoc(), hasConversation: true },
+    })
+    expect(wrapper.text()).toContain('已对话')
+  })
+
+  it('does not show 已对话 badge by default', () => {
+    const wrapper = mount(DocumentItem, { props: { document: makeDoc() } })
+    expect(wrapper.text()).not.toContain('已对话')
+  })
 })
