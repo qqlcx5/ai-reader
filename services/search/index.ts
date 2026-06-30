@@ -37,7 +37,12 @@ export function addToIndex(doc: DocumentEntity): void {
 }
 
 export function removeFromIndex(id: string): void {
-  searchIndex.discard(id)
+  // discard() throws when the id isn't in the index — e.g. the async
+  // addAllAsync init hasn't finished yet, or the doc entered via sync/import
+  // without being added to the in-memory index. Removing a non-indexed doc is
+  // a no-op. Without this guard, deleteDocument() throws and the caller's
+  // (confirmDelete) await chain aborts before it can close the modal / refresh.
+  if (searchIndex.has(id)) searchIndex.discard(id)
 }
 
 export function replaceInIndex(doc: DocumentEntity): void {

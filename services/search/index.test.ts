@@ -64,6 +64,15 @@ describe('Search Index', () => {
     expect(results.length).toBe(0)
   })
 
+  it('should not throw when removing a document that was never indexed', () => {
+    // Regression: MiniSearch.discard() throws if the id isn't in the index.
+    // This happens when a doc is deleted before the async index init finishes,
+    // or arrives via sync/import without entering the in-memory index. Without
+    // the guard, deleteDocument() throws and confirmDelete() aborts before it
+    // can close the modal or refresh the list.
+    expect(() => removeFromIndex('never-indexed-id')).not.toThrow()
+  })
+
   it('should replace a document in the index', () => {
     addToIndex(makeDoc({ id: 'doc-1', title: 'Old Title' }))
     replaceInIndex(makeDoc({ id: 'doc-1', title: 'New Title', markdown: 'Completely different content about quantum physics' }))
