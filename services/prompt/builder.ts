@@ -20,15 +20,19 @@ export class PromptBuilder {
       messages.push({ role: 'user', content: input.context })
     }
 
-    // Append conversation history
+    // Append conversation history (skip entries with empty content)
     if (input.history && input.history.length > 0) {
       for (const entry of input.history) {
-        messages.push({ role: entry.role, content: entry.content })
+        if (entry.content) {
+          messages.push({ role: entry.role, content: entry.content })
+        }
       }
     }
 
-    // Append current user input
-    messages.push({ role: 'user', content: input.userInput })
+    // Append current user input (skip if empty)
+    if (input.userInput) {
+      messages.push({ role: 'user', content: input.userInput })
+    }
 
     return {
       messages,
