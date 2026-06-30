@@ -97,6 +97,7 @@ describe('mergeSet', () => {
     })
     expect(out.merged.has('a')).toBe(false)
     expect(out.stats.deletedRemote).toBe(1)
+    expect(out.remoteDeletes).toEqual(['a'])
     expect(out.newBase.a).toBeUndefined()
   })
 

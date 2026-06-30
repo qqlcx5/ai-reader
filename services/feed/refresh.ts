@@ -2,6 +2,7 @@ import { FeedRepository } from '@/db/repositories/feed.repository'
 import { FeedItemRepository } from '@/db/repositories/feed-item.repository'
 import { fetchFeed } from './fetch'
 import { parseFeed } from './parser'
+import { collectItems } from './collect'
 import type { FeedEntity, FeedItemEntity } from '@/types/feed'
 
 function uuid(): string {
@@ -57,6 +58,13 @@ export async function refreshFeed(feed: FeedEntity): Promise<RefreshResult> {
       lastError: undefined,
       updatedAt: now,
     })
+
+    // Auto-collect: opt-in per feed. Newly-inserted items (no documentId yet)
+    // are fetched + defuddled into the library, best-effort, capped.
+    if (feed.autoCollect && fresh.length) {
+      await collectItems(fresh, 'auto')
+    }
+
     return { feedId: feed.id, newItems: fresh.length }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

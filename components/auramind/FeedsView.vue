@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronDown, ChevronRight } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronDown, ChevronRight, Zap } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import { useFeedStore } from '@/stores/feed.store'
@@ -234,7 +234,16 @@ onUnmounted(() => {
           >
             <Globe class="w-3 h-3 shrink-0 opacity-60" />
             <span class="truncate flex-1">{{ f.title }}</span>
+            <span v-if="f.autoCollect" class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
             <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
+            <button
+              class="p-0.5 rounded shrink-0 transition-colors"
+              :class="f.autoCollect ? 'text-brand' : 'text-zinc-300 hover:text-zinc-500'"
+              :title="f.autoCollect ? '自动入库：开（点击关闭）' : '自动入库：关（新条目自动入记忆库）'"
+              @click.stop="feedStore.setAutoCollect(f.id, !f.autoCollect)"
+            >
+              <Zap class="w-3 h-3" />
+            </button>
             <Trash2
               class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500"
               @click.stop="feedStore.unsubscribe(f.id)"

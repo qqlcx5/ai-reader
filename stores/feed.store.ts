@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { FeedRepository } from '../db/repositories/feed.repository'
 import { FeedItemRepository } from '../db/repositories/feed-item.repository'
 import { refreshFeed, refreshAll, addSubscription } from '../services/feed/refresh'
-import { collectFeedItem } from '../services/feed/collect'
+import { collectFeedItem, collectItems } from '../services/feed/collect'
 import type { FeedEntity, FeedItemEntity } from '../types/feed'
 
 export const useFeedStore = defineStore('feed', () => {
@@ -94,7 +94,7 @@ export const useFeedStore = defineStore('feed', () => {
   async function collect(itemId: string) {
     const item = items.value.find((i) => i.id === itemId)
     if (!item || item.documentId) return
-    const entity = await collectFeedItem(item)
+    const entity = await collectFeedItem(item, 'manual')
     const idx = items.value.findIndex((i) => i.id === itemId)
     if (idx >= 0) {
       items.value[idx] = {
@@ -102,6 +102,21 @@ export const useFeedStore = defineStore('feed', () => {
         documentId: entity.id,
         collectedAt: new Date().toISOString(),
       }
+    }
+  }
+
+  /** Toggle auto-collect for a feed. When turning on, backfill existing
+   *  uncollected items (capped, best-effort). */
+  async function setAutoCollect(id: string, value: boolean) {
+    const feed = feeds.value.find((f) => f.id === id)
+    if (!feed || feed.autoCollect === value) return
+    await FeedRepository.save({ ...feed, autoCollect: value, updatedAt: new Date().toISOString() })
+    await loadFeeds()
+    if (value) {
+      const all = await FeedItemRepository.findByFeed(id)
+      await collectItems(all.filter((i) => !i.documentId), 'auto')
+      if (selectedFeedId.value === id) items.value = await FeedItemRepository.findByFeed(id)
+      await loadUnread()
     }
   }
 
@@ -121,5 +136,6 @@ export const useFeedStore = defineStore('feed', () => {
     unsubscribe,
     markRead,
     collect,
+    setAutoCollect,
   }
 })

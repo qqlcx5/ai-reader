@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '@/db'
 
-// In-memory fake WebDAV remote.
+// In-memory fake WebDAV remote (path-aware).
 const store: Record<string, string> = {}
 vi.mock('../webdav/webdav.client', () => ({
   normalizeBasePath: (p: string) => p || '/auramind',
@@ -12,17 +12,20 @@ vi.mock('../webdav/webdav.client', () => ({
     async hasData() {
       return !!store['data.json']
     },
-    async putText(_path: string, text: string) {
-      store['data.json'] = text
+    async putText(path: string, text: string) {
+      store[path] = text
     },
-    async getText(_path: string) {
-      return store['data.json']
+    async getText(path: string) {
+      if (store[path] == null) throw new Error(`not found: ${path}`)
+      return store[path]
     },
-    async remove() {},
+    async remove(path: string) {
+      delete store[path]
+    },
   }),
 }))
 
-import { runSync, forceUpload, forceDownload } from './sync.service'
+import { runSync, previewSync, forceUpload, forceDownload } from './sync.service'
 import type { WebDAVConfig } from '@/types/sync'
 
 const cfg: WebDAVConfig = { url: 'x', username: 'u', password: 'p', basePath: '/auramind', enabled: true }
@@ -165,5 +168,69 @@ describe('runSync (integration)', () => {
     expect(d.rawHtmlCompressed).toBeUndefined()
     expect(d.rawText).toBeUndefined()
     expect(d.markdown).toBe('m') // markdown body is kept
+  })
+
+  it('syncs feeds across devices (remote-only feed pulled into a fresh device)', async () => {
+    await db.feeds.put({
+      id: 'f1',
+      url: 'https://a.test/rss',
+      title: 'A',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    })
+    await runSync(cfg) // push from device A
+
+    // Simulate device B: empty local + no sync state.
+    await db.feeds.clear()
+    await db.kvMeta.clear()
+
+    const r = await runSync(cfg)
+    expect(r.pulled).toBeGreaterThanOrEqual(1)
+    expect(await db.feeds.get('f1')).toBeTruthy()
+  })
+
+  it('aborts and preserves remote when local is wiped but sync-state persists', async () => {
+    for (let i = 0; i < 6; i++) await db.documents.put(doc(`d${i}`, '2026-01-01T00:00:00Z'))
+    await runSync(cfg) // push; base now records 6
+
+    // Local documents wiped, but kvMeta (sync-state/base) intentionally persists.
+    await db.documents.clear()
+
+    await expect(runSync(cfg)).rejects.toThrow(/中止/)
+    // Remote must be untouched (no mass delete propagated).
+    const snap = JSON.parse(store['data.json'])
+    expect(snap.data.documents.length).toBe(6)
+  })
+
+  it('writes a backup snapshot before overwriting the remote', async () => {
+    await db.documents.put(doc('d1', '2026-01-01T00:00:00Z'))
+    await runSync(cfg)
+    const firstSnapshot = store['data.json']
+    expect(store['data.backup.json']).toBeUndefined() // nothing to back up on first push
+
+    // Add a doc and sync again — previous remote should be backed up.
+    await db.documents.put(doc('d2', '2026-01-02T00:00:00Z'))
+    await runSync(cfg)
+
+    expect(store['data.backup.json']).toBe(firstSnapshot)
+  })
+
+  it('previewSync reports counts without writing anything', async () => {
+    await db.documents.put(doc('d1', '2026-01-01T00:00:00Z'))
+    await runSync(cfg) // push
+
+    // Simulate a remote-only new doc.
+    const snap = JSON.parse(store['data.json'])
+    snap.data.documents.push(doc('d2', '2026-01-02T00:00:00Z'))
+    store['data.json'] = JSON.stringify(snap)
+
+    const before = store['data.json']
+    const p = await previewSync(cfg)
+    expect(p.pulled).toBeGreaterThanOrEqual(1)
+    expect(p.deletedLocal).toBe(0)
+    expect(p.deletedRemote).toBe(0)
+    // Pure dry-run: no writes.
+    expect(store['data.json']).toBe(before)
+    expect(store['data.backup.json']).toBeUndefined()
   })
 })

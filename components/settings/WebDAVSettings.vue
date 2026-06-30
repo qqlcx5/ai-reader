@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud } from '@lucide/vue'
+import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud, RotateCcw } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -8,7 +8,8 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
-import { testConnection, runSync, forceUpload, forceDownload, getSyncState } from '@/services/sync/sync.service'
+import { testConnection, runSync, previewSync, forceUpload, forceDownload, restoreFromBackup, getSyncState } from '@/services/sync/sync.service'
+import type { SyncPreview, SyncDeleteItem } from '@/types/sync'
 
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
@@ -17,11 +18,15 @@ const testing = ref(false)
 const syncing = ref(false)
 const uploading = ref(false)
 const downloading = ref(false)
+const restoring = ref(false)
 const showForceConfirm = ref(false)
 const showDownloadConfirm = ref(false)
+const showSyncConfirm = ref(false)
+const showRestoreConfirm = ref(false)
+const preview = ref<SyncPreview | null>(null)
 const lastResult = ref('')
 const lastSyncAt = ref('')
-const busy = computed(() => testing.value || syncing.value || uploading.value || downloading.value)
+const busy = computed(() => testing.value || syncing.value || uploading.value || downloading.value || restoring.value)
 
 const url = computed({ get: () => settingsStore.webdav.url, set: (v) => settingsStore.updateWebDAVConfig({ url: v }) })
 const username = computed({ get: () => settingsStore.webdav.username, set: (v) => settingsStore.updateWebDAVConfig({ username: v }) })
@@ -99,11 +104,50 @@ async function onTest() {
   }
 }
 
+function fmtItems(items: SyncDeleteItem[]): string {
+  const labels = items.map((i) => i.label || i.id).slice(0, 5)
+  const more = items.length - labels.length
+  return labels.join('、') + (more > 0 ? ` 等 ${items.length} 项` : '')
+}
+
+const previewDesc = computed(() => {
+  const p = preview.value
+  if (!p) return ''
+  const lines = [`拉取 ${p.pulled} · 推送 ${p.pushed} · 冲突 ${p.conflicts}`]
+  if (p.deletedLocal) lines.push(`删除本地 ${p.deletedLocal} 条：${fmtItems(p.localDeleteItems)}`)
+  if (p.deletedRemote) lines.push(`删除远端 ${p.deletedRemote} 条：${fmtItems(p.remoteDeleteItems)}`)
+  if (p.abortReason) lines.push(`\n⚠️ ${p.abortReason}`)
+  return lines.join('\n')
+})
+
 async function onSync() {
   if (!url.value) {
     appStore.showToast('请先填写 WebDAV 地址', 'error')
     return
   }
+  syncing.value = true
+  preview.value = null
+  let p: SyncPreview
+  try {
+    p = await previewSync(settingsStore.webdav)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    appStore.showToast(`同步失败：${msg}`, 'error')
+    syncing.value = false
+    return
+  }
+  preview.value = p
+  syncing.value = false
+  // Nothing destructive → proceed immediately. Otherwise require confirmation.
+  if (!p.abortReason && p.deletedLocal === 0 && p.deletedRemote === 0) {
+    await doSync()
+  } else {
+    showSyncConfirm.value = true
+  }
+}
+
+async function doSync() {
+  showSyncConfirm.value = false
   syncing.value = true
   lastResult.value = ''
   try {
@@ -117,6 +161,26 @@ async function onSync() {
     appStore.showToast(`同步失败：${msg}`, 'error')
   } finally {
     syncing.value = false
+  }
+}
+
+async function onRestore() {
+  showRestoreConfirm.value = false
+  if (!url.value) {
+    appStore.showToast('请先填写 WebDAV 地址', 'error')
+    return
+  }
+  restoring.value = true
+  try {
+    await restoreFromBackup(settingsStore.webdav)
+    await refreshAfterDataChange()
+    await refreshStatus()
+    appStore.showToast('已从备份恢复', 'success')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    appStore.showToast(`恢复失败：${msg}`, 'error')
+  } finally {
+    restoring.value = false
   }
 }
 </script>
@@ -187,6 +251,15 @@ async function onSync() {
         </UButton>
       </div>
 
+      <button
+        class="mx-auto text-[11px] text-zinc-400 hover:text-brand flex items-center gap-1 disabled:opacity-50"
+        :disabled="busy"
+        @click="showRestoreConfirm = true"
+      >
+        <RotateCcw class="w-3 h-3" />
+        {{ restoring ? '恢复中…' : '从备份恢复' }}
+      </button>
+
       <ConfirmModal
         v-if="showForceConfirm"
         title="全量上传"
@@ -205,13 +278,31 @@ async function onSync() {
         @cancel="showDownloadConfirm = false"
       />
 
+      <ConfirmModal
+        v-if="showSyncConfirm"
+        title="确认同步"
+        :desc="previewDesc"
+        :confirm-text="preview?.abortReason ? '仍要同步' : '确认同步'"
+        @confirm="doSync"
+        @cancel="showSyncConfirm = false"
+      />
+
+      <ConfirmModal
+        v-if="showRestoreConfirm"
+        title="从备份恢复"
+        desc="将用上一次同步前的远端备份（data.backup.json）覆盖本地与远端，仅保留最近一次备份。"
+        confirm-text="恢复"
+        @confirm="onRestore"
+        @cancel="showRestoreConfirm = false"
+      />
+
       <div class="flex items-center justify-between pt-1 text-[11px]">
         <span class="text-zinc-400">上次同步：{{ fmt(lastSyncAt) }}</span>
         <span v-if="lastResult" class="text-zinc-500 font-mono">{{ lastResult }}</span>
       </div>
 
       <p class="text-[10px] text-zinc-400 leading-relaxed">
-        三方合并（本地 / 远端 / 上次同步态），按更新时间 LWW；删除通过基线检测自动传播到对端。
+        三方合并（本地 / 远端 / 上次同步态），按更新时间 LWW；删除通过基线检测传播。同步前若有删除会弹窗确认；单次删除超过 50% 自动中止；每次覆盖前自动备份上一次远端，可「从备份恢复」回滚。
       </p>
     </div>
   </div>

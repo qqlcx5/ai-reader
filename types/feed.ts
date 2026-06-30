@@ -9,6 +9,11 @@ export interface FeedEntity {
   /** Grouping (folder). Free-form string; UI aggregates by it. */
   folder?: string
 
+  /** When true, new items are auto-collected into the library on refresh
+   *  (fetch article → defuddle → DocumentEntity). Opt-in per feed, intended
+   *  for low-volume curated feeds. */
+  autoCollect?: boolean
+
   /** Conditional-fetch tokens, let periodic refresh skip unchanged feeds. */
   etag?: string
   lastModified?: string

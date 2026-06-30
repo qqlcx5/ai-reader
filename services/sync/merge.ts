@@ -24,6 +24,8 @@ export interface MergeOutput {
   merged: Map<string, any>
   /** ids present locally but not in the merged set (remote-deleted) → remove locally. */
   localDeletes: string[]
+  /** ids present remotely but dropped from the merged set (local-deleted) → drop from remote. */
+  remoteDeletes: string[]
   /** New base versions (versions of the merged set). */
   newBase: VersionMap
   stats: MergeStats
@@ -44,6 +46,7 @@ export function mergeSet(input: MergeInput): MergeOutput {
   const { local: L, remote: R, base: B } = input
   const merged = new Map<string, any>()
   const localDeletes: string[] = []
+  const remoteDeletes: string[] = []
   const newBase: VersionMap = {}
   const stats: MergeStats = { pulled: 0, pushed: 0, deletedLocal: 0, deletedRemote: 0, conflicts: 0 }
 
@@ -80,6 +83,7 @@ export function mergeSet(input: MergeInput): MergeOutput {
     } else if (!l && r) {
       if (bVer !== undefined) {
         // local deletion propagates to remote: simply exclude from merged.
+        remoteDeletes.push(id)
         stats.deletedRemote++
       } else {
         merged.set(id, r.entity)
@@ -90,5 +94,5 @@ export function mergeSet(input: MergeInput): MergeOutput {
     // else: absent on both sides → drop from base (omit from newBase)
   }
 
-  return { merged, localDeletes, newBase, stats }
+  return { merged, localDeletes, remoteDeletes, newBase, stats }
 }

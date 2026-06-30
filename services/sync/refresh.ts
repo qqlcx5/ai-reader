@@ -2,6 +2,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import { useCollectionStore } from '@/stores/collection.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { useFeedStore } from '@/stores/feed.store'
 import { initSearchIndex } from '@/services/search'
 
 /**
@@ -14,11 +15,13 @@ export async function refreshAfterDataChange(): Promise<void> {
   const modelStore = useModelStore()
   const collectionStore = useCollectionStore()
   const settingsStore = useSettingsStore()
+  const feedStore = useFeedStore()
   await Promise.all([
     documentStore.refreshDocuments(),
     modelStore.loadModels(),
     collectionStore.loadCollections(),
     settingsStore.loadSettings(),
+    feedStore.loadFeeds(),
     initSearchIndex(),
   ])
 }

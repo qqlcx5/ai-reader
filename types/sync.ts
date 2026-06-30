@@ -59,3 +59,27 @@ export interface SyncResult {
   deletedRemote: number
   conflicts: number
 }
+
+export interface SyncDeleteItem {
+  type: EntityKey
+  id: string
+  label?: string
+}
+
+/**
+ * Dry-run preview of a sync: counts, totals, and labelled deletion items so
+ * the UI can show exactly what would be removed before applying anything.
+ * `abortReason` is set when a wipe safeguard would trigger.
+ */
+export interface SyncPreview {
+  pulled: number
+  pushed: number
+  deletedLocal: number
+  deletedRemote: number
+  conflicts: number
+  localTotal: number
+  remoteTotal: number
+  abortReason?: string
+  localDeleteItems: SyncDeleteItem[]
+  remoteDeleteItems: SyncDeleteItem[]
+}
