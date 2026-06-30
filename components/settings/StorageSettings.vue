@@ -10,6 +10,7 @@ import { initSearchIndex, searchIndex } from '@/services/search/index'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
 import { useAppStore } from '@/stores/app.store'
 import { db } from '@/db/index'
+import { MetaRepository } from '@/db/repositories/meta.repository'
 
 const docCount = ref(0)
 const convCount = ref(0)
@@ -67,13 +68,16 @@ function getBackupFilename(): string {
 async function doExport() {
   showExportConfirm.value = false
   try {
-    const [documents, conversations, models, settings, collections, collectionItems] = await Promise.all([
+    const [documents, conversations, models, settings, collections, collectionItems, webdavConfig] = await Promise.all([
       DocumentRepository.findAll(),
       ChatRepository.findAll(),
       ModelRepository.findAll(),
       db.settings.toArray(),
       db.collections.toArray(),
       db.collectionItems.toArray(),
+      // WebDAV 配置存在 kvMeta 表（键 'webdav-config'）。只导出这一个键，
+      // 不导出 'sync-state' —— 同步基线是设备本地的，跨设备恢复会破坏 LWW 三方合并。
+      MetaRepository.get('webdav-config'),
     ])
 
     const backup = {
@@ -85,6 +89,7 @@ async function doExport() {
       settings,
       collections,
       collectionItems,
+      webdavConfig,
     }
 
     const json = JSON.stringify(backup, null, 2)
@@ -135,6 +140,13 @@ async function doImport(file: File) {
         if (collectionItems.length > 0) await db.collectionItems.bulkAdd(collectionItems)
       },
     )
+
+    // 恢复 WebDAV 配置（只覆盖这一个键，不动 sync-state）。refreshAfterDataChange
+    // 会重新触发 loadSettings，让 WebDAV 设置面板的 UI 同步更新。
+    const webdavConfig = data.webdavConfig
+    if (webdavConfig && typeof webdavConfig === 'object') {
+      await MetaRepository.set('webdav-config', webdavConfig)
+    }
 
     await refreshStats()
     await refreshAfterDataChange()
