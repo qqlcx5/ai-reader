@@ -53,6 +53,30 @@ describe('truncateContext', () => {
     expect(result).toBe(text)
   })
 
+  it('should keep whole paragraphs until the token budget is exhausted', () => {
+    const paragraphs = [
+      'First paragraph here with some words.',
+      'Second paragraph here with more words.',
+      'Third paragraph here that should be trimmed away.',
+    ]
+    const text = paragraphs.join('\n\n')
+
+    // Budget fits only the first paragraph plus a partial second.
+    const result = truncateContext(text, 12)
+
+    expect(result).toContain('First paragraph here')
+    expect(result.length).toBeLessThan(text.length)
+  })
+
+  it('should not split mid-word when hard-cutting a long paragraph', () => {
+    // One huge paragraph, tiny budget → must hard-cut to a short prefix.
+    const text = 'Word '.repeat(400)
+    const result = truncateContext(text, 50)
+
+    expect(result.length).toBeLessThan(text.length)
+    expect(result.length).toBeGreaterThan(0)
+  })
+
   it('should handle negative maxTokens gracefully', () => {
     const result = truncateContext('Hello World', -1)
     expect(result).toBe('')

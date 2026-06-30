@@ -187,6 +187,21 @@ input, select, textarea {
 
 .md-render img { max-width: 100%; height: auto; border-radius: 8px; margin: 0.7em 0; }
 
+/* Constrain any media that survives sanitization (video/audio/iframe/embed/svg…)
+   so a huge native size or a width="9999" attribute can't blow out the layout. */
+.md-render video,
+.md-render iframe,
+.md-render embed,
+.md-render object,
+.md-render svg,
+.md-render picture,
+.md-render audio {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.7em 0;
+}
+
 .md-render code:not(pre code) {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.88em;
@@ -199,7 +214,7 @@ input, select, textarea {
   margin: 0;
   padding: 12px 14px;
   overflow-x: auto;
-  background: #0d1117;
+  background: #f6f8fa;
 }
 .md-render pre code {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -225,34 +240,47 @@ input, select, textarea {
 
 .md-render input[type='checkbox'] { margin-right: 0.5em; transform: translateY(-1px); }
 
+/* Footnotes (marked-footnote) */
+.md-render sup a { color: #6366f1; border-bottom: 0; font-size: 0.8em; }
+.md-render .footnotes {
+  margin-top: 1.6em;
+  padding-top: 0.8em;
+  border-top: 1px solid #e4e4e7;
+  font-size: 0.85em;
+  color: #71717a;
+}
+.md-render .footnotes ol { padding-left: 1.3em; margin: 0.4em 0; }
+.md-render .footnotes li { margin: 0.3em 0; }
+.md-render .footnotes li::marker { color: #a1a1aa; }
+
 /* ── Code block wrapper (language label + copy) ── */
 .code-block {
   margin: 1em 0;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #1f2428;
-  background: #0d1117;
+  border: 1px solid #d0d7de;
+  background: #f6f8fa;
 }
 .code-block__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 4px 10px;
-  background: #161b22;
-  border-bottom: 1px solid #1f2428;
+  background: #eaeef2;
+  border-bottom: 1px solid #d0d7de;
 }
 .code-block__lang {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px;
-  color: #8b949e;
+  color: #57606a;
   text-transform: lowercase;
 }
 .code-block__copy {
   font-size: 11px;
-  color: #8b949e;
+  color: #57606a;
   cursor: pointer;
   padding: 2px 6px;
   border-radius: 4px;
 }
-.code-block__copy:hover { color: #c9d1d9; background: rgba(255, 255, 255, 0.06); }
+.code-block__copy:hover { color: #24292f; background: rgba(0, 0, 0, 0.05); }
 .code-block pre { margin: 0; border-radius: 0; }

@@ -22,6 +22,12 @@ describe('renderMarkdown', () => {
     expect(html).toContain('src="https://example.com/a.png"')
   })
 
+  it('keeps <video> tags so CSS can bound them (not stripped)', () => {
+    const html = renderMarkdown('<video src="https://example.com/a.mp4" width="9999"></video>')
+    expect(html).toContain('<video')
+    expect(html).toContain('src="https://example.com/a.mp4"')
+  })
+
   it('returns empty string for empty input', () => {
     expect(renderMarkdown('')).toBe('')
   })

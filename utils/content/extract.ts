@@ -1,5 +1,6 @@
 import Defuddle from 'defuddle'
 import { createMarkdownContent } from 'defuddle/full'
+import { estimateTokens } from '../token'
 
 // ---------------------------------------------------------------------------
 // Types — matches the AuraMind internal data model
@@ -129,7 +130,7 @@ export async function extractPage(
 
   const contentHash = await computeHash(markdown)
   const wordCount = markdown.split(/\s+/).filter(Boolean).length
-  const tokenCount = Math.ceil(markdown.length / 4)
+  const tokenCount = estimateTokens(markdown)
 
   return {
     url,
@@ -158,7 +159,7 @@ function fallbackExtract(doc: Document, url: string): Promise<ExtractedPageData>
 
   return computeHash(markdown).then((contentHash) => {
     const wordCount = markdown.split(/\s+/).filter(Boolean).length
-    const tokenCount = Math.ceil(markdown.length / 4)
+    const tokenCount = estimateTokens(markdown)
 
     return {
       url,
