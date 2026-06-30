@@ -95,9 +95,9 @@ describe('aggregateUsage', () => {
       {
         id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
         messages: [
-          { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
+          { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 1000, createdAt: '', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
           { id: 'm2', role: 'user', content: '', createdAt: '' },
-          { id: 'm3', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
+          { id: 'm3', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 2000, createdAt: '', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
         ],
       },
     ] as any
@@ -108,26 +108,35 @@ describe('aggregateUsage', () => {
     expect(agg.totalPrompt).toBe(300)
     expect(agg.totalCompletion).toBe(150)
     expect(agg.totalTokens).toBe(450)
+    expect(agg.totalMessages).toBe(2)
+    expect(agg.failedMessages).toBe(0)
+    expect(agg.errorRate).toBe(0)
+    expect(agg.avgDurationMs).toBe(1500)
     expect(agg.byModel).toHaveLength(1)
     expect(agg.byModel[0].name).toBe('GPT-5.5')
+    expect(agg.byModel[0].avgDurationMs).toBe(1500)
     // gpt-5.5: 35 in / 210 out per 1M
     expect(agg.totalCost).toBeCloseTo((300 * 35 + 150 * 210) / 1e6, 6)
   })
 
-  it('ignores messages without tokenUsage; unknown models contribute tokens but no cost', () => {
+  it('counts errors and averages latency across all assistant messages', () => {
     const conversations = [
       {
         id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
         messages: [
-          { id: 'm1', role: 'assistant', content: '', modelId: 'llama', createdAt: '', tokenUsage: { promptTokens: 10, completionTokens: 5 } },
-          { id: 'm2', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '' },
+          { id: 'm1', role: 'assistant', content: '', modelId: 'llama', status: 'success', durationMs: 500, createdAt: '', tokenUsage: { promptTokens: 10, completionTokens: 5 } },
+          { id: 'm2', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'failed', durationMs: 200, createdAt: '' },
         ],
       },
     ] as any
 
     const agg = aggregateUsage(conversations, [])
-    expect(agg.totalTokens).toBe(15)
-    expect(agg.totalCost).toBe(0)
-    expect(agg.byModel[0].name).toBe('llama')
+    expect(agg.totalMessages).toBe(2)
+    expect(agg.failedMessages).toBe(1)
+    expect(agg.errorRate).toBe(0.5)
+    expect(agg.totalTokens).toBe(15) // only m1 has usage
+    expect(agg.totalCost).toBe(0) // unknown models
+    expect(agg.avgDurationMs).toBe(350) // (500 + 200) / 2
+    expect(agg.byModel).toHaveLength(2)
   })
 })

@@ -21,6 +21,9 @@ export interface ChatMessage {
     completionTokens?: number
     totalTokens?: number
   }
+
+  /** Wall-clock generation time (send → done), ms. Set on completion/failure. */
+  durationMs?: number
 }
 
 export interface ConversationEntity {

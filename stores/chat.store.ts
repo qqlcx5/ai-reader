@@ -548,6 +548,7 @@ export const useChatStore = defineStore('chat', () => {
     // Use capturedMessages (not messages.value) for all callbacks so tokens
     // continue flowing into the correct conversation even after a switch.
     const assistantId = assistantMsg.id
+    const startedAt = performance.now()
     streamState.provider = createProvider(model)
     await streamState.provider.streamChat(
       {
@@ -577,6 +578,7 @@ export const useChatStore = defineStore('chat', () => {
           if (msg) {
             msg.status = 'success'
             msg.updatedAt = new Date().toISOString()
+            msg.durationMs = Math.round(performance.now() - startedAt)
             // Fallback estimate when the provider didn't return real usage
             // (e.g. some OpenAI-compatible endpoints). Real usage was already
             // written by onUsage above when available.
@@ -605,6 +607,7 @@ export const useChatStore = defineStore('chat', () => {
             msg.status = 'failed'
             msg.error = error.message || String(error)
             msg.updatedAt = new Date().toISOString()
+            msg.durationMs = Math.round(performance.now() - startedAt)
           }
         },
       },

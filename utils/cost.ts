@@ -52,6 +52,14 @@ export interface UsageByModel {
   promptTokens: number
   completionTokens: number
   cost: number
+  /** Total assistant messages for this model. */
+  total: number
+  /** Failed assistant messages (status === 'failed'). */
+  failed: number
+  /** failed / total. */
+  errorRate: number
+  /** Mean generation time over messages that recorded durationMs (ms). */
+  avgDurationMs: number
 }
 
 export interface UsageAggregate {
@@ -60,53 +68,110 @@ export interface UsageAggregate {
   totalCompletion: number
   totalCost: number
   totalTokens: number
+  /** Total assistant messages. */
+  totalMessages: number
+  failedMessages: number
+  errorRate: number
+  avgDurationMs: number
+}
+
+interface AccModel {
+  modelId: string
+  name: string
+  promptTokens: number
+  completionTokens: number
+  cost: number
+  total: number
+  failed: number
+  durationSum: number
+  durationCount: number
 }
 
 /**
- * Aggregate assistant token usage + cost across ALL conversations.
- * Pure derivation over data fetched from the DB (e.g. findAllSorted),
- * so the result covers every document — not just the currently open one.
+ * Aggregate assistant token usage, cost, latency and error rate across ALL
+ * conversations. Pure derivation over data fetched from the DB (e.g.
+ * findAllSorted), so the result covers every document — not just the open one.
  */
 export function aggregateUsage(
   conversations: ConversationEntity[],
   models: ModelConfig[],
 ): UsageAggregate {
-  const byModel = new Map<string, UsageByModel>()
+  const byModel = new Map<string, AccModel>()
   let totalPrompt = 0
   let totalCompletion = 0
   let totalCost = 0
+  let totalMessages = 0
+  let failedMessages = 0
+  let durationSum = 0
+  let durationCount = 0
 
   for (const conv of conversations) {
     for (const msg of conv.messages) {
-      if (msg.role !== 'assistant' || !msg.tokenUsage) continue
-      const u = msg.tokenUsage
-      const p = u.promptTokens ?? 0
-      const c = u.completionTokens ?? 0
-      const model = models.find((m) => m.modelId === msg.modelId)
-      const cost = model ? (calcMessageCost(u, model) ?? 0) : 0
-      totalPrompt += p
-      totalCompletion += c
-      totalCost += cost
+      if (msg.role !== 'assistant') continue
+      totalMessages++
+      const failed = msg.status === 'failed'
+      if (failed) failedMessages++
+
       const key = msg.modelId || 'unknown'
-      const entry = byModel.get(key) ?? {
-        modelId: key,
-        name: model?.name || key,
-        promptTokens: 0,
-        completionTokens: 0,
-        cost: 0,
+      const model = models.find((m) => m.modelId === msg.modelId)
+      let entry = byModel.get(key)
+      if (!entry) {
+        entry = {
+          modelId: key,
+          name: model?.name || key,
+          promptTokens: 0,
+          completionTokens: 0,
+          cost: 0,
+          total: 0,
+          failed: 0,
+          durationSum: 0,
+          durationCount: 0,
+        }
+        byModel.set(key, entry)
       }
-      entry.promptTokens += p
-      entry.completionTokens += c
-      entry.cost += cost
-      byModel.set(key, entry)
+      entry.total++
+      if (failed) entry.failed++
+      if (msg.durationMs != null) {
+        entry.durationSum += msg.durationMs
+        entry.durationCount++
+        durationSum += msg.durationMs
+        durationCount++
+      }
+      if (msg.tokenUsage) {
+        const p = msg.tokenUsage.promptTokens ?? 0
+        const c = msg.tokenUsage.completionTokens ?? 0
+        const cost = model ? (calcMessageCost(msg.tokenUsage, model) ?? 0) : 0
+        entry.promptTokens += p
+        entry.completionTokens += c
+        entry.cost += cost
+        totalPrompt += p
+        totalCompletion += c
+        totalCost += cost
+      }
     }
   }
 
+  const toByModel = (e: AccModel): UsageByModel => ({
+    modelId: e.modelId,
+    name: e.name,
+    promptTokens: e.promptTokens,
+    completionTokens: e.completionTokens,
+    cost: e.cost,
+    total: e.total,
+    failed: e.failed,
+    errorRate: e.total > 0 ? e.failed / e.total : 0,
+    avgDurationMs: e.durationCount > 0 ? Math.round(e.durationSum / e.durationCount) : 0,
+  })
+
   return {
-    byModel: [...byModel.values()].sort((a, b) => b.cost - a.cost),
+    byModel: [...byModel.values()].map(toByModel).sort((a, b) => b.cost - a.cost),
     totalPrompt,
     totalCompletion,
     totalCost,
     totalTokens: totalPrompt + totalCompletion,
+    totalMessages,
+    failedMessages,
+    errorRate: totalMessages > 0 ? failedMessages / totalMessages : 0,
+    avgDurationMs: durationCount > 0 ? Math.round(durationSum / durationCount) : 0,
   }
 }

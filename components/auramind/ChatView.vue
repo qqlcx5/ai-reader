@@ -8,7 +8,7 @@ import { useAppStore } from '@/stores/app.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
 import UButton from '@/components/ui/UButton.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
-import { calcMessageCost, formatTokens, formatCNY } from '@/utils/cost'
+import { calcMessageCost, formatCNY } from '@/utils/cost'
 
 const chatStore = useChatStore()
 const documentStore = useDocumentStore()
@@ -33,16 +33,18 @@ function modelNameFor(modelId?: string): string | undefined {
 // ── Token usage + cost label ────────────────────────────
 function metaFor(msg: ChatMessageType): string | undefined {
   if (msg.role !== 'assistant' || !msg.tokenUsage) return undefined
-  const usage = msg.tokenUsage
-  const total = (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0)
+  const u = msg.tokenUsage
+  const prompt = u.promptTokens ?? 0
+  const completion = u.completionTokens ?? 0
+  const total = prompt + completion
   if (total === 0) return undefined
-  const parts: string[] = [formatTokens(total)]
+  const parts: string[] = [`Tokens: ${total} ↑${prompt} ↓${completion}`]
   const model = modelStore.models.find((m) => m.modelId === msg.modelId)
   if (model) {
-    const cost = calcMessageCost(usage, model)
-    if (cost != null && cost > 0) parts.push(formatCNY(cost))
+    const cost = calcMessageCost(u, model)
+    if (cost != null && cost > 0) parts.push(`花费:${formatCNY(cost)}`)
   }
-  return parts.join(' · ')
+  return parts.join('  ')
 }
 
 // ── Round grouping ──────────────────────────────────────

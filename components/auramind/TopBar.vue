@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { PanelRight, BookOpen, Settings, RefreshCw } from '@lucide/vue'
+import { PanelRight, BookOpen, Settings, RefreshCw, Gauge } from '@lucide/vue'
 import LZString from 'lz-string'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -31,6 +31,7 @@ const libraryDocCount = computed(() => documentStore.documents.length)
 const navItems = [
   { key: 'workspace', icon: PanelRight, label: '工作区' },
   { key: 'library', icon: BookOpen, label: '记忆库' },
+  { key: 'usage', icon: Gauge, label: '用量' },
   { key: 'settings', icon: Settings, label: '设置' },
 ] as const
 

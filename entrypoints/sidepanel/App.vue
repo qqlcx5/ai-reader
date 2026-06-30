@@ -13,6 +13,7 @@ import TopBar from '@/components/auramind/TopBar.vue'
 import WorkspaceView from '@/components/auramind/WorkspaceView.vue'
 import LibraryView from '@/components/auramind/LibraryView.vue'
 import SettingsView from '@/components/auramind/SettingsView.vue'
+import UsageView from '@/components/auramind/UsageView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
@@ -172,6 +173,7 @@ onUnmounted(() => {
 
     <WorkspaceView v-show="appStore.currentView === 'workspace'" />
     <LibraryView v-show="appStore.currentView === 'library'" />
+    <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 
     <!-- Toast notification -->

@@ -13,13 +13,10 @@ import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
-import { ChatRepository } from '@/db/repositories/chat.repository'
-import { aggregateUsage, formatTokens, formatCNY, type UsageAggregate } from '@/utils/cost'
 
 const modelStore = useModelStore()
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
-const usage = ref<UsageAggregate | null>(null)
 
 const enabledCount = computed(() => modelStore.models.filter(m => m.enabled).length)
 
@@ -38,8 +35,6 @@ const globalSystemPrompt = computed({
 onMounted(async () => {
   await modelStore.loadModels()
   await settingsStore.loadSettings()
-  const all = await ChatRepository.findAllSorted()
-  usage.value = aggregateUsage(all, modelStore.models)
 })
 
 function openAddDialog() {
@@ -186,32 +181,6 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">WebDAV 同步</h2>
         <WebDAVSettings />
-      </section>
-
-      <!-- 用量统计 -->
-      <section v-if="usage && usage.totalTokens > 0" class="flex flex-col gap-2.5">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">用量统计</h2>
-        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
-          <div class="grid grid-cols-2 divide-x divide-zinc-100 border-b border-zinc-100">
-            <div class="p-3">
-              <div class="text-[10px] text-zinc-400">累计 Token</div>
-              <div class="text-[16px] font-semibold text-zinc-900 mt-0.5">{{ formatTokens(usage.totalTokens) }}</div>
-              <div class="text-[10px] text-zinc-400 mt-0.5">输入 {{ formatTokens(usage.totalPrompt) }} · 输出 {{ formatTokens(usage.totalCompletion) }}</div>
-            </div>
-            <div class="p-3">
-              <div class="text-[10px] text-zinc-400">累计成本</div>
-              <div class="text-[16px] font-semibold text-zinc-900 mt-0.5">{{ formatCNY(usage.totalCost) }}</div>
-              <div class="text-[10px] text-zinc-400 mt-0.5">参考价（手填优先）</div>
-            </div>
-          </div>
-          <div v-if="usage.byModel.length > 1" class="p-3 flex flex-col gap-1.5">
-            <div class="text-[10px] text-zinc-400">按模型</div>
-            <div v-for="m in usage.byModel" :key="m.modelId" class="flex items-center justify-between text-[12px]">
-              <span class="text-zinc-700 truncate">{{ m.name }}</span>
-              <span class="text-zinc-400 tabular-nums shrink-0 ml-2">{{ formatTokens(m.promptTokens + m.completionTokens) }} · {{ formatCNY(m.cost) }}</span>
-            </div>
-          </div>
-        </div>
       </section>
 
       <!-- 本地存储 -->

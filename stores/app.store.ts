@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { TabInfo } from '../types/message'
 
-export type AppView = 'workspace' | 'library' | 'settings'
+export type AppView = 'workspace' | 'library' | 'settings' | 'usage'
 
 export const useAppStore = defineStore('app', () => {
   const currentView = ref<AppView>('workspace')
