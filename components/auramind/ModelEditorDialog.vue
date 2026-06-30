@@ -55,6 +55,8 @@ const isDefault = ref(false)
 const thinkingEnabled = ref(false)
 const thinkingBudgetTokens = ref<number | undefined>(undefined)
 const reasoningEffort = ref('xhigh')
+const inputPricePer1M = ref<number | undefined>(undefined)
+const outputPricePer1M = ref<number | undefined>(undefined)
 
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
@@ -77,6 +79,8 @@ function resetForm() {
   thinkingEnabled.value = false
   thinkingBudgetTokens.value = undefined
   reasoningEffort.value = 'xhigh'
+  inputPricePer1M.value = undefined
+  outputPricePer1M.value = undefined
   errors.value = {}
 }
 
@@ -93,6 +97,8 @@ function populateFromModel(model: ModelConfig) {
   thinkingEnabled.value = !!model.thinking?.enabled
   thinkingBudgetTokens.value = model.thinking?.budgetTokens
   reasoningEffort.value = model.reasoningEffort || '__default__'
+  inputPricePer1M.value = model.inputPricePer1M
+  outputPricePer1M.value = model.outputPricePer1M
   systemPrompt.value = model.systemPrompt || ''
   enabled.value = model.enabled
   isDefault.value = model.isDefault
@@ -172,6 +178,8 @@ async function handleSubmit() {
         maxTokens: maxTokens.value,
         thinking: buildThinkingConfig(),
         reasoningEffort: reasoningEffort.value !== '__default__' ? reasoningEffort.value : undefined,
+        inputPricePer1M: inputPricePer1M.value,
+        outputPricePer1M: outputPricePer1M.value,
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value,
@@ -191,6 +199,8 @@ async function handleSubmit() {
         maxTokens: maxTokens.value,
         thinking: buildThinkingConfig(),
         reasoningEffort: reasoningEffort.value !== '__default__' ? reasoningEffort.value : undefined,
+        inputPricePer1M: inputPricePer1M.value,
+        outputPricePer1M: outputPricePer1M.value,
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value || modelStore.models.length === 0,
@@ -300,6 +310,30 @@ watch(() => props.open, (val) => {
               @update:model-value="maxTokens = $event === '' ? undefined : Number($event)"
             />
             <p v-if="errors.maxTokens" class="text-[10px] text-red-400 mt-0.5">{{ errors.maxTokens }}</p>
+          </div>
+        </div>
+
+        <!-- Pricing (per 1M tokens, CNY) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">输入价 ¥/1M</label>
+            <UInput
+              :model-value="inputPricePer1M != null ? String(inputPricePer1M) : ''"
+              type="number"
+              class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
+              placeholder="留空用内置价"
+              @update:model-value="inputPricePer1M = $event === '' ? undefined : Number($event)"
+            />
+          </div>
+          <div>
+            <label class="text-[11px] text-zinc-500 font-medium">输出价 ¥/1M</label>
+            <UInput
+              :model-value="outputPricePer1M != null ? String(outputPricePer1M) : ''"
+              type="number"
+              class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
+              placeholder="留空用内置价"
+              @update:model-value="outputPricePer1M = $event === '' ? undefined : Number($event)"
+            />
           </div>
         </div>
 

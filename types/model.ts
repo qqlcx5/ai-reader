@@ -32,6 +32,11 @@ export interface ModelConfig {
   /** OpenAI-style reasoning effort (e.g. minimal/low/medium/high/xhigh). Only sent when set. */
   reasoningEffort?: string
 
+  /** Per-1M-tokens input price (CNY). Overrides the built-in pricing table when set. */
+  inputPricePer1M?: number
+  /** Per-1M-tokens output price (CNY). Overrides the built-in pricing table when set. */
+  outputPricePer1M?: number
+
   systemPrompt?: string
 
   createdAt: string

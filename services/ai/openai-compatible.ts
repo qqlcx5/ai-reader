@@ -79,6 +79,7 @@ export const OpenAICompatibleProvider: AIProvider = {
       messages,
       ...buildOpenAIParams(input.model),
       stream: true,
+      stream_options: { include_usage: true },
     })
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -112,11 +113,16 @@ export const OpenAICompatibleProvider: AIProvider = {
     }
 
     const decoder = new TextDecoder()
+    let lastUsage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined
     const parser = createParser({
       onEvent: (event: EventSourceMessage) => {
         if (event.data === '[DONE]') return
         try {
           const parsed = JSON.parse(event.data)
+          // The final chunk (empty choices) carries the accumulated usage
+          if (parsed.usage) {
+            lastUsage = parsed.usage
+          }
           const delta = parsed.choices?.[0]?.delta
 
           // Reasoning / thinking content (DeepSeek R1, OpenAI o1 via compatible API)
@@ -148,6 +154,13 @@ export const OpenAICompatibleProvider: AIProvider = {
       const remainder = decoder.decode()
       if (remainder) {
         parser.feed(remainder)
+      }
+      if (lastUsage) {
+        callbacks.onUsage?.({
+          promptTokens: lastUsage.prompt_tokens,
+          completionTokens: lastUsage.completion_tokens,
+          totalTokens: lastUsage.total_tokens,
+        })
       }
       callbacks.onDone()
     } catch (e: any) {

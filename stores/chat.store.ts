@@ -9,6 +9,7 @@ import { PromptBuilder } from '../services/prompt/builder'
 import type { PromptInput } from '../services/prompt/builder'
 import { buildPageContext } from '../services/prompt/context'
 import { truncateContext } from '../services/prompt/truncate'
+import { estimateTokens } from '../utils/token'
 import { createProvider } from '../services/ai/factory'
 import type { ModelConfig } from '../types/model'
 import type { AIProvider } from '../services/ai/types'
@@ -567,11 +568,28 @@ export const useChatStore = defineStore('chat', () => {
             msg.reasoningContent += text
           }
         },
+        onUsage(usage) {
+          const msg = capturedMessages.find((m) => m.id === assistantId)
+          if (msg) msg.tokenUsage = usage
+        },
         onDone() {
           const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) {
             msg.status = 'success'
             msg.updatedAt = new Date().toISOString()
+            // Fallback estimate when the provider didn't return real usage
+            // (e.g. some OpenAI-compatible endpoints). Real usage was already
+            // written by onUsage above when available.
+            if (!msg.tokenUsage) {
+              const promptText = [
+                promptOutput.system ?? '',
+                ...promptOutput.messages.map((m) => m.content ?? ''),
+              ].join('\n')
+              msg.tokenUsage = {
+                promptTokens: estimateTokens(promptText),
+                completionTokens: estimateTokens(msg.content ?? ''),
+              }
+            }
           }
         },
         onError(error: Error) {

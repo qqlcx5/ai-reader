@@ -147,6 +147,46 @@ describe('AnthropicProvider', () => {
       expect(doneCalled).toBe(true)
     })
 
+    it('should parse usage from message_start + message_delta and call onUsage', async () => {
+      const encoder = new TextEncoder()
+      const chunks = [
+        'data: {"type":"message_start","message":{"usage":{"input_tokens":42}}}\n\n',
+        'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hi"}}\n\n',
+        'data: {"type":"message_delta","delta":{},"usage":{"output_tokens":7}}\n\n',
+        'data: {"type":"message_stop"}\n\n',
+      ]
+
+      let chunkIndex = 0
+      const mockReader = {
+        read: vi.fn().mockImplementation(() => {
+          if (chunkIndex >= chunks.length) return Promise.resolve({ done: true, value: undefined })
+          const value = encoder.encode(chunks[chunkIndex++])
+          return Promise.resolve({ done: false, value })
+        }),
+      }
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => mockReader },
+      }))
+
+      let usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined
+      await AnthropicProvider.streamChat(
+        { model: mockModelConfig(), messages: [{ role: 'user', content: 'Hi' }] },
+        {
+          onToken: () => {},
+          onUsage: (u) => { usage = u },
+          onDone: () => {},
+          onError: () => {},
+        },
+      )
+
+      expect(usage).toBeDefined()
+      expect(usage?.promptTokens).toBe(42)
+      expect(usage?.completionTokens).toBe(7)
+      expect(usage?.totalTokens).toBe(49)
+    })
+
     it('should call onError on fetch failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
 

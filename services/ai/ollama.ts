@@ -134,6 +134,7 @@ export const OllamaProvider: AIProvider = {
 
     const decoder = new TextDecoder()
     let buffer = ''
+    let lastUsage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined
 
     try {
       while (true) {
@@ -163,7 +164,14 @@ export const OllamaProvider: AIProvider = {
               callbacks.onToken(content)
             }
             if (event.done) {
-              // stream naturally ends here — onDone will fire after while loop
+              // The done chunk carries final prompt_eval_count / eval_count
+              if (event.prompt_eval_count != null || event.eval_count != null) {
+                lastUsage = {
+                  promptTokens: event.prompt_eval_count,
+                  completionTokens: event.eval_count,
+                  totalTokens: (event.prompt_eval_count ?? 0) + (event.eval_count ?? 0),
+                }
+              }
             }
           } catch {
             // ignore malformed NDJSON lines
@@ -186,9 +194,19 @@ export const OllamaProvider: AIProvider = {
           if (content) {
             callbacks.onToken(content)
           }
+          if (event.done && (event.prompt_eval_count != null || event.eval_count != null)) {
+            lastUsage = {
+              promptTokens: event.prompt_eval_count,
+              completionTokens: event.eval_count,
+              totalTokens: (event.prompt_eval_count ?? 0) + (event.eval_count ?? 0),
+            }
+          }
         } catch {
           // ignore final partial line
         }
+      }
+      if (lastUsage) {
+        callbacks.onUsage?.(lastUsage)
       }
       callbacks.onDone()
     } catch (e: unknown) {

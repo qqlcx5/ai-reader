@@ -143,6 +143,44 @@ describe('OllamaProvider', () => {
       expect(doneCalled).toBe(true)
     })
 
+    it('should parse usage from the done chunk and call onUsage', async () => {
+      const encoder = new TextEncoder()
+      const lines = [
+        '{"model":"llama3.2","message":{"role":"assistant","content":"Hi"},"done":false}\n',
+        '{"model":"llama3.2","message":{"role":"assistant","content":""},"done":true,"prompt_eval_count":42,"eval_count":7}\n',
+      ]
+
+      let lineIndex = 0
+      const mockReader = {
+        read: vi.fn().mockImplementation(() => {
+          if (lineIndex >= lines.length) return Promise.resolve({ done: true, value: undefined })
+          const value = encoder.encode(lines[lineIndex++])
+          return Promise.resolve({ done: false, value })
+        }),
+      }
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        body: { getReader: () => mockReader },
+      }))
+
+      let usage: { promptTokens?: number; completionTokens?: number; totalTokens?: number } | undefined
+      await OllamaProvider.streamChat(
+        { model: mockModelConfig(), messages: [{ role: 'user', content: 'Hi' }] },
+        {
+          onToken: () => {},
+          onUsage: (u) => { usage = u },
+          onDone: () => {},
+          onError: () => {},
+        },
+      )
+
+      expect(usage).toBeDefined()
+      expect(usage?.promptTokens).toBe(42)
+      expect(usage?.completionTokens).toBe(7)
+      expect(usage?.totalTokens).toBe(49)
+    })
+
     it('should call onError on fetch failure', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Connection refused')))
 

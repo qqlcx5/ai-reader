@@ -124,6 +124,8 @@ export const AnthropicProvider: AIProvider = {
     }
 
     const decoder = new TextDecoder()
+    let inputTokens: number | undefined
+    let outputTokens: number | undefined
     const parser = createParser({
       onEvent: (event: EventSourceMessage) => {
         try {
@@ -148,6 +150,14 @@ export const AnthropicProvider: AIProvider = {
             if (text) {
               callbacks.onToken(text)
             }
+          } else if (parsed.type === 'message_start') {
+            // input_tokens arrive in the message_start event
+            const u = parsed.message?.usage
+            if (u?.input_tokens != null) inputTokens = u.input_tokens
+          } else if (parsed.type === 'message_delta') {
+            // output_tokens is cumulative across message_delta events
+            const u = parsed.usage
+            if (u?.output_tokens != null) outputTokens = u.output_tokens
           } else if (parsed.type === 'error') {
             callbacks.onError(new Error(parsed.error?.message ?? 'Anthropic stream error'))
           }
@@ -167,6 +177,13 @@ export const AnthropicProvider: AIProvider = {
       const remainder = decoder.decode()
       if (remainder) {
         parser.feed(remainder)
+      }
+      if (inputTokens != null || outputTokens != null) {
+        callbacks.onUsage?.({
+          promptTokens: inputTokens,
+          completionTokens: outputTokens,
+          totalTokens: (inputTokens ?? 0) + (outputTokens ?? 0),
+        })
       }
       callbacks.onDone()
     } catch (e: unknown) {

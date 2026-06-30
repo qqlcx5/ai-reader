@@ -8,6 +8,7 @@ import { useAppStore } from '@/stores/app.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
 import UButton from '@/components/ui/UButton.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
+import { calcMessageCost, formatTokens, formatCNY } from '@/utils/cost'
 
 const chatStore = useChatStore()
 const documentStore = useDocumentStore()
@@ -27,6 +28,21 @@ function modelNameFor(modelId?: string): string | undefined {
   if (!modelId) return undefined
   const m = modelStore.models.find((mod) => mod.modelId === modelId)
   return m?.name
+}
+
+// ── Token usage + cost label ────────────────────────────
+function metaFor(msg: ChatMessageType): string | undefined {
+  if (msg.role !== 'assistant' || !msg.tokenUsage) return undefined
+  const usage = msg.tokenUsage
+  const total = (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0)
+  if (total === 0) return undefined
+  const parts: string[] = [formatTokens(total)]
+  const model = modelStore.models.find((m) => m.modelId === msg.modelId)
+  if (model) {
+    const cost = calcMessageCost(usage, model)
+    if (cost != null && cost > 0) parts.push(formatCNY(cost))
+  }
+  return parts.join(' · ')
 }
 
 // ── Round grouping ──────────────────────────────────────
@@ -185,6 +201,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         v-if="round.assistantMsgs.length === 1"
         :message="round.assistantMsgs[0]"
         :model-name="modelNameFor(round.assistantMsgs[0].modelId)"
+        :meta="metaFor(round.assistantMsgs[0])"
         :is-last-assistant="round.assistantMsgs[0].id === lastAssistantMsgId"
         @regenerate="handleRegenerate"
         @copy="handleCopy"
@@ -206,6 +223,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
           :key="amsg.id"
           :message="amsg"
           :model-name="modelNameFor(amsg.modelId)"
+          :meta="metaFor(amsg)"
           :is-multi-model="true"
           :is-last-assistant="amsg.id === lastAssistantMsgId"
           @regenerate="handleRegenerate"

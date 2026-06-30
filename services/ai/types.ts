@@ -29,6 +29,8 @@ export interface ChatInput {
 export interface StreamCallbacks {
   onToken: (text: string) => void
   onReasoning?: (text: string) => void
+  /** Real token usage parsed from the stream tail (when the provider returns it). */
+  onUsage?: (usage: NonNullable<ChatOutput['usage']>) => void
   onDone: () => void
   onError: (error: Error) => void
 }

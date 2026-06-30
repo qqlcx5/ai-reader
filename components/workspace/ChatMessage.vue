@@ -13,6 +13,8 @@ const props = defineProps<{
   isMultiModel?: boolean
   /** Whether this is the last assistant message (to show regenerate) */
   isLastAssistant?: boolean
+  /** Token usage + cost summary, e.g. "1.5k · ¥0.003" */
+  meta?: string
 }>()
 
 const emit = defineEmits<{
@@ -206,6 +208,7 @@ watch(renderedHtml, async () => {
         </div>
       </template>
     </div>
+    <div v-if="meta" class="text-[10px] text-zinc-400 px-1 select-none">{{ meta }}</div>
   </div>
 </template>
 
