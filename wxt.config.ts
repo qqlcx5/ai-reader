@@ -6,7 +6,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-vue', '@wxt-dev/unocss'],
   manifest: {
     name: 'AuraMind',
-    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs'],
+    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms'],
     host_permissions: ['<all_urls>'],
   },
   unocss: {

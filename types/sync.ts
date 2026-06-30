@@ -3,6 +3,7 @@ import type { ConversationEntity } from './chat'
 import type { ModelConfig } from './model'
 import type { AppSettings } from './settings'
 import type { CollectionEntity, CollectionItemEntity } from './collection'
+import type { FeedEntity } from './feed'
 
 /** Device-local WebDAV connection config. Never synced across devices. */
 export interface WebDAVConfig {
@@ -20,6 +21,7 @@ export type EntityKey =
   | 'collections'
   | 'collectionItems'
   | 'settings'
+  | 'feeds'
 
 /** The dataset that participates in sync. */
 export interface SyncedDataset {
@@ -29,6 +31,7 @@ export interface SyncedDataset {
   collections: CollectionEntity[]
   collectionItems: CollectionItemEntity[]
   settings: AppSettings[]
+  feeds: FeedEntity[]
 }
 
 export interface RemoteSnapshot {

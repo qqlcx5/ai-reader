@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderMarkdown, enhanceCodeBlocks } from './markdown'
+import { renderMarkdown, enhanceCodeBlocks, sanitizeHtml } from './markdown'
 
 describe('renderMarkdown', () => {
   it('renders headings, lists, and code', () => {
@@ -31,7 +31,6 @@ describe('renderMarkdown', () => {
   it('returns empty string for empty input', () => {
     expect(renderMarkdown('')).toBe('')
   })
-
   it('renders footnotes when the extension is present', () => {
     const html = renderMarkdown('Here[^1].\n\n[^1]: note body')
     // marked-footnote emits a footnotes section + references
@@ -85,5 +84,19 @@ describe('enhanceCodeBlocks', () => {
     enhanceCodeBlocks(container)
     enhanceCodeBlocks(container)
     expect(container.querySelectorAll('.code-block')).toHaveLength(1)
+  })
+})
+
+describe('sanitizeHtml', () => {
+  it('keeps structure + media, strips scripts (shared policy for RSS reader)', () => {
+    const out = sanitizeHtml('<p>hi</p><video src="x.mp4" controls></video><script>alert(1)</script>')
+    expect(out).toContain('<p>hi</p>')
+    expect(out).toContain('<video')
+    expect(out).toContain('controls')
+    expect(out).not.toContain('<script>')
+  })
+
+  it('returns empty string for empty input', () => {
+    expect(sanitizeHtml('')).toBe('')
   })
 })

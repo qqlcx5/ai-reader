@@ -153,7 +153,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
 </script>
 
 <template>
-  <div ref="scrollContainer" class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-5 bg-[#FAFAFA]">
+  <div ref="scrollContainer" class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-3 bg-[#FAFAFA]">
     <!-- Context badge -->
     <div class="flex justify-center">
       <span

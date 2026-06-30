@@ -1,0 +1,91 @@
+import { FeedRepository } from '@/db/repositories/feed.repository'
+import { FeedItemRepository } from '@/db/repositories/feed-item.repository'
+import { fetchFeed } from './fetch'
+import { parseFeed } from './parser'
+import type { FeedEntity, FeedItemEntity } from '@/types/feed'
+
+function uuid(): string {
+  return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+}
+
+export interface RefreshResult {
+  feedId: string
+  newItems: number
+  error?: string
+}
+
+/** Fetch + parse one feed, inserting items not yet seen (dedupe by guid). */
+export async function refreshFeed(feed: FeedEntity): Promise<RefreshResult> {
+  try {
+    const fetched = await fetchFeed(feed.url, { etag: feed.etag, lastModified: feed.lastModified })
+    const now = new Date().toISOString()
+
+    if (fetched.notModified) {
+      await FeedRepository.save({ ...feed, lastFetchedAt: now, lastError: undefined })
+      return { feedId: feed.id, newItems: 0 }
+    }
+
+    const parsed = parseFeed(fetched.xml)
+    const known = await FeedItemRepository.findGuids(feed.id)
+    const fresh: FeedItemEntity[] = []
+    for (const it of parsed.items) {
+      const guid = it.guid || it.link
+      if (!guid || known.has(guid)) continue
+      fresh.push({
+        id: uuid(),
+        feedId: feed.id,
+        guid,
+        title: it.title,
+        link: it.link,
+        author: it.author,
+        summary: it.summary,
+        contentHtml: it.contentHtml,
+        publishedAt: it.publishedAt,
+        fetchedAt: now,
+      })
+    }
+
+    await FeedItemRepository.bulkSave(fresh)
+    await FeedRepository.save({
+      ...feed,
+      title: feed.title && feed.title !== feed.url ? feed.title : parsed.title,
+      siteUrl: feed.siteUrl || parsed.siteUrl,
+      description: parsed.description,
+      etag: fetched.etag,
+      lastModified: fetched.lastModified,
+      lastFetchedAt: now,
+      lastError: undefined,
+      updatedAt: now,
+    })
+    return { feedId: feed.id, newItems: fresh.length }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    await FeedRepository.save({ ...feed, lastFetchedAt: new Date().toISOString(), lastError: msg })
+    return { feedId: feed.id, newItems: 0, error: msg }
+  }
+}
+
+export async function refreshAll(): Promise<RefreshResult[]> {
+  const feeds = await FeedRepository.findAll()
+  return Promise.all(feeds.map(refreshFeed))
+}
+
+/** Subscribe to a URL (dedupe by URL) and do an initial fetch to fill items. */
+export async function addSubscription(url: string, folder?: string): Promise<FeedEntity> {
+  const normalized = url.trim()
+  const existing = await FeedRepository.findByUrl(normalized)
+  if (existing) return existing
+
+  const now = new Date().toISOString()
+  const feed: FeedEntity = {
+    id: uuid(),
+    url: normalized,
+    title: normalized,
+    folder: folder?.trim() || undefined,
+    createdAt: now,
+    updatedAt: now,
+  }
+  await FeedRepository.save(feed)
+  await refreshFeed(feed)
+  return (await FeedRepository.findById(feed.id)) ?? feed
+}

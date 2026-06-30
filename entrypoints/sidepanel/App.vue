@@ -9,11 +9,14 @@ import { useChatStore } from '@/stores/chat.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
+import { isWindowMode } from '@/utils/open-window'
+import { useBackNavigation } from '@/composables/useBackNavigation'
 import TopBar from '@/components/auramind/TopBar.vue'
 import WorkspaceView from '@/components/auramind/WorkspaceView.vue'
 import LibraryView from '@/components/auramind/LibraryView.vue'
 import SettingsView from '@/components/auramind/SettingsView.vue'
 import UsageView from '@/components/auramind/UsageView.vue'
+import FeedsView from '@/components/auramind/FeedsView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
@@ -25,6 +28,13 @@ const documentStore = useDocumentStore()
 const modelStore = useModelStore()
 const chatStore = useChatStore()
 const promptTemplateStore = usePromptTemplateStore()
+
+// In popped-out window mode there is no associated page tab, so skip the
+// current-page capture flow entirely (window is for library + chat).
+const windowMode = isWindowMode()
+
+// Register mouse-back / Alt+Left / Esc → goBack listeners.
+useBackNavigation()
 
 // Toast notification state
 const toastVisible = ref(false)
@@ -53,7 +63,7 @@ function handleBackgroundMessage(
     }
 
     // Auto-extract on tab change
-    if (settingsStore.settings.capture.autoExtractOnTabChange) {
+    if (!windowMode && settingsStore.settings.capture.autoExtractOnTabChange) {
       triggerAutoExtract(message.payload.tab.id)
     }
   }
@@ -145,8 +155,8 @@ onMounted(async () => {
     removeListener = () => browser.runtime.onMessage.removeListener(handleBackgroundMessage)
   }
 
-  // Get current tab info and auto-extract on open
-  if (browser?.runtime?.sendMessage) {
+  // Get current tab info and auto-extract on open (skip in window mode)
+  if (!windowMode && browser?.runtime?.sendMessage) {
     browser.runtime
       .sendMessage({ type: 'GET_CURRENT_TAB' })
       .then((tab: any) => {
@@ -172,6 +182,7 @@ onUnmounted(() => {
 
     <WorkspaceView v-show="appStore.currentView === 'workspace'" />
     <LibraryView v-show="appStore.currentView === 'library'" />
+    <FeedsView v-show="appStore.currentView === 'feeds'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 

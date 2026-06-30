@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { DocumentRepository } from '../db/repositories/document.repository'
 import { addToIndex, removeFromIndex, replaceInIndex, initSearchIndex } from '../services/search'
-import type { DocumentEntity } from '../types/document'
+import type { DocumentEntity, LibrarySortKey } from '../types/document'
 
 export const useDocumentStore = defineStore('document', () => {
   const currentDocument = ref<DocumentEntity | null>(null)
@@ -10,12 +10,19 @@ export const useDocumentStore = defineStore('document', () => {
   const documents = ref<DocumentEntity[]>([])
   const isLoading = ref(false)
 
+  // Library list sort preference (persisted).
+  const librarySortKey = ref<LibrarySortKey>('viewed')
+
   function setCurrentDocument(doc: DocumentEntity | null) {
     currentDocument.value = doc
   }
 
   function setPageDocument(doc: DocumentEntity | null) {
     pageDocument.value = doc
+  }
+
+  function setLibrarySortKey(key: LibrarySortKey) {
+    librarySortKey.value = key
   }
 
   async function loadDocument(id: string) {
@@ -26,6 +33,20 @@ export const useDocumentStore = defineStore('document', () => {
     } finally {
       isLoading.value = false
     }
+  }
+
+  /** Mark a document as opened now (drives "recently viewed" sort + unread dot). */
+  async function markOpened(id: string) {
+    const now = new Date().toISOString()
+    try {
+      await DocumentRepository.touchLastOpened(id, now)
+    } catch (err) {
+      console.error('[document.store] markOpened failed for', id, err)
+      return
+    }
+    const inList = documents.value.find((d) => d.id === id)
+    if (inList) inList.lastOpenedAt = now
+    if (currentDocument.value?.id === id) currentDocument.value.lastOpenedAt = now
   }
 
   async function saveDocument(doc: DocumentEntity) {
@@ -67,11 +88,18 @@ export const useDocumentStore = defineStore('document', () => {
     pageDocument,
     documents,
     isLoading,
+    librarySortKey,
     setCurrentDocument,
     setPageDocument,
+    setLibrarySortKey,
     loadDocument,
     saveDocument,
     deleteDocument,
+    markOpened,
     refreshDocuments,
   }
+}, {
+  persist: {
+    pick: ['librarySortKey'],
+  },
 })

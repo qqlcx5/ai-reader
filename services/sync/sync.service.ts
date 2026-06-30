@@ -47,14 +47,17 @@ const TYPE_CONFIGS: TypeConfig[] = [
     version: (e) => e.updatedAt,
     filter: (e) => e.id === 'app-settings',
   },
+  // RSS subscriptions sync across devices; feedItems are deliberately excluded
+  // (they're a local, re-fetched cache — see feeds/refresh.ts).
+  { type: 'feeds', table: () => db.feeds, version: (e) => e.updatedAt },
 ]
 
 function emptyVersions(): SyncVersions {
-  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {} }
+  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {}, feeds: {} }
 }
 
 function emptyDataset(): SyncedDataset {
-  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [] }
+  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [] }
 }
 
 /** Strip raw text fields before uploading — raw HTML / rawText are not part of
@@ -106,6 +109,7 @@ export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
     collections: await db.collections.toArray(),
     collectionItems: await db.collectionItems.toArray(),
     settings: (await db.settings.toArray()).filter((s) => s.id === 'app-settings'),
+    feeds: await db.feeds.toArray(),
   }
 
   await remote.putText(
@@ -181,7 +185,7 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
   const mergedDataset = emptyDataset()
   const newBase: SyncVersions = emptyVersions()
   const puts: Record<EntityKey, any[]> = { ...emptyDataset() }
-  const deletes: Record<EntityKey, string[]> = { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [] }
+  const deletes: Record<EntityKey, string[]> = { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [] }
 
   // 3. Merge each type.
   let localTotal = 0

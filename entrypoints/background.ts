@@ -3,6 +3,11 @@ export default defineBackground(() => {
 
   const b = browser as any
 
+  // Clear the tracked app-window id when that window closes (singleton cleanup).
+  b.windows?.onRemoved?.addListener(() => {
+    b.storage?.local?.remove('appWindowId').catch(() => {})
+  })
+
   // Side Panel: open on action click
   const sidePanel = b.sidePanel || (globalThis as any).chrome?.sidePanel
   if (sidePanel) {
@@ -82,6 +87,23 @@ export default defineBackground(() => {
           })
         })
       return true // keep channel open for async response
+    }
+  })
+
+  // RSS periodic refresh. MV3 service workers have no DOMParser, so the actual
+  // parse runs in the side panel — the alarm just broadcasts REFRESH_FEEDS; if
+  // the panel is open it refreshes, otherwise the next open catches up via the
+  // stale check in FeedsView.
+  const FEED_ALARM = 'feed-refresh'
+  function setupFeedAlarm() {
+    b.alarms?.create(FEED_ALARM, { periodInMin: 30 }).catch(() => {})
+  }
+  b.runtime.onInstalled?.addListener(setupFeedAlarm)
+  b.runtime.onStartup?.addListener(setupFeedAlarm)
+  setupFeedAlarm()
+  b.alarms?.onAlarm?.addListener((alarm: any) => {
+    if (alarm?.name === FEED_ALARM) {
+      b.runtime.sendMessage({ type: 'REFRESH_FEEDS' }).catch(() => {})
     }
   })
 })

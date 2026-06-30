@@ -1,0 +1,50 @@
+import { db } from '../index'
+import type { FeedItemEntity } from '../../types/feed'
+
+export const FeedItemRepository = {
+  async findById(id: string): Promise<FeedItemEntity | undefined> {
+    return db.feedItems.get(id)
+  },
+
+  async findByFeed(feedId: string): Promise<FeedItemEntity[]> {
+    // [feedId+publishedAt] index lets us order newest-first efficiently.
+    const items = await db.feedItems.where('feedId').equals(feedId).toArray()
+    return items.sort((a, b) => {
+      const ta = new Date(a.publishedAt ?? a.fetchedAt).getTime()
+      const tb = new Date(b.publishedAt ?? b.fetchedAt).getTime()
+      return tb - ta
+    })
+  },
+
+  async findGuids(feedId: string): Promise<Set<string>> {
+    const rows = await db.feedItems.where('feedId').equals(feedId).toArray()
+    return new Set(rows.map((r) => r.guid))
+  },
+
+  async save(item: FeedItemEntity): Promise<FeedItemEntity> {
+    await db.feedItems.put(item)
+    return item
+  },
+
+  async bulkSave(items: FeedItemEntity[]): Promise<void> {
+    if (items.length) await db.feedItems.bulkPut(items)
+  },
+
+  async markRead(id: string, readAt: string): Promise<void> {
+    await db.feedItems.update(id, { readAt })
+  },
+
+  async setDocument(id: string, documentId: string, collectedAt: string): Promise<void> {
+    await db.feedItems.update(id, { documentId, collectedAt })
+  },
+
+  async unreadCount(feedId?: string): Promise<number> {
+    const col = feedId ? db.feedItems.where('feedId').equals(feedId) : db.feedItems.toCollection()
+    const rows = await col.toArray()
+    return rows.filter((r) => !r.readAt).length
+  },
+
+  async delete(id: string): Promise<void> {
+    await db.feedItems.delete(id)
+  },
+}

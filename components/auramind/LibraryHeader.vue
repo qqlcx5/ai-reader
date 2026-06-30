@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Database, CloudSync } from '@lucide/vue'
+import { Database, RefreshCw } from '@lucide/vue'
 
 defineProps<{
   docCount: number
@@ -22,7 +22,7 @@ const emit = defineEmits<{
       title="刷新记忆库"
       @click="emit('refresh')"
     >
-      <CloudSync class="w-4 h-4" />
+      <RefreshCw class="w-4 h-4" />
     </button>
   </div>
 </template>

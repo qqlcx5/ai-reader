@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { PanelRight, BookOpen, Settings, RefreshCw, Gauge } from '@lucide/vue'
+import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
+import { openAppWindow, isWindowMode } from '@/utils/open-window'
 import type { DocumentEntity } from '@/types/document'
 import WorkspaceHeader from '@/components/auramind/WorkspaceHeader.vue'
 import LibraryHeader from '@/components/auramind/LibraryHeader.vue'
@@ -20,6 +21,7 @@ const chatStore = useChatStore()
 
 const isRefreshing = ref(false)
 const isLibraryRefreshing = ref(false)
+const windowMode = isWindowMode()
 
 const showRefresh = computed(() => {
   return appStore.currentView === 'workspace' && workspaceStore.documentSource === 'current-page'
@@ -30,6 +32,7 @@ const libraryDocCount = computed(() => documentStore.documents.length)
 const navItems = [
   { key: 'workspace', icon: PanelRight, label: '工作区' },
   { key: 'library', icon: BookOpen, label: '记忆库' },
+  { key: 'feeds', icon: Rss, label: '订阅' },
   { key: 'usage', icon: Gauge, label: '用量' },
   { key: 'settings', icon: Settings, label: '设置' },
 ] as const
@@ -158,6 +161,22 @@ async function handleRefresh() {
     <!-- Right: Refresh + nav buttons -->
     <div class="flex items-center gap-1">
       <button
+        v-if="appStore.canGoBack"
+        class="p-1.5 rounded-md text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
+        title="返回 (Alt+←)"
+        @click="appStore.goBack()"
+      >
+        <ArrowLeft class="w-4 h-4" />
+      </button>
+      <button
+        v-if="!windowMode"
+        class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+        title="在独立窗口打开"
+        @click="openAppWindow"
+      >
+        <Maximize2 class="w-4 h-4" />
+      </button>
+      <button
         v-if="showRefresh"
         class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
         :disabled="isRefreshing"
@@ -175,7 +194,7 @@ async function handleRefresh() {
         class="p-1.5 rounded-md transition-colors"
         :class="appStore.currentView === item.key ? 'text-brand bg-indigo-50' : 'text-zinc-500 hover:bg-zinc-100'"
         :title="item.label"
-        @click="appStore.setCurrentView(item.key)"
+        @click="appStore.setCurrentView(item.key, { resetHistory: true })"
       >
         <component :is="item.icon" class="w-4 h-4" />
       </button>

@@ -30,3 +30,5 @@ export interface DocumentEntity {
 
   syncStatus?: 'local-only' | 'synced' | 'pending' | 'conflict'
 }
+
+export type LibrarySortKey = 'viewed' | 'captured' | 'updated' | 'title'

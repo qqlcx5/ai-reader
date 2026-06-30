@@ -8,9 +8,11 @@ import { useCollectionStore } from '@/stores/collection.store'
 import { searchDocuments } from '@/services/search'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import type { DocumentEntity } from '@/types/document'
+import type { LibrarySortKey } from '@/types/document'
 import SearchBar from '@/components/library/SearchBar.vue'
 import DocumentItem from '@/components/library/DocumentItem.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
+import Select from '@/components/ui/Select.vue'
 import Heatmap from './Heatmap.vue'
 import CollectionDialog from './CollectionDialog.vue'
 import CollectionPickerDialog from './CollectionPickerDialog.vue'
@@ -26,7 +28,7 @@ const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<string | undefined>(undefined)
 const deleteTargetName = ref('')
 const selectedDate = ref<string | null>(null)
-const statusFilter = ref<'all' | 'unread' | 'conversation'>('all')
+const statusFilter = ref<'all' | 'unread' | 'read' | 'conversation'>('all')
 const siteFilter = ref<string | null>(null)
 const tagFilter = ref<string | null>(null)
 const conversationDocIds = ref<Set<string>>(new Set())
@@ -75,12 +77,45 @@ const tags = computed(() => {
 })
 
 const unreadCount = computed(() => documentStore.documents.filter((d) => !d.lastOpenedAt).length)
+const readCount = computed(() => documentStore.documents.filter((d) => !!d.lastOpenedAt).length)
 
 const statusOptions = computed(() => [
   { value: 'all' as const, label: `全部 ${documentStore.documents.length}` },
   { value: 'unread' as const, label: `未读 ${unreadCount.value}` },
+  { value: 'read' as const, label: `已读 ${readCount.value}` },
   { value: 'conversation' as const, label: `有对话 ${conversationDocIds.value.size}` },
 ])
+
+const sortOptions: { value: LibrarySortKey; label: string }[] = [
+  { value: 'viewed', label: '最近查看' },
+  { value: 'captured', label: '最近捕获' },
+  { value: 'updated', label: '最近更新' },
+  { value: 'title', label: '标题' },
+]
+
+function ts(s?: string): number {
+  return s ? new Date(s).getTime() : 0
+}
+
+function sortDocs(docs: DocumentEntity[]): DocumentEntity[] {
+  const arr = [...docs]
+  switch (documentStore.librarySortKey) {
+    case 'captured':
+      return arr.sort((a, b) => ts(b.capturedAt) - ts(a.capturedAt))
+    case 'updated':
+      return arr.sort((a, b) => ts(b.updatedAt) - ts(a.updatedAt))
+    case 'title':
+      return arr.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    case 'viewed':
+    default:
+      // Never-opened docs fall back to capturedAt so the list stays coherent.
+      return arr.sort((a, b) => ts(b.lastOpenedAt ?? b.capturedAt) - ts(a.lastOpenedAt ?? a.capturedAt))
+  }
+}
+
+function setSort(key: string) {
+  documentStore.setLibrarySortKey(key as LibrarySortKey)
+}
 
 const hasActiveFilter = computed(
   () =>
@@ -112,6 +147,7 @@ const displayedDocs = computed(() => {
     if (siteFilter.value && getSite(d) !== siteFilter.value) return false
     if (tagFilter.value && !(d.tags || []).includes(tagFilter.value)) return false
     if (statusFilter.value === 'unread' && d.lastOpenedAt) return false
+    if (statusFilter.value === 'read' && !d.lastOpenedAt) return false
     if (statusFilter.value === 'conversation' && !conversationDocIds.value.has(d.id)) return false
     return true
   })
@@ -124,7 +160,7 @@ const displayedDocs = computed(() => {
   }
 
   if (!preserveOrder) {
-    filtered = filtered.sort((a, b) => new Date(b.capturedAt).getTime() - new Date(a.capturedAt).getTime())
+    filtered = sortDocs(filtered)
   }
   return hasActiveFilter.value ? filtered : filtered.slice(0, 20)
 })
@@ -268,6 +304,7 @@ async function handleAddToCollection(doc: DocumentEntity) {
 
 async function handleDocumentClick(doc: DocumentEntity) {
   await documentStore.loadDocument(doc.id)
+  documentStore.markOpened(doc.id)
   workspaceStore.setDocumentSource('library')
   try {
     await chatStore.loadConversations(doc.id)
@@ -279,6 +316,7 @@ async function handleDocumentClick(doc: DocumentEntity) {
 
 async function handleChatClick(doc: DocumentEntity) {
   documentStore.setCurrentDocument(doc)
+  documentStore.markOpened(doc.id)
   workspaceStore.setDocumentSource('library')
   try {
     await chatStore.loadConversations(doc.id)
@@ -379,14 +417,23 @@ function cancelDelete() {
 
       <!-- Facets -->
       <div v-if="documentStore.documents.length" class="px-4 py-2.5 border-b border-zinc-100 space-y-2">
-        <div class="inline-flex bg-zinc-100 rounded-lg p-0.5 text-[11px]">
-          <button
-            v-for="opt in statusOptions"
-            :key="opt.value"
-            class="px-2 py-1 rounded-md transition-colors"
-            :class="statusFilter === opt.value ? 'bg-white shadow-sm text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'"
-            @click="statusFilter = opt.value"
-          >{{ opt.label }}</button>
+        <div class="flex items-center justify-between gap-2">
+          <div class="inline-flex bg-zinc-100 rounded-lg p-0.5 text-[11px]">
+            <button
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              class="px-2 py-1 rounded-md transition-colors"
+              :class="statusFilter === opt.value ? 'bg-white shadow-sm text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'"
+              @click="statusFilter = opt.value"
+            >{{ opt.label }}</button>
+          </div>
+          <div class="w-[120px] shrink-0">
+            <Select
+              :model-value="documentStore.librarySortKey"
+              :options="sortOptions"
+              @update:model-value="setSort"
+            />
+          </div>
         </div>
 
         <div v-if="sites.length > 1" class="flex flex-wrap gap-1">

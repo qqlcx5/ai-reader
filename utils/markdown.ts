@@ -13,7 +13,13 @@ import { gfmHeadingId } from 'marked-gfm-heading-id'
 
 const SANITIZE_OPTS = {
   ADD_TAGS: ['img'],
-  ADD_ATTR: ['src', 'alt', 'title', 'width', 'height', 'loading', 'srcset', 'sizes', 'id'],
+  ADD_ATTR: ['src', 'alt', 'title', 'width', 'height', 'loading', 'srcset', 'sizes', 'id', 'controls'],
+}
+
+/** Sanitize raw HTML (e.g. RSS feed bodies) with the same policy as markdown. */
+export function sanitizeHtml(html: string): string {
+  if (!html) return ''
+  return DOMPurify.sanitize(html, SANITIZE_OPTS)
 }
 
 let configured = false

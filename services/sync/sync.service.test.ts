@@ -29,7 +29,7 @@ const cfg: WebDAVConfig = { url: 'x', username: 'u', password: 'p', basePath: '/
 
 async function resetDB() {
   await Promise.all(
-    [db.documents, db.conversations, db.models, db.collections, db.collectionItems, db.settings, db.kvMeta].map((t) =>
+    [db.documents, db.conversations, db.models, db.collections, db.collectionItems, db.settings, db.kvMeta, db.feeds].map((t) =>
       t.clear(),
     ),
   )

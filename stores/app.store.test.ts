@@ -25,6 +25,33 @@ describe('stores/app.store', () => {
     expect(store.currentView).toBe('workspace')
   })
 
+  it('should track view history and go back', () => {
+    const store = useAppStore()
+    expect(store.canGoBack).toBe(false)
+
+    store.setCurrentView('library') // push 'workspace'
+    expect(store.currentView).toBe('library')
+    expect(store.canGoBack).toBe(true)
+
+    store.setCurrentView('settings') // push 'library'
+    expect(store.canGoBack).toBe(true)
+
+    expect(store.goBack()).toBe(true)
+    expect(store.currentView).toBe('library')
+    expect(store.goBack()).toBe(true)
+    expect(store.currentView).toBe('workspace')
+    expect(store.canGoBack).toBe(false)
+    expect(store.goBack()).toBe(false) // nowhere to go back to
+  })
+
+  it('should reset history with the resetHistory option', () => {
+    const store = useAppStore()
+    store.setCurrentView('library') // push 'workspace'
+    store.setCurrentView('settings', { resetHistory: true })
+    expect(store.canGoBack).toBe(false)
+    expect(store.currentView).toBe('settings')
+  })
+
   it('should show and clear toast', () => {
     const store = useAppStore()
     store.showToast('test message', 'error')
