@@ -506,15 +506,18 @@ export const useChatStore = defineStore('chat', () => {
     const doc = documentStore.pageDocument || documentStore.currentDocument
     let context: string | undefined
     if (doc?.markdown) {
-      context = buildPageContext({
-        title: doc.title,
-        url: doc.url,
-        markdown: doc.markdown,
-        wordCount: doc.wordCount,
-        tokenCount: doc.tokenCount,
-        siteName: doc.siteName,
-        capturedAt: doc.capturedAt,
-      })
+      context = buildPageContext(
+        {
+          title: doc.title,
+          url: doc.url,
+          markdown: doc.markdown,
+          wordCount: doc.wordCount,
+          tokenCount: doc.tokenCount,
+          siteName: doc.siteName,
+          capturedAt: doc.capturedAt,
+        },
+        settings.context,
+      )
     }
 
     // Truncate context before building the prompt (was previously done

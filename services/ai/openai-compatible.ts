@@ -5,8 +5,8 @@ import { normalizeBaseUrl, fetchWithTimeout } from './shared'
 
 function buildOpenAIParams(model: ModelConfig): Record<string, unknown> {
   const params: Record<string, unknown> = {}
-  if (model.temperature != null) params.temperature = model.temperature
   if (model.maxTokens != null) params.max_tokens = model.maxTokens
+  if (model.temperature != null) params.temperature = model.temperature
   if (model.reasoningEffort) params.reasoning_effort = model.reasoningEffort
   return params
 }
