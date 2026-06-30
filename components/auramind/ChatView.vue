@@ -213,12 +213,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
       <!-- Multi-assistant: side-by-side card layout -->
       <div
         v-else-if="round.assistantMsgs.length > 1"
-        class="grid gap-3"
-        :class="{
-          'grid-cols-2': round.assistantMsgs.length === 2,
-          'grid-cols-2': round.assistantMsgs.length === 3,
-          'grid-cols-2': round.assistantMsgs.length >= 4,
-        }"
+        class="grid grid-cols-2 gap-3"
       >
         <ChatMessage
           v-for="amsg in round.assistantMsgs"

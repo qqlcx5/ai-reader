@@ -60,6 +60,10 @@ export interface UsageByModel {
   errorRate: number
   /** Mean generation time over messages that recorded durationMs (ms). */
   avgDurationMs: number
+  /** Mean time to first token (ms). */
+  avgFirstTokenMs: number
+  /** Output tokens per second over messages with gen timing. */
+  tokensPerSec: number
 }
 
 export interface UsageAggregate {
@@ -73,6 +77,8 @@ export interface UsageAggregate {
   failedMessages: number
   errorRate: number
   avgDurationMs: number
+  avgFirstTokenMs: number
+  tokensPerSec: number
 }
 
 interface AccModel {
@@ -85,6 +91,9 @@ interface AccModel {
   failed: number
   durationSum: number
   durationCount: number
+  firstTokenSum: number
+  firstTokenCount: number
+  genSum: number
 }
 
 /**
@@ -95,6 +104,7 @@ interface AccModel {
 export function aggregateUsage(
   conversations: ConversationEntity[],
   models: ModelConfig[],
+  fromMs?: number,
 ): UsageAggregate {
   const byModel = new Map<string, AccModel>()
   let totalPrompt = 0
@@ -104,10 +114,17 @@ export function aggregateUsage(
   let failedMessages = 0
   let durationSum = 0
   let durationCount = 0
+  let totalFirstTokenSum = 0
+  let totalFirstTokenCount = 0
+  let totalGenSum = 0
 
   for (const conv of conversations) {
     for (const msg of conv.messages) {
       if (msg.role !== 'assistant') continue
+      if (fromMs != null && msg.createdAt) {
+        const t = Date.parse(msg.createdAt)
+        if (!Number.isNaN(t) && t < fromMs) continue
+      }
       totalMessages++
       const failed = msg.status === 'failed'
       if (failed) failedMessages++
@@ -126,6 +143,9 @@ export function aggregateUsage(
           failed: 0,
           durationSum: 0,
           durationCount: 0,
+          firstTokenSum: 0,
+          firstTokenCount: 0,
+          genSum: 0,
         }
         byModel.set(key, entry)
       }
@@ -136,6 +156,16 @@ export function aggregateUsage(
         entry.durationCount++
         durationSum += msg.durationMs
         durationCount++
+      }
+      if (msg.firstTokenMs != null) {
+        entry.firstTokenSum += msg.firstTokenMs
+        entry.firstTokenCount++
+        totalFirstTokenSum += msg.firstTokenMs
+        totalFirstTokenCount++
+      }
+      if (msg.genMs != null) {
+        entry.genSum += msg.genMs
+        totalGenSum += msg.genMs
       }
       if (msg.tokenUsage) {
         const p = msg.tokenUsage.promptTokens ?? 0
@@ -161,6 +191,8 @@ export function aggregateUsage(
     failed: e.failed,
     errorRate: e.total > 0 ? e.failed / e.total : 0,
     avgDurationMs: e.durationCount > 0 ? Math.round(e.durationSum / e.durationCount) : 0,
+    avgFirstTokenMs: e.firstTokenCount > 0 ? Math.round(e.firstTokenSum / e.firstTokenCount) : 0,
+    tokensPerSec: e.genSum > 0 ? Math.round(e.completionTokens / (e.genSum / 1000)) : 0,
   })
 
   return {
@@ -173,5 +205,46 @@ export function aggregateUsage(
     failedMessages,
     errorRate: totalMessages > 0 ? failedMessages / totalMessages : 0,
     avgDurationMs: durationCount > 0 ? Math.round(durationSum / durationCount) : 0,
+    avgFirstTokenMs: totalFirstTokenCount > 0 ? Math.round(totalFirstTokenSum / totalFirstTokenCount) : 0,
+    tokensPerSec: totalGenSum > 0 ? Math.round(totalCompletion / (totalGenSum / 1000)) : 0,
   }
+}
+
+export interface DailyUsage {
+  /** YYYY-MM-DD (UTC). */
+  date: string
+  tokens: number
+  cost: number
+  messages: number
+}
+
+/** Group assistant usage by UTC day. Only days with data are returned, sorted ascending. */
+export function aggregateByDay(
+  conversations: ConversationEntity[],
+  models: ModelConfig[],
+  fromMs?: number,
+): DailyUsage[] {
+  const map = new Map<string, DailyUsage>()
+  for (const conv of conversations) {
+    for (const msg of conv.messages) {
+      if (msg.role !== 'assistant' || !msg.createdAt) continue
+      const t = Date.parse(msg.createdAt)
+      if (Number.isNaN(t)) continue
+      if (fromMs != null && t < fromMs) continue
+      const d = new Date(t)
+      const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+      let entry = map.get(date)
+      if (!entry) {
+        entry = { date, tokens: 0, cost: 0, messages: 0 }
+        map.set(date, entry)
+      }
+      entry.messages++
+      if (msg.tokenUsage) {
+        entry.tokens += (msg.tokenUsage.promptTokens ?? 0) + (msg.tokenUsage.completionTokens ?? 0)
+        const model = models.find((m) => m.modelId === msg.modelId)
+        entry.cost += model ? (calcMessageCost(msg.tokenUsage, model) ?? 0) : 0
+      }
+    }
+  }
+  return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
 }

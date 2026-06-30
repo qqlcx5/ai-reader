@@ -549,6 +549,7 @@ export const useChatStore = defineStore('chat', () => {
     // continue flowing into the correct conversation even after a switch.
     const assistantId = assistantMsg.id
     const startedAt = performance.now()
+    let firstTokenAt: number | undefined
     streamState.provider = createProvider(model)
     await streamState.provider.streamChat(
       {
@@ -559,6 +560,7 @@ export const useChatStore = defineStore('chat', () => {
       },
       {
         onToken(text: string) {
+          if (firstTokenAt == null) firstTokenAt = performance.now()
           const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) msg.content += text
         },
@@ -579,6 +581,10 @@ export const useChatStore = defineStore('chat', () => {
             msg.status = 'success'
             msg.updatedAt = new Date().toISOString()
             msg.durationMs = Math.round(performance.now() - startedAt)
+            if (firstTokenAt != null) {
+              msg.firstTokenMs = Math.round(firstTokenAt - startedAt)
+              msg.genMs = Math.round(performance.now() - firstTokenAt)
+            }
             // Fallback estimate when the provider didn't return real usage
             // (e.g. some OpenAI-compatible endpoints). Real usage was already
             // written by onUsage above when available.

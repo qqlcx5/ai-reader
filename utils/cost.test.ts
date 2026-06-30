@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calcMessageCost, getModelPricing, formatTokens, formatCNY, aggregateUsage } from './cost'
+import { calcMessageCost, getModelPricing, formatTokens, formatCNY, aggregateUsage, aggregateByDay } from './cost'
 
 function model(
   modelId: string,
@@ -95,9 +95,9 @@ describe('aggregateUsage', () => {
       {
         id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
         messages: [
-          { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 1000, createdAt: '', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
+          { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 1000, firstTokenMs: 200, genMs: 800, createdAt: '', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
           { id: 'm2', role: 'user', content: '', createdAt: '' },
-          { id: 'm3', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 2000, createdAt: '', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
+          { id: 'm3', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'success', durationMs: 2000, firstTokenMs: 400, genMs: 1600, createdAt: '', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
         ],
       },
     ] as any
@@ -112,9 +112,12 @@ describe('aggregateUsage', () => {
     expect(agg.failedMessages).toBe(0)
     expect(agg.errorRate).toBe(0)
     expect(agg.avgDurationMs).toBe(1500)
+    expect(agg.avgFirstTokenMs).toBe(300) // (200 + 400) / 2
+    expect(agg.tokensPerSec).toBe(63) // 150 / ((800 + 1600) / 1000)
     expect(agg.byModel).toHaveLength(1)
     expect(agg.byModel[0].name).toBe('GPT-5.5')
     expect(agg.byModel[0].avgDurationMs).toBe(1500)
+    expect(agg.byModel[0].tokensPerSec).toBe(63)
     // gpt-5.5: 35 in / 210 out per 1M
     expect(agg.totalCost).toBeCloseTo((300 * 35 + 150 * 210) / 1e6, 6)
   })
@@ -124,7 +127,7 @@ describe('aggregateUsage', () => {
       {
         id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
         messages: [
-          { id: 'm1', role: 'assistant', content: '', modelId: 'llama', status: 'success', durationMs: 500, createdAt: '', tokenUsage: { promptTokens: 10, completionTokens: 5 } },
+          { id: 'm1', role: 'assistant', content: '', modelId: 'llama', status: 'success', durationMs: 500, firstTokenMs: 100, genMs: 400, createdAt: '', tokenUsage: { promptTokens: 10, completionTokens: 5 } },
           { id: 'm2', role: 'assistant', content: '', modelId: 'gpt-5.5', status: 'failed', durationMs: 200, createdAt: '' },
         ],
       },
@@ -137,6 +140,58 @@ describe('aggregateUsage', () => {
     expect(agg.totalTokens).toBe(15) // only m1 has usage
     expect(agg.totalCost).toBe(0) // unknown models
     expect(agg.avgDurationMs).toBe(350) // (500 + 200) / 2
+    expect(agg.avgFirstTokenMs).toBe(100) // only m1 has ttft
+    expect(agg.tokensPerSec).toBe(13) // 5 / 0.4
     expect(agg.byModel).toHaveLength(2)
+  })
+
+  it('respects the fromMs time filter', () => {
+    const conversations = [{
+      id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
+      messages: [
+        { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '2026-06-01T00:00:00Z', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
+        { id: 'm2', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '2026-06-29T00:00:00Z', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
+      ],
+    }] as any
+
+    const from = Date.parse('2026-06-28T00:00:00Z')
+    const agg = aggregateUsage(conversations, [], from)
+    expect(agg.totalMessages).toBe(1) // only m2 (>= 2026-06-28)
+    expect(agg.totalTokens).toBe(300)
+  })
+})
+
+describe('aggregateByDay', () => {
+  it('groups assistant usage by UTC day', () => {
+    const conversations = [{
+      id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
+      messages: [
+        { id: 'm1', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '2026-06-28T10:00:00Z', tokenUsage: { promptTokens: 100, completionTokens: 50 } },
+        { id: 'm2', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '2026-06-28T15:00:00Z', tokenUsage: { promptTokens: 50, completionTokens: 20 } },
+        { id: 'm3', role: 'assistant', content: '', modelId: 'gpt-5.5', createdAt: '2026-06-29T10:00:00Z', tokenUsage: { promptTokens: 200, completionTokens: 100 } },
+      ],
+    }] as any
+
+    const daily = aggregateByDay(conversations, [])
+    expect(daily).toHaveLength(2)
+    expect(daily[0].date).toBe('2026-06-28')
+    expect(daily[0].tokens).toBe(220) // (100+50) + (50+20)
+    expect(daily[0].messages).toBe(2)
+    expect(daily[1].date).toBe('2026-06-29')
+    expect(daily[1].tokens).toBe(300)
+  })
+
+  it('respects the fromMs time filter', () => {
+    const conversations = [{
+      id: 'c1', documentId: 'd1', createdAt: '', updatedAt: '',
+      messages: [
+        { id: 'm1', role: 'assistant', content: '', createdAt: '2026-06-01T00:00:00Z', tokenUsage: { promptTokens: 10, completionTokens: 5 } },
+        { id: 'm2', role: 'assistant', content: '', createdAt: '2026-06-29T00:00:00Z', tokenUsage: { promptTokens: 20, completionTokens: 10 } },
+      ],
+    }] as any
+
+    const daily = aggregateByDay(conversations, [], Date.parse('2026-06-28T00:00:00Z'))
+    expect(daily).toHaveLength(1)
+    expect(daily[0].date).toBe('2026-06-29')
   })
 })
