@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
 import type { ChatMessage } from '@/types/chat'
@@ -31,15 +31,65 @@ const isHovered = ref(false)
 const thinkingExpanded = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
-// Markdown rendering for completed assistant messages
-const renderedHtml = computed(() => {
-  if (isUser.value || isStreaming.value || isFailed.value || isAborted.value) return ''
-  return renderMarkdown(props.message.content || '')
-})
+// Markdown rendering. During streaming we re-render throttled (leading +
+// trailing edge) so live markdown feels smooth; hljs highlight + copy-button
+// wrapping are deferred to the final non-streaming render to avoid per-chunk
+// flicker and highlight.js CPU spikes.
+const displayedHtml = ref('')
+const shouldRender = computed(
+  () => !isUser.value && !isFailed.value && !isAborted.value && !!props.message.content,
+)
 
-watch(renderedHtml, async () => {
-  await nextTick()
-  if (contentRef.value) enhanceCodeBlocks(contentRef.value)
+let renderTimer: ReturnType<typeof setTimeout> | null = null
+let lastRenderAt = 0
+const STREAM_THROTTLE_MS = 80
+
+function flushRender() {
+  renderTimer = null
+  lastRenderAt = Date.now()
+  displayedHtml.value = renderMarkdown(props.message.content || '')
+  if (!isStreaming.value) {
+    void nextTick(() => {
+      if (contentRef.value) enhanceCodeBlocks(contentRef.value)
+    })
+  }
+}
+
+function scheduleRender() {
+  if (!shouldRender.value) {
+    if (renderTimer != null) {
+      clearTimeout(renderTimer)
+      renderTimer = null
+    }
+    displayedHtml.value = ''
+    return
+  }
+  if (!isStreaming.value) {
+    if (renderTimer != null) {
+      clearTimeout(renderTimer)
+      renderTimer = null
+    }
+    flushRender()
+    return
+  }
+  // Streaming: leading-edge (render the first chunk now so the bubble isn't
+  // empty), then throttle subsequent chunks to ~one re-render per 80ms.
+  const elapsed = Date.now() - lastRenderAt
+  if (elapsed >= STREAM_THROTTLE_MS) {
+    flushRender()
+  } else if (renderTimer == null) {
+    renderTimer = setTimeout(flushRender, STREAM_THROTTLE_MS - elapsed)
+  }
+}
+
+watch(
+  [() => props.message.content, () => props.message.status],
+  scheduleRender,
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  if (renderTimer != null) clearTimeout(renderTimer)
 })
 </script>
 
@@ -57,21 +107,21 @@ watch(renderedHtml, async () => {
       class="flex items-center gap-0.1 self-center opacity-0 group-hover:opacity-100 transition-opacity"
     >
       <button
-        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+        class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
         title="编辑"
         @click.stop="emit('edit', message.id, message.content)"
       >
         <Pencil class="w-3 h-3" />
       </button>
       <button
-        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+        class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
         title="复制"
         @click.stop="emit('copy', message.content)"
       >
         <Copy class="w-3 h-3" />
       </button>
       <button
-        class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+        class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         title="删除"
         @click.stop="emit('delete', message.id)"
       >
@@ -108,21 +158,21 @@ watch(renderedHtml, async () => {
         class="flex items-center gap-0.5 ml-auto"
       >
         <button
-          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
           title="重新生成"
           @click.stop="emit('regenerate', message.id)"
         >
           <RefreshCw class="w-3 h-3" />
         </button>
         <button
-          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
           title="复制"
           @click.stop="emit('copy', message.content)"
         >
           <Copy class="w-3 h-3" />
         </button>
         <button
-          class="w-6 h-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
           title="删除"
           @click.stop="emit('delete', message.id)"
         >
@@ -160,19 +210,15 @@ watch(renderedHtml, async () => {
         </div>
       </div>
 
-      <!-- Normal content (rendered Markdown) -->
-      <template v-if="!isFailed && !isAborted && !isStreaming">
+      <!-- Rendered Markdown — also during streaming (with a cursor). Streaming
+           re-renders throttled; highlight + copy-button are added on completion. -->
+      <template v-if="!isFailed && !isAborted">
         <div
           ref="contentRef"
           class="md-render"
-          v-html="renderedHtml"
+          v-html="displayedHtml"
         />
-      </template>
-
-      <!-- Streaming content with cursor -->
-      <template v-else-if="isStreaming">
-        <span class="whitespace-pre-wrap">{{ message.content }}</span>
-        <span class="inline-block w-1.5 h-4 bg-brand animate-pulse align-middle ml-0.5 rounded-sm" />
+        <span v-if="isStreaming" class="inline-block w-1.5 h-4 bg-brand animate-pulse align-middle ml-0.5 rounded-sm" />
       </template>
 
       <!-- Failed state -->
