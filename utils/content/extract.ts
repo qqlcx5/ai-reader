@@ -9,7 +9,6 @@ export interface ExtractedPageData {
   url: string
   title: string
   markdown: string
-  rawText: string
   siteName?: string
   author?: string
   description?: string
@@ -31,36 +30,6 @@ export async function computeHash(text: string): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-// ---------------------------------------------------------------------------
-// HTML to plain text — preserve paragraph structure (newlines from block elements)
-// ---------------------------------------------------------------------------
-
-const BLOCK_RE = /<\/(?:div|p|h[1-6]|li|blockquote|pre|table|tr|section|article|header|footer|nav|main|aside|figure|figcaption|details|summary|fieldset|form|hr|ul|ol|dl|dt|dd|address|br)[^>]*>/gi
-
-export function htmlToPlainText(html: string): string {
-  return html
-    // Self-closing br
-    .replace(/<br\s*\/?>/gi, '\n')
-    // Closing tags of block elements → newline
-    .replace(BLOCK_RE, '\n')
-    // Strip all remaining HTML tags
-    .replace(/<[^>]+>/g, '')
-    // Decode common HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    // Collapse horizontal whitespace (spaces/tabs) on each line, keep newlines
-    .split('\n')
-    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
-    .join('\n')
-    // Collapse 3+ consecutive newlines to 2 (i.e. at most one blank line between paragraphs)
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +135,6 @@ export async function extractPage(
     url,
     title: result.title || '',
     markdown,
-    rawText: htmlToPlainText(content),
     siteName: result.site || undefined,
     author: result.author || undefined,
     description: result.description || undefined,
@@ -196,7 +164,6 @@ function fallbackExtract(doc: Document, url: string): Promise<ExtractedPageData>
       url,
       title,
       markdown,
-      rawText,
       siteName: undefined,
       author: undefined,
       description: undefined,

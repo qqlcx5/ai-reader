@@ -149,4 +149,21 @@ describe('runSync (integration)', () => {
     expect(r.pushed).toBe(0)
     expect(r.pulled).toBe(0)
   })
+
+  it('excludes raw fields (rawHtml / rawText) from the backup, keeps markdown', async () => {
+    await db.documents.put({
+      ...doc('d1', '2026-01-01T00:00:00Z'),
+      rawHtml: '<html>',
+      rawHtmlCompressed: false,
+      rawText: 'raw text',
+    } as any)
+    await runSync(cfg)
+
+    const snap = JSON.parse(store['data.json'])
+    const d = snap.data.documents.find((x: any) => x.id === 'd1')
+    expect(d.rawHtml).toBeUndefined()
+    expect(d.rawHtmlCompressed).toBeUndefined()
+    expect(d.rawText).toBeUndefined()
+    expect(d.markdown).toBe('m') // markdown body is kept
+  })
 })

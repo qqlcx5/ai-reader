@@ -35,7 +35,6 @@ export interface PageExtractedPayload {
   url: string
   title: string
   markdown: string
-  rawText?: string
   siteName?: string
   author?: string
   description?: string

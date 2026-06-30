@@ -19,16 +19,6 @@ const preferCache = computed({
   get: () => settingsStore.settings.capture.preferCache,
   set: (val: boolean) => settingsStore.updateCaptureSettings({ preferCache: val }),
 })
-
-const saveRawHtml = computed({
-  get: () => settingsStore.settings.capture.saveRawHtml,
-  set: (val: boolean) => settingsStore.updateCaptureSettings({ saveRawHtml: val }),
-})
-
-const compressRawHtml = computed({
-  get: () => settingsStore.settings.capture.compressRawHtml,
-  set: (val: boolean) => settingsStore.updateCaptureSettings({ compressRawHtml: val }),
-})
 </script>
 
 <template>
@@ -47,26 +37,12 @@ const compressRawHtml = computed({
       </div>
       <Switch v-model="autoExtractOnTabChange" />
     </div>
-    <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
+    <div class="p-3 flex items-center justify-between">
       <div class="flex flex-col gap-0.5">
         <span class="text-zinc-700">优先使用缓存</span>
         <span class="text-[11px] text-zinc-400">相同 URL 优先返回已缓存的抓取结果</span>
       </div>
       <Switch v-model="preferCache" />
-    </div>
-    <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
-      <div class="flex flex-col gap-0.5">
-        <span class="text-zinc-700">保存原始 HTML</span>
-        <span class="text-[11px] text-zinc-400">保留网页原始 HTML，便于日后重新解析</span>
-      </div>
-      <Switch v-model="saveRawHtml" />
-    </div>
-    <div class="p-3 flex items-center justify-between">
-      <div class="flex flex-col gap-0.5">
-        <span class="text-zinc-700">压缩原始 HTML</span>
-        <span class="text-[11px] text-zinc-400">使用 lz-string 压缩以减少存储占用</span>
-      </div>
-      <Switch v-model="compressRawHtml" />
     </div>
   </div>
 </template>

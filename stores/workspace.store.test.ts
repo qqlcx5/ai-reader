@@ -23,8 +23,8 @@ describe('stores/workspace.store', () => {
 
   it('should change context tab', () => {
     const store = useWorkspaceStore()
-    store.setContextTab('raw')
-    expect(store.currentContextTab).toBe('raw')
+    store.setContextTab('metadata')
+    expect(store.currentContextTab).toBe('metadata')
   })
 
   it('should set extracting state', () => {

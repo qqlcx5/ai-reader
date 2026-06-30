@@ -32,7 +32,6 @@ function buildDocumentEntity(data: {
   url: string
   title: string
   markdown: string
-  rawText?: string
   siteName?: string
   author?: string
   description?: string
@@ -42,7 +41,6 @@ function buildDocumentEntity(data: {
   wordCount: number
   tokenCount: number
   extractionMethod: 'defuddle' | 'fallback'
-  sanitizedHtml?: string
 }): DocumentEntity {
   const now = nowISO()
   return {
@@ -55,8 +53,6 @@ function buildDocumentEntity(data: {
     description: data.description,
     publishedAt: data.publishedAt,
     markdown: data.markdown,
-    rawText: data.rawText,
-    rawHtml: data.sanitizedHtml,
     wordCount: data.wordCount,
     tokenCount: data.tokenCount,
     contentHash: data.contentHash,
@@ -85,7 +81,6 @@ async function handleRefresh() {
         url: extracted.url,
         title: extracted.title,
         markdown: extracted.markdown,
-        rawText: extracted.rawText,
         siteName: extracted.siteName,
         author: extracted.author,
         description: extracted.description,
@@ -95,7 +90,6 @@ async function handleRefresh() {
         wordCount: extracted.wordCount,
         tokenCount: extracted.tokenCount,
         extractionMethod: extracted.extractionMethod,
-        sanitizedHtml: (extracted as any).sanitizedHtml,
       })
 
       documentStore.setCurrentDocument(doc)
@@ -157,10 +151,7 @@ async function handleCopy() {
   if (tab === 'markdown') {
     content = documentStore.currentDocument?.markdown || ''
   } else if (tab === 'raw') {
-    content = documentStore.currentDocument?.markdown
-      || documentStore.currentDocument?.rawText
-      || documentStore.currentDocument?.rawHtml
-      || ''
+    content = documentStore.currentDocument?.markdown || ''
   } else if (tab === 'metadata') {
     content = buildMetadataJSON()
   }

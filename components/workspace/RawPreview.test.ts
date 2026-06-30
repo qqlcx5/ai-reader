@@ -28,33 +28,13 @@ describe('RawPreview', () => {
     vi.clearAllMocks()
   })
 
-  it('renders rawText when available', () => {
+  it('renders markdown as the raw source', () => {
     mockDocStore.mockReturnValue(createMockDocumentStore({
-      rawText: 'Some raw text content',
       markdown: '# Markdown here',
     }) as any)
 
     const wrapper = mount(RawPreview)
-    expect(wrapper.text()).toContain('Some raw text content')
-  })
-
-  it('falls back to markdown when rawText is empty', () => {
-    mockDocStore.mockReturnValue(createMockDocumentStore({
-      rawText: '',
-      markdown: '# Fallback markdown',
-    }) as any)
-
-    const wrapper = mount(RawPreview)
-    expect(wrapper.text()).toContain('# Fallback markdown')
-  })
-
-  it('falls back to markdown when rawText is absent', () => {
-    mockDocStore.mockReturnValue(createMockDocumentStore({
-      markdown: '# Only markdown',
-    }) as any)
-
-    const wrapper = mount(RawPreview)
-    expect(wrapper.text()).toContain('# Only markdown')
+    expect(wrapper.text()).toContain('# Markdown here')
   })
 
   it('shows placeholder when no content available', () => {
@@ -66,7 +46,7 @@ describe('RawPreview', () => {
 
   it('renders with dark background styling', () => {
     mockDocStore.mockReturnValue(createMockDocumentStore({
-      rawText: 'test',
+      markdown: 'test',
     }) as any)
 
     const wrapper = mount(RawPreview)
@@ -76,7 +56,7 @@ describe('RawPreview', () => {
 
   it('uses monospace font', () => {
     mockDocStore.mockReturnValue(createMockDocumentStore({
-      rawText: 'test',
+      markdown: 'test',
     }) as any)
 
     const wrapper = mount(RawPreview)

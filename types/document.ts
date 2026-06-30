@@ -11,7 +11,6 @@ export interface DocumentEntity {
   publishedAt?: string
 
   markdown: string
-  rawText?: string
   rawHtml?: string
   rawHtmlCompressed?: boolean
 

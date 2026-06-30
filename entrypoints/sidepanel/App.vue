@@ -74,7 +74,6 @@ async function triggerAutoExtract(tabId: number) {
       description: extracted.description,
       publishedAt: extracted.publishedAt,
       markdown: extracted.markdown,
-      rawText: extracted.rawText,
       wordCount: extracted.wordCount,
       tokenCount: extracted.tokenCount,
       contentHash: extracted.contentHash,

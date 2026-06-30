@@ -19,15 +19,13 @@ describe('CaptureSettings', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders all five capture toggles', async () => {
+  it('renders all three capture toggles', async () => {
     const store = useSettingsStore()
     await store.loadSettings()
     const wrapper = mount(CaptureSettings)
     expect(wrapper.text()).toContain('打开面板时自动抓取')
     expect(wrapper.text()).toContain('切换标签时自动抓取')
     expect(wrapper.text()).toContain('优先使用缓存')
-    expect(wrapper.text()).toContain('保存原始 HTML')
-    expect(wrapper.text()).toContain('压缩原始 HTML')
   })
 
   it('renders subtitle descriptions', async () => {
@@ -48,11 +46,5 @@ describe('CaptureSettings', () => {
     const store = useSettingsStore()
     await store.loadSettings()
     expect(store.settings.capture.autoExtractOnTabChange).toBe(false)
-  })
-
-  it('saveRawHtml is false by default', async () => {
-    const store = useSettingsStore()
-    await store.loadSettings()
-    expect(store.settings.capture.saveRawHtml).toBe(false)
   })
 })

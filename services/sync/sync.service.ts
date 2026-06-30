@@ -57,6 +57,14 @@ function emptyDataset(): SyncedDataset {
   return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [] }
 }
 
+/** Strip raw text fields before uploading — raw HTML / rawText are not part of
+ *  the backup. The Raw view falls back to markdown when rawText is absent. */
+function stripRawFields(doc: any): any {
+  if (!doc) return doc
+  const { rawHtml, rawHtmlCompressed, rawText, ...rest } = doc
+  return rest
+}
+
 function toMap(arr: any[] | undefined, cfg: TypeConfig): Map<string, VersionedEntry> {
   const map = new Map<string, VersionedEntry>()
   for (const e of arr ?? []) {
@@ -92,7 +100,7 @@ export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
   if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
 
   const data: SyncedDataset = {
-    documents: await db.documents.toArray(),
+    documents: (await db.documents.toArray()).map(stripRawFields),
     conversations: await db.conversations.toArray(),
     models: await db.models.toArray(),
     collections: await db.collections.toArray(),
@@ -234,11 +242,11 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
     })
   }
 
-  // 5. Push merged snapshot.
+  // 5. Push merged snapshot (raw HTML excluded from the backup).
   const snapshot: RemoteSnapshot = {
     version: SYNC_VERSION,
     syncedAt: new Date().toISOString(),
-    data: mergedDataset,
+    data: { ...mergedDataset, documents: mergedDataset.documents.map(stripRawFields) },
   }
   await remote.putText(DATA_FILE, JSON.stringify(snapshot))
 
