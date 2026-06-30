@@ -8,8 +8,8 @@ import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
-import { testConnection, runSync, previewSync, forceUpload, forceDownload, restoreFromBackup, getSyncState } from '@/services/sync/sync.service'
-import type { SyncPreview, SyncDeleteItem } from '@/types/sync'
+import { testConnection, runSync, previewSync, forceUpload, forceDownload, listBackups, restoreFromSnapshot, getSyncState } from '@/services/sync/sync.service'
+import type { SyncPreview, SyncDeleteItem, BackupEntry } from '@/types/sync'
 
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
@@ -22,7 +22,9 @@ const restoring = ref(false)
 const showForceConfirm = ref(false)
 const showDownloadConfirm = ref(false)
 const showSyncConfirm = ref(false)
-const showRestoreConfirm = ref(false)
+const showBackupsModal = ref(false)
+const backups = ref<BackupEntry[]>([])
+const selectedBackup = ref('')
 const preview = ref<SyncPreview | null>(null)
 const lastResult = ref('')
 const lastSyncAt = ref('')
@@ -33,6 +35,10 @@ const username = computed({ get: () => settingsStore.webdav.username, set: (v) =
 const password = computed({ get: () => settingsStore.webdav.password, set: (v) => settingsStore.updateWebDAVConfig({ password: v }) })
 const basePath = computed({ get: () => settingsStore.webdav.basePath, set: (v) => settingsStore.updateWebDAVConfig({ basePath: v }) })
 const enabled = computed({ get: () => settingsStore.webdav.enabled, set: (v) => settingsStore.updateWebDAVConfig({ enabled: v }) })
+const maxBackups = computed({
+  get: () => settingsStore.webdav.maxBackups ?? 10,
+  set: (v: number) => settingsStore.updateWebDAVConfig({ maxBackups: v > 0 ? v : 10 }),
+})
 
 async function refreshStatus() {
   const st = await getSyncState()
@@ -164,18 +170,36 @@ async function doSync() {
   }
 }
 
-async function onRestore() {
-  showRestoreConfirm.value = false
+async function onShowBackups() {
   if (!url.value) {
     appStore.showToast('请先填写 WebDAV 地址', 'error')
     return
   }
   restoring.value = true
   try {
-    await restoreFromBackup(settingsStore.webdav)
+    const list = await listBackups(settingsStore.webdav)
+    backups.value = list
+    selectedBackup.value = list[0]?.name ?? ''
+    showBackupsModal.value = true
+    if (list.length === 0) appStore.showToast('没有可用的备份', 'info')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    appStore.showToast(`读取备份失败：${msg}`, 'error')
+  } finally {
+    restoring.value = false
+  }
+}
+
+async function onRestore() {
+  if (!selectedBackup.value) return
+  const name = selectedBackup.value
+  showBackupsModal.value = false
+  restoring.value = true
+  try {
+    await restoreFromSnapshot(settingsStore.webdav, name)
     await refreshAfterDataChange()
     await refreshStatus()
-    appStore.showToast('已从备份恢复', 'success')
+    appStore.showToast(`已从备份恢复（${name}）`, 'success')
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     appStore.showToast(`恢复失败：${msg}`, 'error')
@@ -229,6 +253,16 @@ async function onRestore() {
         />
       </div>
 
+      <div>
+        <label class="text-[11px] text-zinc-500 font-medium">备份保留份数</label>
+        <UInput
+          :model-value="String(maxBackups)"
+          type="number"
+          class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
+          @update:model-value="(v) => (maxBackups = Number(v))"
+        />
+      </div>
+
       <div class="flex items-center gap-2 pt-1">
         <UButton variant="secondary" size="md" class="flex-1" :disabled="busy" @click="onTest">
           <Plug class="w-3.5 h-3.5" />
@@ -254,10 +288,10 @@ async function onRestore() {
       <button
         class="mx-auto text-[11px] text-zinc-400 hover:text-brand flex items-center gap-1 disabled:opacity-50"
         :disabled="busy"
-        @click="showRestoreConfirm = true"
+        @click="onShowBackups"
       >
         <RotateCcw class="w-3 h-3" />
-        {{ restoring ? '恢复中…' : '从备份恢复' }}
+        {{ restoring ? '读取中…' : '从备份恢复' }}
       </button>
 
       <ConfirmModal
@@ -287,14 +321,34 @@ async function onRestore() {
         @cancel="showSyncConfirm = false"
       />
 
-      <ConfirmModal
-        v-if="showRestoreConfirm"
-        title="从备份恢复"
-        desc="将用上一次同步前的远端备份（data.backup.json）覆盖本地与远端，仅保留最近一次备份。"
-        confirm-text="恢复"
-        @confirm="onRestore"
-        @cancel="showRestoreConfirm = false"
-      />
+      <div
+        v-if="showBackupsModal"
+        class="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="showBackupsModal = false"
+      >
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-2xl w-full max-w-[320px] p-3 text-[13px]">
+          <h3 class="text-[14px] font-semibold mb-2">选择要恢复的备份</h3>
+          <div v-if="backups.length === 0" class="text-zinc-400 py-4 text-center text-[12px]">
+            没有可用的备份快照
+          </div>
+          <ul v-else class="max-h-60 overflow-y-auto -mx-1">
+            <li
+              v-for="b in backups"
+              :key="b.name"
+              class="mx-1 my-0.5 px-2.5 py-2 rounded-lg cursor-pointer flex items-center justify-between transition-colors"
+              :class="selectedBackup === b.name ? 'bg-indigo-50 text-brand' : 'hover:bg-zinc-100 text-zinc-700'"
+              @click="selectedBackup = b.name"
+            >
+              <span>{{ b.ts ? new Date(b.ts).toLocaleString() : b.name }}</span>
+              <span class="text-[10px] opacity-50">{{ selectedBackup === b.name ? '✓' : '' }}</span>
+            </li>
+          </ul>
+          <div class="flex gap-2 mt-3">
+            <UButton variant="secondary" size="md" class="flex-1" @click="showBackupsModal = false">取消</UButton>
+            <UButton variant="primary" size="md" class="flex-1" :disabled="!selectedBackup" @click="onRestore">恢复</UButton>
+          </div>
+        </div>
+      </div>
 
       <div class="flex items-center justify-between pt-1 text-[11px]">
         <span class="text-zinc-400">上次同步：{{ fmt(lastSyncAt) }}</span>

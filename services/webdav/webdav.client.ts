@@ -13,6 +13,8 @@ export interface WebDAVRemote {
   putText(path: string, text: string): Promise<void>
   getText(path: string): Promise<string>
   remove(path: string): Promise<void>
+  /** Names of files in the base directory (best-effort, never throws). */
+  listFiles(): Promise<string[]>
 }
 
 export function normalizeBasePath(path: string): string {
@@ -58,6 +60,18 @@ export function createWebDAVRemote(cfg: WebDAVConfig): WebDAVRemote {
         await client.deleteFile(`${base}/${path}`)
       } catch {
         // best-effort
+      }
+    },
+    async listFiles() {
+      try {
+        const res: any = await (client as any).getDirectoryContents(base)
+        const arr: any[] = Array.isArray(res) ? res : res?.data ?? []
+        return arr
+          .filter((e) => e && e.type !== 'directory')
+          .map((e) => e.basename)
+          .filter((n): n is string => typeof n === 'string')
+      } catch {
+        return []
       }
     },
   }

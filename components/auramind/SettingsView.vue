@@ -10,6 +10,7 @@ import ContextSettings from '@/components/settings/ContextSettings.vue'
 import CaptureSettings from '@/components/settings/CaptureSettings.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
 import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
+import AiJobQueue from '@/components/settings/AiJobQueue.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
@@ -181,6 +182,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">WebDAV 同步</h2>
         <WebDAVSettings />
+      </section>
+
+      <!-- 自动 AI 分析 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">自动 AI 分析</h2>
+        <AiJobQueue />
       </section>
 
       <!-- 本地存储 -->

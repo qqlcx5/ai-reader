@@ -12,6 +12,14 @@ export interface WebDAVConfig {
   password: string
   basePath: string
   enabled: boolean
+  /** Max timestamped backup snapshots to keep on the remote (default 10). */
+  maxBackups?: number
+}
+
+/** A timestamped remote backup snapshot, newest-first by `ts`. */
+export interface BackupEntry {
+  name: string
+  ts: number
 }
 
 export type EntityKey =

@@ -7,6 +7,7 @@ import type { AppSettings } from '../types/settings'
 import type { PromptTemplate } from '../types/prompt-template'
 import type { CollectionEntity, CollectionItemEntity } from '../types/collection'
 import type { FeedEntity, FeedItemEntity } from '../types/feed'
+import type { AiJobEntity } from '../types/ai-job'
 
 export class AuraMindDB extends Dexie {
   documents!: Table<DocumentEntity, string>
@@ -19,6 +20,7 @@ export class AuraMindDB extends Dexie {
   kvMeta!: Table<{ id: string; value: unknown }, string>
   feeds!: Table<FeedEntity, string>
   feedItems!: Table<FeedItemEntity, string>
+  aiJobs!: Table<AiJobEntity, string>
 
   constructor() {
     super('AuraMindDB')

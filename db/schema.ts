@@ -1,4 +1,4 @@
-export const DB_VERSION = 6
+export const DB_VERSION = 7
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, contentHash',
@@ -13,4 +13,6 @@ export const STORE_MAP = {
   // RSS subscriptions (synced) and items (local-only, re-fetched per device).
   feeds: 'id, url, folder, lastFetchedAt, updatedAt',
   feedItems: 'id, feedId, guid, [feedId+publishedAt], readAt, documentId',
+  // Background auto-analysis jobs (panel-drained queue). Local-only.
+  aiJobs: 'id, documentId, status, createdAt',
 } as const

@@ -19,6 +19,14 @@ export interface CaptureSettings {
   compressRawHtml: boolean
 }
 
+export interface AutoAnalysisSettings {
+  enabled: boolean
+  /** ModelConfig.id; falls back to the default model when unset. */
+  modelId?: string
+  /** PromptTemplate.id whose content becomes the auto prompt. */
+  promptTemplateId?: string
+}
+
 export interface AppSettings {
   id: 'app-settings'
 
@@ -26,6 +34,7 @@ export interface AppSettings {
 
   context: ContextSettings
   capture: CaptureSettings
+  autoAnalysis: AutoAnalysisSettings
 
   createdAt: string
   updatedAt: string

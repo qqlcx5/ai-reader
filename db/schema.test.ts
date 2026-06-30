@@ -4,7 +4,7 @@ import { AuraMindDB } from './index'
 
 describe('db/schema', () => {
   it('should define the current DB version', () => {
-    expect(DB_VERSION).toBe(6)
+    expect(DB_VERSION).toBe(7)
   })
 
   it('should define all required stores', () => {
@@ -16,6 +16,7 @@ describe('db/schema', () => {
     expect(STORE_MAP).toHaveProperty('collectionItems')
     expect(STORE_MAP).toHaveProperty('feeds')
     expect(STORE_MAP).toHaveProperty('feedItems')
+    expect(STORE_MAP).toHaveProperty('aiJobs')
   })
 
   it('should create AuraMindDB with correct tables', () => {
@@ -28,6 +29,7 @@ describe('db/schema', () => {
     expect(db.collectionItems).toBeDefined()
     expect(db.feeds).toBeDefined()
     expect(db.feedItems).toBeDefined()
+    expect(db.aiJobs).toBeDefined()
     expect(db.name).toBe('AuraMindDB')
   })
 })

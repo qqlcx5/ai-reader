@@ -65,6 +65,11 @@ export const SettingsRepository: IRepository<AppSettings> & {
         ...defaultCaptureSettings,
         ...existing.capture,
       },
+      autoAnalysis: {
+        enabled: existing.autoAnalysis?.enabled ?? false,
+        modelId: existing.autoAnalysis?.modelId,
+        promptTemplateId: existing.autoAnalysis?.promptTemplateId,
+      },
       createdAt: existing.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }

@@ -2,6 +2,7 @@ import { extractPage } from '@/utils/content/extract'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { FeedItemRepository } from '@/db/repositories/feed-item.repository'
 import { addToIndex } from '@/services/search'
+import { enqueueForDocument } from '@/services/ai-job/queue'
 import type { FeedItemEntity } from '@/types/feed'
 import type { DocumentEntity } from '@/types/document'
 
@@ -71,8 +72,16 @@ export async function collectItems(
     if (item.documentId) continue
     if (collected >= AUTO_COLLECT_CAP) break
     try {
-      await collectFeedItem(item, origin)
+      const entity = await collectFeedItem(item, origin)
       collected++
+      // Auto-collected docs feed the AI analysis pipeline (opt-in via settings).
+      if (origin === 'auto') {
+        try {
+          await enqueueForDocument(entity.id)
+        } catch {
+          // queue is best-effort — don't fail the collect
+        }
+      }
     } catch {
       // leave as a plain feed item; user can collect manually later
     }

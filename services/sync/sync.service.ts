@@ -12,10 +12,12 @@ import type {
   SyncResult,
   SyncPreview,
   SyncDeleteItem,
+  BackupEntry,
 } from '@/types/sync'
 
 const DATA_FILE = 'data.json'
-const BACKUP_FILE = 'data.backup.json'
+const BACKUP_PREFIX = 'data.backup-'
+const BACKUP_RE = /^data\.backup-(\d{8}T\d{9}Z)(?:-[0-9a-z]+)?\.json$/
 const SYNC_VERSION = 1
 const SYNC_STATE_ID = 'sync-state'
 // Abort when a sync would delete a large fraction of one side — almost always
@@ -73,6 +75,34 @@ function stripRawFields(doc: any): any {
   if (!doc) return doc
   const { rawHtml, rawHtmlCompressed, rawText, ...rest } = doc
   return rest
+}
+
+/** Filename-safe UTC timestamp with millisecond precision (sortable: lex = chrono). */
+function utcStamp(d = new Date()): string {
+  const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  return (
+    `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}` +
+    `T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}${p(d.getUTCMilliseconds(), 3)}Z`
+  )
+}
+
+function stampToDate(stamp: string): number {
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(\d{3})Z$/.exec(stamp)
+  if (!m) return NaN
+  return Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${m[7]}Z`)
+}
+
+/** Short uniqueness suffix so two backups in the same millisecond can't collide. */
+function rand4(): string {
+  return Math.random().toString(36).slice(2, 6).padEnd(4, '0')
+}
+
+/** Keep only the newest `max` timestamped backups, deleting older excess. */
+async function pruneBackups(remote: WebDAVRemote, max: number): Promise<void> {
+  if (max < 0) return
+  const names = (await remote.listFiles()).filter((n) => BACKUP_RE.test(n)).sort()
+  const excess = names.slice(0, Math.max(0, names.length - max))
+  for (const n of excess) await remote.remove(n)
 }
 
 function toMap(arr: any[] | undefined, cfg: TypeConfig): Map<string, VersionedEntry> {
@@ -197,7 +227,11 @@ export async function forceDownload(rawCfg: WebDAVConfig): Promise<void> {
  * Restore the last pre-sync remote backup (`data.backup.json`): promote it to
  * `data.json` and mirror it to local. One-step rollback after a bad sync.
  */
-export async function restoreFromBackup(rawCfg: WebDAVConfig): Promise<void> {
+/**
+ * Restore a specific timestamped backup snapshot: promote it to `data.json`
+ * and mirror it onto local. One-step rollback after a bad sync.
+ */
+export async function restoreFromSnapshot(rawCfg: WebDAVConfig, name: string): Promise<void> {
   const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
   const remote = createWebDAVRemote(cfg)
 
@@ -206,15 +240,33 @@ export async function restoreFromBackup(rawCfg: WebDAVConfig): Promise<void> {
 
   let raw: string
   try {
-    raw = await remote.getText(BACKUP_FILE)
+    raw = await remote.getText(name)
   } catch {
-    throw new Error('没有可恢复的备份（data.backup.json 不存在）')
+    throw new Error(`备份 ${name} 不存在`)
   }
 
   // Promote backup to current remote, then mirror onto local.
   await remote.putText(DATA_FILE, raw)
   const snap = JSON.parse(raw) as RemoteSnapshot
   await applyDatasetAndResetBase(snap.data ?? emptyDataset())
+}
+
+/** List timestamped backup snapshots on the remote, newest-first. */
+export async function listBackups(rawCfg: WebDAVConfig): Promise<BackupEntry[]> {
+  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
+  const remote = createWebDAVRemote(cfg)
+
+  const test = await remote.test()
+  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
+
+  const names = (await remote.listFiles()).filter((n) => BACKUP_RE.test(n))
+  return names
+    .map((name) => {
+      const m = BACKUP_RE.exec(name)
+      const ts = m ? stampToDate(m[1]) : NaN
+      return { name, ts: Number.isNaN(ts) ? 0 : ts }
+    })
+    .sort((a, b) => b.ts - a.ts)
 }
 
 interface Computed {
@@ -374,22 +426,35 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
     })
   }
 
-  // 2. Back up the previous remote snapshot before overwriting (one-step rollback).
+  // 2. Build the merged snapshot (raw HTML excluded from the backup).
+  const newData = { ...c.mergedDataset, documents: c.mergedDataset.documents.map(stripRawFields) }
+  const newJson = JSON.stringify({
+    version: SYNC_VERSION,
+    syncedAt: new Date().toISOString(),
+    data: newData,
+  } satisfies RemoteSnapshot)
+
+  // 3. Back up the previous remote ONLY when its data actually changed (compare
+  //    payloads, not the whole snapshot — syncedAt changes every call). Then
+  //    prune to retention. Best-effort; sync still succeeds without a backup.
+  let prevData: any = null
   if (c.prevRemoteRaw != null) {
     try {
-      await remote.putText(BACKUP_FILE, c.prevRemoteRaw)
+      prevData = (JSON.parse(c.prevRemoteRaw) as RemoteSnapshot).data ?? null
     } catch {
-      // best-effort — sync still succeeds without a fresh backup
+      prevData = null
+    }
+  }
+  if (c.prevRemoteRaw != null && JSON.stringify(prevData) !== JSON.stringify(newData)) {
+    try {
+      await remote.putText(`${BACKUP_PREFIX}${utcStamp()}-${rand4()}.json`, c.prevRemoteRaw)
+      await pruneBackups(remote, cfg.maxBackups ?? 10)
+    } catch {
+      // best-effort
     }
   }
 
-  // 3. Push merged snapshot (raw HTML excluded from the backup).
-  const snapshot: RemoteSnapshot = {
-    version: SYNC_VERSION,
-    syncedAt: new Date().toISOString(),
-    data: { ...c.mergedDataset, documents: c.mergedDataset.documents.map(stripRawFields) },
-  }
-  await remote.putText(DATA_FILE, JSON.stringify(snapshot))
+  await remote.putText(DATA_FILE, newJson)
 
   // 4. Update device-local sync state.
   await MetaRepository.set(SYNC_STATE_ID, {

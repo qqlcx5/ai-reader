@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import { MetaRepository } from '../db/repositories/meta.repository'
-import type { AppSettings, ContextSettings, CaptureSettings } from '../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings } from '../types/settings'
 import type { WebDAVConfig } from '../types/sync'
 
 const defaultContextSettings: ContextSettings = {
@@ -23,12 +23,17 @@ const defaultCaptureSettings: CaptureSettings = {
   compressRawHtml: true,
 }
 
+const defaultAutoAnalysisSettings: AutoAnalysisSettings = {
+  enabled: false,
+}
+
 function createDefaultSettings(): AppSettings {
   return {
     id: 'app-settings',
     globalSystemPrompt: '',
     context: { ...defaultContextSettings },
     capture: { ...defaultCaptureSettings },
+    autoAnalysis: { ...defaultAutoAnalysisSettings },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
@@ -37,7 +42,7 @@ function createDefaultSettings(): AppSettings {
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<AppSettings>(createDefaultSettings())
   const isLoaded = ref(false)
-  const webdav = ref<WebDAVConfig>({ url: '', username: '', password: '', basePath: '/auramind', enabled: false })
+  const webdav = ref<WebDAVConfig>({ url: '', username: '', password: '', basePath: '/auramind', enabled: false, maxBackups: 10 })
 
   async function loadSettings() {
     const saved = await SettingsRepository.get()
@@ -72,6 +77,12 @@ export const useSettingsStore = defineStore('settings', () => {
     await persist()
   }
 
+  async function updateAutoAnalysis(partial: Partial<AutoAnalysisSettings>) {
+    settings.value.autoAnalysis = { ...settings.value.autoAnalysis, ...partial }
+    settings.value.updatedAt = new Date().toISOString()
+    await persist()
+  }
+
   async function persist() {
     await SettingsRepository.save(toRaw(settings.value) as AppSettings)
   }
@@ -85,6 +96,7 @@ export const useSettingsStore = defineStore('settings', () => {
     updateGlobalSystemPrompt,
     updateContextSettings,
     updateCaptureSettings,
+    updateAutoAnalysis,
     persist,
   }
 })
