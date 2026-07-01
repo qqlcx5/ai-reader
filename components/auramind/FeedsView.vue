@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
+import ScrollFab from '@/components/ui/ScrollFab.vue'
 import {
   DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal,
   DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
@@ -67,9 +68,25 @@ const safeContent = computed(() => {
   return sanitizeHtml(html)
 })
 
-// Same code-block UX (highlight + copy button) as the library reader.
+const readerScrollRef = ref<HTMLElement | null>(null)
+const showBackToTop = ref(false)
+
+function onReaderScroll() {
+  const el = readerScrollRef.value
+  if (!el) return
+  showBackToTop.value = el.scrollTop > 400
+}
+
+function backToTop() {
+  readerScrollRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// Same code-block UX (highlight + copy button) as the library reader. Also
+// reset scroll on item change so a new article always opens at the top.
 watch(safeContent, async () => {
   await nextTick()
+  if (readerScrollRef.value) readerScrollRef.value.scrollTop = 0
+  showBackToTop.value = false
   if (readerRef.value) enhanceCodeBlocks(readerRef.value)
 })
 
@@ -436,9 +453,14 @@ onUnmounted(() => {
     </section>
 
     <!-- Reader -->
-    <section
-      class="flex-1 min-w-0 overflow-y-auto"
+    <div
+      class="flex-1 min-w-0 min-h-0 flex flex-col relative"
       :class="compact && !showReader ? 'hidden' : ''"
+    >
+    <section
+      ref="readerScrollRef"
+      class="flex-1 min-h-0 overflow-y-auto"
+      @scroll.passive="onReaderScroll"
     >
       <article v-if="selectedItem" class="p-5 mx-auto">
         <h1 class="text-[18px] font-bold text-zinc-900 leading-snug">{{ selectedItem.title }}</h1>
@@ -468,6 +490,16 @@ onUnmounted(() => {
         选择左侧条目阅读
       </div>
     </section>
+    <ScrollFab :visible="showBackToTop">
+      <button
+        class="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-zinc-200 shadow-md text-zinc-600 hover:text-brand hover:border-brand/40 transition-colors"
+        title="返回顶部"
+        @click="backToTop"
+      >
+        <ArrowUp class="w-4 h-4" />
+      </button>
+    </ScrollFab>
+    </div>
     </div>
   </div>
 </template>

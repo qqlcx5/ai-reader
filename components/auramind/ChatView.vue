@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { watch, ref, nextTick, computed } from 'vue'
-import { PlugZap, Sparkles } from '@lucide/vue'
+import { PlugZap, Sparkles, ArrowDown } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import { useAppStore } from '@/stores/app.store'
 import ChatMessage from '@/components/workspace/ChatMessage.vue'
 import UButton from '@/components/ui/UButton.vue'
+import ScrollFab from '@/components/ui/ScrollFab.vue'
 import type { ChatMessage as ChatMessageType } from '@/types/chat'
 import { calcMessageCost, formatCNY } from '@/utils/cost'
 
@@ -92,22 +93,55 @@ const rounds = computed<MessageRound[]>(() => {
   return result
 })
 
-function scrollToBottom() {
+// ── Auto-scroll: only while the user is pinned to the bottom. Once they scroll
+//    up to read earlier turns, streaming/new messages stop yanking the view
+//    back down; a floating "back to bottom" button appears instead.
+const pinned = ref(true)
+const unreadCount = ref(0)
+const NEAR_BOTTOM_THRESHOLD = 80
+
+function isNearBottom(): boolean {
+  const el = scrollContainer.value
+  if (!el) return true
+  return el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_THRESHOLD
+}
+
+function onScroll() {
+  pinned.value = isNearBottom()
+  if (pinned.value) unreadCount.value = 0
+}
+
+function scrollToBottom(smooth = false) {
   nextTick(() => {
-    if (scrollContainer.value) {
-      scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
-    }
+    if (!scrollContainer.value) return
+    scrollContainer.value.scrollTo({
+      top: scrollContainer.value.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto',
+    })
   })
 }
 
+function backToBottom() {
+  pinned.value = true
+  unreadCount.value = 0
+  scrollToBottom(true)
+}
+
+// New message added: follow if pinned, otherwise just bump the unread counter.
 watch(
   () => chatStore.messages.length,
-  () => scrollToBottom(),
+  () => {
+    if (pinned.value) scrollToBottom()
+    else unreadCount.value++
+  },
 )
 
+// Streaming tokens on the last message: follow only while still pinned.
 watch(
   () => chatStore.messages[chatStore.messages.length - 1]?.content,
-  () => scrollToBottom(),
+  () => {
+    if (pinned.value) scrollToBottom()
+  },
 )
 
 function handleStop() {
@@ -153,7 +187,12 @@ const lastAssistantMsgId = computed<string | null>(() => {
 </script>
 
 <template>
-  <div ref="scrollContainer" class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-3 bg-[#FAFAFA]">
+  <div class="flex-1 min-h-0 flex flex-col relative">
+    <div
+      ref="scrollContainer"
+      class="flex-1 min-h-0 overflow-y-auto p-4 pb-28 flex flex-col gap-3 bg-[#FAFAFA]"
+      @scroll.passive="onScroll"
+    >
     <!-- Context badge -->
     <div class="flex justify-center">
       <span
@@ -236,5 +275,16 @@ const lastAssistantMsgId = computed<string | null>(() => {
         停止生成
       </UButton>
     </div>
+    </div>
+    <ScrollFab :visible="!pinned">
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-zinc-200 shadow-md text-[12px] text-zinc-600 hover:text-brand hover:border-brand/40 transition-colors"
+        @click="backToBottom"
+      >
+        <ArrowDown class="w-3.5 h-3.5" />
+        <span v-if="unreadCount > 0">{{ unreadCount }} 条新消息</span>
+        <span v-else>回到底部</span>
+      </button>
+    </ScrollFab>
   </div>
 </template>
