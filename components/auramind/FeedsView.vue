@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import { useFeedStore } from '@/stores/feed.store'
 import { useAppStore } from '@/stores/app.store'
 import { exportOpml, parseOpml } from '@/utils/feed/opml'
 import { sanitizeHtml, enhanceCodeBlocks } from '@/utils/markdown'
+import type { FeedEntity } from '@/types/feed'
 
 const feedStore = useFeedStore()
 const appStore = useAppStore()
@@ -101,6 +102,34 @@ async function onOpenItem(itemId: string) {
 function onSelectFeed(id: string | null) {
   feedStore.selectFeed(id)
   showFeeds.value = false
+}
+
+// Inline "move to folder" editor: click the folder icon on a feed row, then
+// type/pick a folder (datalist offers existing folders; blank = 未分组).
+const editingFolderFeedId = ref<string | null>(null)
+const folderDraft = ref('')
+const knownFolders = computed(() => {
+  const s = new Set<string>()
+  for (const f of feedStore.feeds) if (f.folder) s.add(f.folder)
+  return [...s]
+})
+
+function startMoveFolder(f: FeedEntity) {
+  editingFolderFeedId.value = f.id
+  folderDraft.value = f.folder || ''
+}
+function cancelMoveFolder() {
+  editingFolderFeedId.value = null
+}
+async function commitMoveFolder(f: FeedEntity) {
+  const name = folderDraft.value.trim()
+  if (name === (f.folder || '')) {
+    editingFolderFeedId.value = null
+    return
+  }
+  await feedStore.moveFolder(f.id, name || undefined)
+  editingFolderFeedId.value = null
+  appStore.showToast(name ? `已移动到「${name}」` : '已移出分组', 'success')
 }
 
 async function onOpenOriginal(url: string) {
@@ -230,7 +259,7 @@ onUnmounted(() => {
     <div class="flex-1 min-h-0 flex">
       <!-- Feed list -->
       <aside
-        class="w-[150px] shrink-0 border-r border-zinc-100 flex flex-col min-h-0"
+        class="w-[180px] shrink-0 border-r border-zinc-100 flex flex-col min-h-0"
         :class="compact ? (showFeeds ? 'w-full' : 'hidden') : ''"
       >
       <div class="p-2.5 border-b border-zinc-100">
@@ -288,37 +317,67 @@ onUnmounted(() => {
             <span class="truncate flex-1 text-left font-medium">{{ g.folder }}</span>
             <span v-if="g.unread" class="text-[10px] text-zinc-400">{{ g.unread }}</span>
           </button>
-          <button
-            v-for="f in g.list"
-            v-show="!collapsed.has(g.folder)"
-            :key="f.id"
-            class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors group"
-            :class="feedStore.selectedFeedId === f.id ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
-            :title="f.title"
-            @click="onSelectFeed(f.id)"
-          >
-            <Globe class="w-3 h-3 shrink-0 opacity-60" />
-            <span class="truncate flex-1">{{ f.title }}</span>
-            <span v-if="f.autoCollect" class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
-            <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
-            <button
-              class="p-0.5 rounded shrink-0 transition-colors"
-              :class="f.autoCollect ? 'text-brand' : 'text-zinc-300 hover:text-zinc-500'"
-              :title="f.autoCollect ? '自动入库：开（点击关闭）' : '自动入库：关（新条目自动入记忆库）'"
-              @click.stop="feedStore.setAutoCollect(f.id, !f.autoCollect)"
+          <template v-for="f in g.list" :key="f.id">
+            <div
+              v-if="editingFolderFeedId === f.id"
+              v-show="!collapsed.has(g.folder)"
+              class="flex items-center gap-1 pl-7 pr-1 py-1.5"
             >
-              <Zap class="w-3 h-3" />
+              <UInput
+                v-model="folderDraft"
+                list="feed-folders"
+                placeholder="分组名（留空=未分组）"
+                class="flex-1 min-w-0 h-7 text-[12px] rounded-md border border-zinc-200 px-2 bg-white"
+                @keydown.enter.prevent="commitMoveFolder(f)"
+                @keydown.esc="cancelMoveFolder"
+              />
+              <button class="p-0.5 rounded text-brand hover:bg-zinc-100 shrink-0" title="确定" @click="commitMoveFolder(f)">
+                <Check class="w-3 h-3" />
+              </button>
+              <button class="p-0.5 rounded text-zinc-400 hover:bg-zinc-100 shrink-0" title="取消" @click="cancelMoveFolder">
+                <X class="w-3 h-3" />
+              </button>
+            </div>
+            <button
+              v-else
+              v-show="!collapsed.has(g.folder)"
+              class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors group"
+              :class="feedStore.selectedFeedId === f.id ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
+              :title="f.title"
+              @click="onSelectFeed(f.id)"
+            >
+              <Globe class="w-3 h-3 shrink-0 opacity-60" />
+              <span class="truncate flex-1">{{ f.title }}</span>
+              <span v-if="f.autoCollect" class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
+              <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
+              <button
+                class="p-0.5 rounded shrink-0 transition-colors"
+                :class="f.autoCollect ? 'text-brand' : 'text-zinc-300 hover:text-zinc-500'"
+                :title="f.autoCollect ? '自动入库：开（点击关闭）' : '自动入库：关（新条目自动入记忆库）'"
+                @click.stop="feedStore.setAutoCollect(f.id, !f.autoCollect)"
+              >
+                <Zap class="w-3 h-3" />
+              </button>
+              <FolderInput
+                class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand"
+                title="移动到分组"
+                @click.stop="startMoveFolder(f)"
+              />
+              <Trash2
+                class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500"
+                @click.stop="feedStore.unsubscribe(f.id)"
+              />
             </button>
-            <Trash2
-              class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500"
-              @click.stop="feedStore.unsubscribe(f.id)"
-            />
-          </button>
+          </template>
         </div>
 
         <div v-if="!feedStore.feeds.length" class="text-center text-[11px] text-zinc-400 py-4">
           暂无订阅
         </div>
+
+        <datalist id="feed-folders">
+          <option v-for="name in knownFolders" :key="name" :value="name" />
+        </datalist>
       </div>
     </aside>
 

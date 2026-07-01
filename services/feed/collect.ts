@@ -50,14 +50,19 @@ export async function collectFeedItem(
     updatedAt: now,
   }
 
-  await DocumentRepository.save(entity)
-  await FeedItemRepository.setDocument(item.id, entity.id, now)
+  // save() may merge this into an existing doc (same URL / canonicalUrl) and
+  // return a different id. Use the persisted id everywhere downstream so the
+  // feed item links to the document that's actually in the library — otherwise
+  // the item looks collected but its documentId points at a row that was never
+  // written, and the article can't be found/opened from the library.
+  const saved = await DocumentRepository.save(entity)
+  await FeedItemRepository.setDocument(item.id, saved.id, now)
   try {
-    addToIndex(entity)
+    addToIndex(saved)
   } catch {
     // search index is best-effort
   }
-  return entity
+  return saved
 }
 
 /** Resolve an item's article content. RSS body first (no network), then the

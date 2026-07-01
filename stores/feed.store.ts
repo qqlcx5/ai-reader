@@ -79,6 +79,14 @@ export const useFeedStore = defineStore('feed', () => {
     await loadFeeds()
   }
 
+  /** Move a feed to a different folder (pass undefined for 未分组). */
+  async function moveFolder(id: string, folder: string | undefined) {
+    const feed = feeds.value.find((f) => f.id === id)
+    if (!feed) return
+    await FeedRepository.save({ ...feed, folder, updatedAt: new Date().toISOString() })
+    await loadFeeds()
+  }
+
   async function markRead(itemId: string) {
     const readAt = new Date().toISOString()
     await FeedItemRepository.markRead(itemId, readAt)
@@ -134,6 +142,7 @@ export const useFeedStore = defineStore('feed', () => {
     refresh,
     subscribe,
     unsubscribe,
+    moveFolder,
     markRead,
     collect,
     setAutoCollect,
