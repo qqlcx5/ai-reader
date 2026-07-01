@@ -12,6 +12,17 @@ export default defineConfig({
   unocss: {
     excludeEntrypoints: ['background'],
   },
+  vite: () => ({
+    build: {
+      chunkSizeWarningLimit: 500,
+      rollupOptions: {
+        onwarn(warning, warn) {
+          if (warning.code === 'INVALID_ANNOTATION') return
+          warn(warning)
+        },
+      },
+    },
+  }),
   webExt: {
     // Mac
     // chromiumProfile: './.wxt/chrome-data',
