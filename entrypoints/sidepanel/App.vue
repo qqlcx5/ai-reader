@@ -69,7 +69,17 @@ function handleBackgroundMessage(
   }
 }
 
+function isInjectableUrl(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://')
+}
+
 async function triggerAutoExtract(tabId: number) {
+  const url = appStore.activeTab?.url || ''
+
+  // Content scripts cannot be injected into chrome://, chrome-extension://,
+  // about:blank, new tab pages, etc. Silently skip non-injectable pages.
+  if (!isInjectableUrl(url)) return
+
   workspaceStore.setExtracting(true)
   try {
     const extracted = await requestExtract(tabId)
@@ -107,6 +117,18 @@ async function triggerAutoExtract(tabId: number) {
       // non-critical
     }
   } catch (err) {
+    const msg = (err as Error)?.message || ''
+
+    // Connection errors mean the page became non-injectable between the URL
+    // check and the extraction attempt (e.g. the tab navigated to a chrome://
+    // page). Silently skip — this is not a real failure.
+    if (
+      msg.includes('Receiving end does not exist') ||
+      msg.includes('Could not establish connection')
+    ) {
+      return
+    }
+
     console.error('[triggerAutoExtract] capture failed for tab', tabId, err)
     workspaceStore.setCaptureStatus('failed')
   } finally {

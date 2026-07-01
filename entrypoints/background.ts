@@ -96,7 +96,7 @@ export default defineBackground(() => {
   // stale check in FeedsView.
   const FEED_ALARM = 'feed-refresh'
   function setupFeedAlarm() {
-    b.alarms?.create(FEED_ALARM, { periodInMin: 30 }).catch(() => {})
+    b.alarms?.create(FEED_ALARM, { periodInMinutes: 30 }).catch(() => {})
   }
   b.runtime.onInstalled?.addListener(setupFeedAlarm)
   b.runtime.onStartup?.addListener(setupFeedAlarm)
