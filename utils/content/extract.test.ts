@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { computeHash, extractPage, cleanFullHtml } from './extract'
+import { computeHash, extractPage, cleanFullHtml, extractFromHtml } from './extract'
 
 let digestCallCount = 0
 
@@ -199,6 +199,28 @@ describe('utils/content/extract', () => {
       expect(result.extractionMethod).toBe('fallback')
       expect(result.title).toBe('Error Page')
       expect(result.markdown).toContain('Error recovery content.')
+    })
+  })
+
+  describe('extractFromHtml', () => {
+    it('converts HTML to markdown and stamps the rss extraction method', async () => {
+      const d = await extractFromHtml(
+        '<p>hello world from rss body</p>',
+        'https://example.com/a',
+        { title: 'T', author: 'A', publishedAt: '2024-01-01' },
+      )
+      expect(d.extractionMethod).toBe('rss')
+      expect(d.markdown).toBe('hello world from rss body')
+      expect(d.wordCount).toBe(5)
+      expect(d.title).toBe('T')
+      expect(d.author).toBe('A')
+      expect(d.publishedAt).toBe('2024-01-01')
+    })
+
+    it('defaults title to empty and counts zero words for blank html', async () => {
+      const d = await extractFromHtml('', 'https://example.com/a')
+      expect(d.wordCount).toBe(0)
+      expect(d.title).toBe('')
     })
   })
 })

@@ -43,7 +43,7 @@ export interface PageExtractedPayload {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback'
+  extractionMethod: 'defuddle' | 'fallback' | 'rss'
   sanitizedHtml?: string
 }
 

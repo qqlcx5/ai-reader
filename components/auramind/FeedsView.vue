@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronDown, ChevronRight, Zap } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import { useFeedStore } from '@/stores/feed.store'
@@ -17,6 +17,21 @@ const selectedItemId = ref<string | null>(null)
 const collecting = ref(false)
 const opmlInput = ref<HTMLInputElement | null>(null)
 const collapsed = ref<Set<string>>(new Set())
+
+// Responsive layout: wide (≥760px) = 3 panes side-by-side; compact = a single
+// pane with back-style navigation — timeline ↔ reader, feed list behind "源".
+const rootRef = ref<HTMLElement | null>(null)
+const compact = ref(false)
+const showFeeds = ref(false) // compact only: feed-picker pane open
+const showReader = computed(() => !!selectedItemId.value)
+const currentFeedTitle = computed(() => {
+  const id = feedStore.selectedFeedId
+  if (id == null) return '全部'
+  return feedStore.feeds.find((f) => f.id === id)?.title || '全部'
+})
+watch(compact, (c) => {
+  if (!c) showFeeds.value = false
+})
 
 function toggleFolder(folder: string) {
   const next = new Set(collapsed.value)
@@ -81,6 +96,11 @@ async function onSubscribe() {
 async function onOpenItem(itemId: string) {
   selectedItemId.value = itemId
   await feedStore.markRead(itemId)
+}
+
+function onSelectFeed(id: string | null) {
+  feedStore.selectFeed(id)
+  showFeeds.value = false
 }
 
 async function onOpenOriginal(url: string) {
@@ -159,15 +179,60 @@ onMounted(async () => {
   removeMsgListener = () => runtime?.onMessage.removeListener(onBackgroundMessage)
 })
 
+// Track container width → switch between wide (3-pane) and compact (1-pane).
+// ResizeObserver (not matchMedia): the sidepanel's own width is what matters,
+// and window.innerWidth reflects the whole browser, not this panel.
+let ro: ResizeObserver | null = null
+onMounted(() => {
+  ro = new ResizeObserver((entries) => {
+    const w = entries[0]?.contentRect.width ?? 0
+    compact.value = w < 760
+  })
+  if (rootRef.value) ro.observe(rootRef.value)
+})
+
 onUnmounted(() => {
   removeMsgListener?.()
+  ro?.disconnect()
 })
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 flex bg-[#FCFCFC]">
-    <!-- Feed list -->
-    <aside class="w-[150px] shrink-0 border-r border-zinc-100 flex flex-col min-h-0">
+  <div ref="rootRef" class="flex-1 min-h-0 flex flex-col bg-[#FCFCFC]">
+    <!-- Compact top bar: back when reading, else feed-picker toggle + refresh -->
+    <header v-if="compact" class="flex items-center gap-2 h-9 px-2.5 border-b border-zinc-100 shrink-0 bg-white">
+      <template v-if="showReader">
+        <button class="flex items-center gap-0.5 text-[12px] text-zinc-600 hover:text-brand transition-colors" @click="selectedItemId = null">
+          <ChevronLeft class="w-3.5 h-3.5" /> 返回
+        </button>
+        <span class="text-[12px] truncate flex-1 text-zinc-400">{{ currentFeedTitle }}</span>
+      </template>
+      <template v-else>
+        <button
+          class="flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded transition-colors"
+          :class="showFeeds ? 'text-brand bg-indigo-50' : 'text-zinc-500 hover:bg-zinc-100'"
+          @click="showFeeds = !showFeeds"
+        >
+          <Globe class="w-3.5 h-3.5" /> 源
+        </button>
+        <span class="text-[12px] truncate flex-1 text-zinc-700 font-medium">{{ showFeeds ? '订阅源' : currentFeedTitle }}</span>
+        <button
+          class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors"
+          :disabled="feedStore.refreshing"
+          title="全部刷新"
+          @click="feedStore.refresh()"
+        >
+          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': feedStore.refreshing }" />
+        </button>
+      </template>
+    </header>
+
+    <div class="flex-1 min-h-0 flex">
+      <!-- Feed list -->
+      <aside
+        class="w-[150px] shrink-0 border-r border-zinc-100 flex flex-col min-h-0"
+        :class="compact ? (showFeeds ? 'w-full' : 'hidden') : ''"
+      >
       <div class="p-2.5 border-b border-zinc-100">
         <UInput v-model="newUrl" placeholder="订阅源 URL" class="w-full h-8 rounded-md border border-zinc-200 px-2 text-[12px]" />
         <UInput v-model="newFolder" placeholder="分组（可选）" class="mt-1.5 w-full h-8 rounded-md border border-zinc-200 px-2 text-[12px]" />
@@ -207,7 +272,7 @@ onUnmounted(() => {
         <button
           class="w-full text-left px-2 py-1.5 rounded-md text-[12px] flex items-center justify-between transition-colors"
           :class="feedStore.selectedFeedId === null ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
-          @click="feedStore.selectFeed(null)"
+          @click="onSelectFeed(null)"
         >
           <span>全部</span>
           <span v-if="feedStore.totalUnread" class="text-[10px] font-semibold bg-brand text-white rounded-full px-1.5 leading-4">{{ feedStore.totalUnread }}</span>
@@ -227,10 +292,10 @@ onUnmounted(() => {
             v-for="f in g.list"
             v-show="!collapsed.has(g.folder)"
             :key="f.id"
-            class="w-full text-left pl-7 pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors group"
+            class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors group"
             :class="feedStore.selectedFeedId === f.id ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
             :title="f.title"
-            @click="feedStore.selectFeed(f.id)"
+            @click="onSelectFeed(f.id)"
           >
             <Globe class="w-3 h-3 shrink-0 opacity-60" />
             <span class="truncate flex-1">{{ f.title }}</span>
@@ -258,7 +323,10 @@ onUnmounted(() => {
     </aside>
 
     <!-- Items timeline -->
-    <section class="w-[230px] shrink-0 border-r border-zinc-100 overflow-y-auto no-scrollbar">
+    <section
+      class="w-[230px] shrink-0 border-r border-zinc-100 overflow-y-auto no-scrollbar"
+      :class="compact ? (showFeeds || showReader ? 'hidden' : 'w-full flex-1 border-r-0') : ''"
+    >
       <button
         v-for="it in feedStore.items"
         :key="it.id"
@@ -281,8 +349,11 @@ onUnmounted(() => {
     </section>
 
     <!-- Reader -->
-    <section class="flex-1 min-w-0 overflow-y-auto">
-      <article v-if="selectedItem" class="p-5 max-w-prose">
+    <section
+      class="flex-1 min-w-0 overflow-y-auto"
+      :class="compact && !showReader ? 'hidden' : ''"
+    >
+      <article v-if="selectedItem" class="p-5 mx-auto">
         <h1 class="text-[18px] font-bold text-zinc-900 leading-snug">{{ selectedItem.title }}</h1>
         <div class="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-2">
           <span v-if="selectedItem.author">{{ selectedItem.author }}</span>
@@ -310,5 +381,6 @@ onUnmounted(() => {
         选择左侧条目阅读
       </div>
     </section>
+    </div>
   </div>
 </template>

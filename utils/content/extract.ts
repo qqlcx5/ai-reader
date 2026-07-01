@@ -18,7 +18,7 @@ export interface ExtractedPageData {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback'
+  extractionMethod: 'defuddle' | 'fallback' | 'rss'
 }
 
 // ---------------------------------------------------------------------------
@@ -145,6 +145,39 @@ export async function extractPage(
     wordCount,
     tokenCount,
     extractionMethod: 'defuddle',
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RSS-body extraction — convert feed-provided HTML straight to Markdown. Used
+// by feed collection so we don't re-fetch the article (often paywalled /
+// bot-blocked / JS-rendered) when the feed already carries the full body.
+// Metadata comes from the feed item, which is more reliable than what defuddle
+// can recover from a fetched page.
+// ---------------------------------------------------------------------------
+
+export async function extractFromHtml(
+  html: string,
+  url: string,
+  meta: { title?: string; siteName?: string; author?: string; description?: string; publishedAt?: string } = {},
+): Promise<ExtractedPageData> {
+  const markdown = createMarkdownContent(html, url)
+  const contentHash = await computeHash(markdown)
+  const wordCount = markdown.split(/\s+/).filter(Boolean).length
+  const tokenCount = estimateTokens(markdown)
+  return {
+    url,
+    title: meta.title || '',
+    markdown,
+    siteName: meta.siteName,
+    author: meta.author,
+    description: meta.description,
+    publishedAt: meta.publishedAt,
+    canonicalUrl: undefined,
+    contentHash,
+    wordCount,
+    tokenCount,
+    extractionMethod: 'rss',
   }
 }
 

@@ -19,7 +19,7 @@ export interface DocumentEntity {
   tokenCount: number
   contentHash: string
 
-  extractionMethod: 'defuddle' | 'fallback' | 'manual'
+  extractionMethod: 'defuddle' | 'fallback' | 'manual' | 'rss'
   source: 'current-page' | 'library'
 
   /** When this document was collected from an RSS feed: 'auto' = auto-collected
