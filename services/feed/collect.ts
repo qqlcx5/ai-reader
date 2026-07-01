@@ -13,6 +13,12 @@ const AUTO_COLLECT_CAP = 10
  *  article. Below this it's likely a truncated teaser → fetch the real page. */
 const RSS_MIN_WORDS = 40
 
+/** Auto-collected docs must clear this word count or they're skipped. A short
+ *  result usually means the feed only carried a teaser and the article page was
+ *  paywalled / bot-blocked, so saving would shelve a truncated article in the
+ *  library. Manual collects are exempt — the user explicitly asked. */
+const AUTO_COLLECT_MIN_WORDS = 500
+
 /**
  * Collect a feed item into the knowledge base as a DocumentEntity, linked back
  * to the item via documentId. Content resolution prefers the body the feed
@@ -28,6 +34,14 @@ export async function collectFeedItem(
 ): Promise<DocumentEntity> {
   const data = await extractItemContent(item)
   if (!data) throw new Error('无法获取该条目的正文')
+
+  // Auto-collect quality gate: skip short bodies (likely a teaser-only feed
+  // whose article page got paywalled / bot-blocked) instead of shelving a
+  // truncated article in the library. The item stays a plain feed item; the
+  // user can still collect it manually. Manual collects bypass this.
+  if (origin === 'auto' && data.wordCount < AUTO_COLLECT_MIN_WORDS) {
+    throw new Error(`正文过短（${data.wordCount} 词），疑似未完整抓取`)
+  }
 
   const now = new Date().toISOString()
   const entity: DocumentEntity = {
@@ -130,4 +144,3 @@ export async function collectItems(
   }
   return collected
 }
-

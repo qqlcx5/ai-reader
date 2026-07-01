@@ -1,8 +1,12 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
+import {
+  DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal,
+  DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from 'reka-ui'
 import { useFeedStore } from '@/stores/feed.store'
 import { useAppStore } from '@/stores/app.store'
 import { exportOpml, parseOpml } from '@/utils/feed/opml'
@@ -341,7 +345,7 @@ onUnmounted(() => {
             <button
               v-else
               v-show="!collapsed.has(g.folder)"
-              class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors group"
+              class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors"
               :class="feedStore.selectedFeedId === f.id ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
               :title="f.title"
               @click="onSelectFeed(f.id)"
@@ -350,23 +354,47 @@ onUnmounted(() => {
               <span class="truncate flex-1">{{ f.title }}</span>
               <span v-if="f.autoCollect" class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
               <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
-              <button
-                class="p-0.5 rounded shrink-0 transition-colors"
-                :class="f.autoCollect ? 'text-brand' : 'text-zinc-300 hover:text-zinc-500'"
-                :title="f.autoCollect ? '自动入库：开（点击关闭）' : '自动入库：关（新条目自动入记忆库）'"
-                @click.stop="feedStore.setAutoCollect(f.id, !f.autoCollect)"
-              >
-                <Zap class="w-3 h-3" />
-              </button>
-              <FolderInput
-                class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-brand"
-                title="移动到分组"
-                @click.stop="startMoveFolder(f)"
-              />
-              <Trash2
-                class="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500"
-                @click.stop="feedStore.unsubscribe(f.id)"
-              />
+              <DropdownMenuRoot>
+                <DropdownMenuTrigger as-child>
+                  <button
+                    class="p-0.5 rounded shrink-0 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+                    title="更多操作"
+                    @click.stop
+                  >
+                    <Ellipsis class="w-3.5 h-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuContent
+                    class="min-w-[148px] bg-white border border-zinc-200 rounded-lg shadow-lg py-1 z-50"
+                    align="end"
+                    :side-offset="4"
+                  >
+                    <DropdownMenuItem
+                      class="flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-zinc-700 outline-none cursor-pointer data-[highlighted]:bg-zinc-100"
+                      @select="feedStore.setAutoCollect(f.id, !f.autoCollect)"
+                    >
+                      <Zap class="w-3 h-3" :class="f.autoCollect ? 'text-brand' : 'text-zinc-400'" />
+                      {{ f.autoCollect ? '关闭自动入库' : '开启自动入库' }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      class="flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-zinc-700 outline-none cursor-pointer data-[highlighted]:bg-zinc-100"
+                      @select="startMoveFolder(f)"
+                    >
+                      <FolderInput class="w-3 h-3 text-zinc-400" />
+                      移动到分组…
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator class="h-px bg-zinc-100 my-1" />
+                    <DropdownMenuItem
+                      class="flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-red-500 outline-none cursor-pointer data-[highlighted]:bg-red-50"
+                      @select="feedStore.unsubscribe(f.id)"
+                    >
+                      <Trash2 class="w-3 h-3" />
+                      取消订阅
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenuPortal>
+              </DropdownMenuRoot>
             </button>
           </template>
         </div>
