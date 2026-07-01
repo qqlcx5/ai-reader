@@ -3,6 +3,7 @@ import { FeedItemRepository } from '@/db/repositories/feed-item.repository'
 import { fetchFeed } from './fetch'
 import { parseFeed } from './parser'
 import { collectItems } from './collect'
+import { normalizeFeedUrl } from '@/utils/feed/url'
 import type { FeedEntity, FeedItemEntity } from '@/types/feed'
 
 function uuid(): string {
@@ -78,9 +79,13 @@ export async function refreshAll(): Promise<RefreshResult[]> {
   return Promise.all(feeds.map(refreshFeed))
 }
 
-/** Subscribe to a URL (dedupe by URL) and do an initial fetch to fill items. */
+/** Subscribe to a URL (dedupe by canonical URL) and do an initial fetch to fill
+ *  items. The URL is normalized (lowercase scheme/host, tracking params and
+ *  fragment stripped, trailing slash dropped) so the same feed subscribed via
+ *  slightly different URLs — utm params, trailing slash, mixed case — resolves
+ *  to one subscription instead of stacking duplicates. */
 export async function addSubscription(url: string, folder?: string): Promise<FeedEntity> {
-  const normalized = url.trim()
+  const normalized = normalizeFeedUrl(url)
   const existing = await FeedRepository.findByUrl(normalized)
   if (existing) return existing
 
