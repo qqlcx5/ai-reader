@@ -1,9 +1,7 @@
 import { db } from '@/db'
 import { MetaRepository } from '@/db/repositories/meta.repository'
 import { mergeSet, type VersionedEntry } from './merge'
-import { createWebDAVRemote, normalizeBasePath, type WebDAVRemote } from '../webdav/webdav.client'
 import type {
-  WebDAVConfig,
   SyncState,
   SyncedDataset,
   RemoteSnapshot,
@@ -15,6 +13,21 @@ import type {
   BackupEntry,
 } from '@/types/sync'
 
+// ── RemoteTransport ────────────────────────────────────────────────────────
+/** Protocol-agnostic remote transport that sync.service orchestrates against.
+ *  Implementations: WebDAV (services/webdav/webdav.client.ts),
+ *  S3 (services/s3/s3.client.ts). */
+export interface RemoteTransport {
+  test(): Promise<{ ok: boolean; error?: string }>
+  hasData(): Promise<boolean>
+  putText(path: string, text: string): Promise<void>
+  getText(path: string): Promise<string>
+  remove(path: string): Promise<void>
+  /** Names of files in the base directory (best-effort, never throws). */
+  listFiles(): Promise<string[]>
+}
+
+// ── Constants ──────────────────────────────────────────────────────────────
 const DATA_FILE = 'data.json'
 const BACKUP_PREFIX = 'data.backup-'
 const BACKUP_RE = /^data\.backup-(\d{8}T\d{9}Z)(?:-[0-9a-z]+)?\.json$/
@@ -34,6 +47,9 @@ interface TypeConfig {
   natKey?: (e: any) => string
   /** Apply by clearing the table and putting the whole merged set (junction tables). */
   rebuild?: boolean
+  /** For tables shared across multiple EntityKey types (e.g., kvMeta):
+   *  use targeted row deletes instead of table.clear(). */
+  sharedTable?: boolean
 }
 
 const TYPE_CONFIGS: TypeConfig[] = [
@@ -45,8 +61,6 @@ const TYPE_CONFIGS: TypeConfig[] = [
     type: 'collectionItems',
     table: () => db.collectionItems,
     version: (e) => e.addedAt,
-    // Natural key is the membership pair, not the per-device uuid id, so the same
-    // pair added on two devices collapses to one entry instead of duplicating.
     natKey: (e) => `${e.collectionId}/${e.documentId}`,
     rebuild: true,
   },
@@ -56,28 +70,40 @@ const TYPE_CONFIGS: TypeConfig[] = [
     version: (e) => e.updatedAt,
     filter: (e) => e.id === 'app-settings',
   },
-  // RSS subscriptions sync across devices; feedItems are deliberately excluded
-  // (they're a local, re-fetched cache — see feeds/refresh.ts).
   { type: 'feeds', table: () => db.feeds, version: (e) => e.updatedAt },
+  { type: 'promptTemplates', table: () => db.promptTemplates, version: (e) => e.updatedAt },
+  {
+    type: 'webdavConfig',
+    table: () => db.kvMeta,
+    version: (e) => e.updatedAt ?? '',
+    filter: (e) => e.id === 'webdav-config',
+    natKey: (e) => e.id,
+    sharedTable: true,
+  },
+  {
+    type: 's3Config',
+    table: () => db.kvMeta,
+    version: (e) => e.updatedAt ?? '',
+    filter: (e) => e.id === 's3-config',
+    natKey: (e) => e.id,
+    sharedTable: true,
+  },
 ]
 
 function emptyVersions(): SyncVersions {
-  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {}, feeds: {} }
+  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {}, feeds: {}, promptTemplates: {}, webdavConfig: {}, s3Config: {} }
 }
 
 function emptyDataset(): SyncedDataset {
-  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [] }
+  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], promptTemplates: [], webdavConfig: [], s3Config: [] }
 }
 
-/** Strip raw text fields before uploading — raw HTML / rawText are not part of
- *  the backup. The Raw view falls back to markdown when rawText is absent. */
 function stripRawFields(doc: any): any {
   if (!doc) return doc
   const { rawHtml, rawHtmlCompressed, rawText, ...rest } = doc
   return rest
 }
 
-/** Filename-safe UTC timestamp with millisecond precision (sortable: lex = chrono). */
 function utcStamp(d = new Date()): string {
   const p = (n: number, w = 2) => String(n).padStart(w, '0')
   return (
@@ -92,17 +118,15 @@ function stampToDate(stamp: string): number {
   return Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${m[7]}Z`)
 }
 
-/** Short uniqueness suffix so two backups in the same millisecond can't collide. */
 function rand4(): string {
   return Math.random().toString(36).slice(2, 6).padEnd(4, '0')
 }
 
-/** Keep only the newest `max` timestamped backups, deleting older excess. */
-async function pruneBackups(remote: WebDAVRemote, max: number): Promise<void> {
+async function pruneBackups(transport: RemoteTransport, max: number): Promise<void> {
   if (max < 0) return
-  const names = (await remote.listFiles()).filter((n) => BACKUP_RE.test(n)).sort()
+  const names = (await transport.listFiles()).filter((n) => BACKUP_RE.test(n)).sort()
   const excess = names.slice(0, Math.max(0, names.length - max))
-  for (const n of excess) await remote.remove(n)
+  for (const n of excess) await transport.remove(n)
 }
 
 function toMap(arr: any[] | undefined, cfg: TypeConfig): Map<string, VersionedEntry> {
@@ -127,6 +151,10 @@ function labelFor(type: EntityKey, e: any): string | undefined {
       return e.name
     case 'feeds':
       return e.title || e.url
+    case 'webdavConfig':
+      return 'WebDAV 配置'
+    case 's3Config':
+      return 'S3 配置'
     default:
       return undefined
   }
@@ -152,16 +180,24 @@ export async function getSyncState(): Promise<SyncState | undefined> {
   return MetaRepository.get<SyncState>(SYNC_STATE_ID)
 }
 
-export async function testConnection(cfg: WebDAVConfig) {
-  return createWebDAVRemote({ ...cfg, basePath: normalizeBasePath(cfg.basePath) }).test()
+// ── Public API ─────────────────────────────────────────────────────────────
+
+export async function testConnection(transport: RemoteTransport) {
+  return transport.test()
 }
 
-/** Overwrite local tables with a dataset and reset the base to match it. */
 async function applyDatasetAndResetBase(data: SyncedDataset): Promise<void> {
   for (const cfg2 of TYPE_CONFIGS) {
     const arr = cfg2.filter ? (data[cfg2.type] ?? []).filter(cfg2.filter) : data[cfg2.type] ?? []
     await db.transaction('rw', cfg2.table(), async () => {
-      await cfg2.table().clear()
+      if (cfg2.sharedTable) {
+        // Delete only rows matching this TypeConfig's filter (don't wipe shared table).
+        const all = await cfg2.table().toArray()
+        const toDelete = cfg2.filter ? all.filter(cfg2.filter) : all
+        for (const row of toDelete) await cfg2.table().delete(row.id)
+      } else {
+        await cfg2.table().clear()
+      }
       if (arr.length) await cfg2.table().bulkPut(arr)
     })
   }
@@ -172,17 +208,9 @@ async function applyDatasetAndResetBase(data: SyncedDataset): Promise<void> {
   } satisfies SyncState)
 }
 
-/**
- * Force (full) upload: overwrite the remote snapshot with the entire local
- * dataset and reset the base to match, so local == remote == base afterwards.
- * Clobbers any remote state. Use as a manual override when merge is unwanted.
- */
-export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
-
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
+export async function forceUpload(transport: RemoteTransport): Promise<void> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
 
   const data: SyncedDataset = {
     documents: (await db.documents.toArray()).map(stripRawFields),
@@ -192,9 +220,12 @@ export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
     collectionItems: await db.collectionItems.toArray(),
     settings: (await db.settings.toArray()).filter((s) => s.id === 'app-settings'),
     feeds: await db.feeds.toArray(),
+    promptTemplates: await db.promptTemplates.toArray(),
+    webdavConfig: (await db.kvMeta.toArray()).filter((e) => e.id === 'webdav-config'),
+    s3Config: (await db.kvMeta.toArray()).filter((e) => e.id === 's3-config'),
   }
 
-  await remote.putText(
+  await transport.putText(
     DATA_FILE,
     JSON.stringify({ version: SYNC_VERSION, syncedAt: new Date().toISOString(), data } satisfies RemoteSnapshot),
   )
@@ -206,60 +237,36 @@ export async function forceUpload(rawCfg: WebDAVConfig): Promise<void> {
   } satisfies SyncState)
 }
 
-/**
- * Force (full) download: overwrite local data with the entire remote snapshot
- * and reset the base to match. Clobbers any local state. Use as a manual
- * override (e.g. after the wipe-safeguard aborts, to declare remote the truth).
- */
-export async function forceDownload(rawCfg: WebDAVConfig): Promise<void> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
+export async function forceDownload(transport: RemoteTransport): Promise<void> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
+  if (!(await transport.hasData())) throw new Error('远端没有数据可下载')
 
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
-  if (!(await remote.hasData())) throw new Error('远端没有数据可下载')
-
-  const snap = JSON.parse(await remote.getText(DATA_FILE)) as RemoteSnapshot
+  const snap = JSON.parse(await transport.getText(DATA_FILE)) as RemoteSnapshot
   await applyDatasetAndResetBase(snap.data ?? emptyDataset())
 }
 
-/**
- * Restore the last pre-sync remote backup (`data.backup.json`): promote it to
- * `data.json` and mirror it to local. One-step rollback after a bad sync.
- */
-/**
- * Restore a specific timestamped backup snapshot: promote it to `data.json`
- * and mirror it onto local. One-step rollback after a bad sync.
- */
-export async function restoreFromSnapshot(rawCfg: WebDAVConfig, name: string): Promise<void> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
-
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
+export async function restoreFromSnapshot(transport: RemoteTransport, name: string): Promise<void> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
 
   let raw: string
   try {
-    raw = await remote.getText(name)
+    raw = await transport.getText(name)
   } catch {
     throw new Error(`备份 ${name} 不存在`)
   }
 
-  // Promote backup to current remote, then mirror onto local.
-  await remote.putText(DATA_FILE, raw)
+  await transport.putText(DATA_FILE, raw)
   const snap = JSON.parse(raw) as RemoteSnapshot
   await applyDatasetAndResetBase(snap.data ?? emptyDataset())
 }
 
-/** List timestamped backup snapshots on the remote, newest-first. */
-export async function listBackups(rawCfg: WebDAVConfig): Promise<BackupEntry[]> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
+export async function listBackups(transport: RemoteTransport): Promise<BackupEntry[]> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
 
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
-
-  const names = (await remote.listFiles()).filter((n) => BACKUP_RE.test(n))
+  const names = (await transport.listFiles()).filter((n) => BACKUP_RE.test(n))
   return names
     .map((name) => {
       const m = BACKUP_RE.exec(name)
@@ -268,6 +275,8 @@ export async function listBackups(rawCfg: WebDAVConfig): Promise<BackupEntry[]> 
     })
     .sort((a, b) => b.ts - a.ts)
 }
+
+// ── Internal merge engine ──────────────────────────────────────────────────
 
 interface Computed {
   mergedDataset: SyncedDataset
@@ -283,13 +292,12 @@ interface Computed {
   prevRemoteRaw: string | null
 }
 
-/** Pull remote + load base + merge every type. Pure compute — writes nothing. */
-async function computeMerge(remote: WebDAVRemote): Promise<Computed> {
+async function computeMerge(transport: RemoteTransport): Promise<Computed> {
   const remoteData: SyncedDataset = emptyDataset()
   let prevRemoteRaw: string | null = null
-  if (await remote.hasData()) {
+  if (await transport.hasData()) {
     try {
-      prevRemoteRaw = await remote.getText(DATA_FILE)
+      prevRemoteRaw = await transport.getText(DATA_FILE)
       const snap = JSON.parse(prevRemoteRaw) as RemoteSnapshot
       if (snap?.data) Object.assign(remoteData, snap.data)
     } catch {
@@ -302,7 +310,9 @@ async function computeMerge(remote: WebDAVRemote): Promise<Computed> {
   const mergedDataset = emptyDataset()
   const newBase = emptyVersions()
   const puts: Record<EntityKey, any[]> = { ...emptyDataset() }
-  const deletes: Record<EntityKey, string[]> = { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [] }
+  const deletes: Record<EntityKey, string[]> = {
+    documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], promptTemplates: [], webdavConfig: [], s3Config: [],
+  }
   const localDeleteItems: SyncDeleteItem[] = []
   const remoteDeleteItems: SyncDeleteItem[] = []
 
@@ -323,7 +333,6 @@ async function computeMerge(remote: WebDAVRemote): Promise<Computed> {
     if (cfg2.rebuild) {
       puts[cfg2.type] = mergedEntities
     } else {
-      // Only write entities whose version differs from current local (or are new).
       puts[cfg2.type] = mergedEntities.filter((e) => {
         const k = cfg2.natKey ? cfg2.natKey(e) : e.id
         const cur = localMap.get(k)
@@ -332,7 +341,6 @@ async function computeMerge(remote: WebDAVRemote): Promise<Computed> {
       deletes[cfg2.type] = out.localDeletes
     }
 
-    // Collect labelled delete items for the preview (skip noisy junction/settings).
     if (cfg2.type !== 'collectionItems' && cfg2.type !== 'settings') {
       for (const id of out.localDeletes) {
         const e = localMap.get(id)?.entity
@@ -363,29 +371,17 @@ async function computeMerge(remote: WebDAVRemote): Promise<Computed> {
   }
 
   return {
-    mergedDataset,
-    newBase,
-    puts,
-    deletes,
-    result,
-    localTotal,
-    remoteTotal,
-    localDeleteItems,
-    remoteDeleteItems,
-    abortReason,
-    prevRemoteRaw,
+    mergedDataset, newBase, puts, deletes, result,
+    localTotal, remoteTotal, localDeleteItems, remoteDeleteItems,
+    abortReason, prevRemoteRaw,
   }
 }
 
-/** Dry-run: compute what a sync would do without writing anything. */
-export async function previewSync(rawCfg: WebDAVConfig): Promise<SyncPreview> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
+export async function previewSync(transport: RemoteTransport): Promise<SyncPreview> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
 
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
-
-  const c = await computeMerge(remote)
+  const c = await computeMerge(transport)
   return {
     pulled: c.result.pulled,
     pushed: c.result.pushed,
@@ -400,14 +396,11 @@ export async function previewSync(rawCfg: WebDAVConfig): Promise<SyncPreview> {
   }
 }
 
-export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
-  const cfg: WebDAVConfig = { ...rawCfg, basePath: normalizeBasePath(rawCfg.basePath) }
-  const remote = createWebDAVRemote(cfg)
+export async function runSync(transport: RemoteTransport, maxBackups = 10): Promise<SyncResult> {
+  const test = await transport.test()
+  if (!test.ok) throw new Error(test.error || '远端连接失败')
 
-  const test = await remote.test()
-  if (!test.ok) throw new Error(test.error || 'WebDAV 连接失败')
-
-  const c = await computeMerge(remote)
+  const c = await computeMerge(transport)
   if (c.abortReason) throw new Error(c.abortReason)
 
   // 1. Apply locally.
@@ -426,7 +419,7 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
     })
   }
 
-  // 2. Build the merged snapshot (raw HTML excluded from the backup).
+  // 2. Build the merged snapshot.
   const newData = { ...c.mergedDataset, documents: c.mergedDataset.documents.map(stripRawFields) }
   const newJson = JSON.stringify({
     version: SYNC_VERSION,
@@ -434,9 +427,7 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
     data: newData,
   } satisfies RemoteSnapshot)
 
-  // 3. Back up the previous remote ONLY when its data actually changed (compare
-  //    payloads, not the whole snapshot — syncedAt changes every call). Then
-  //    prune to retention. Best-effort; sync still succeeds without a backup.
+  // 3. Back up previous remote when data actually changed.
   let prevData: any = null
   if (c.prevRemoteRaw != null) {
     try {
@@ -447,14 +438,14 @@ export async function runSync(rawCfg: WebDAVConfig): Promise<SyncResult> {
   }
   if (c.prevRemoteRaw != null && JSON.stringify(prevData) !== JSON.stringify(newData)) {
     try {
-      await remote.putText(`${BACKUP_PREFIX}${utcStamp()}-${rand4()}.json`, c.prevRemoteRaw)
-      await pruneBackups(remote, cfg.maxBackups ?? 10)
+      await transport.putText(`${BACKUP_PREFIX}${utcStamp()}-${rand4()}.json`, c.prevRemoteRaw)
+      await pruneBackups(transport, maxBackups)
     } catch {
       // best-effort
     }
   }
 
-  await remote.putText(DATA_FILE, newJson)
+  await transport.putText(DATA_FILE, newJson)
 
   // 4. Update device-local sync state.
   await MetaRepository.set(SYNC_STATE_ID, {

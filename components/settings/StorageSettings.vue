@@ -68,28 +68,37 @@ function getBackupFilename(): string {
 async function doExport() {
   showExportConfirm.value = false
   try {
-    const [documents, conversations, models, settings, collections, collectionItems, webdavConfig] = await Promise.all([
+    const [documents, conversations, models, settings, collections, collectionItems, feeds, promptTemplates, webdavConfig, s3Config] = await Promise.all([
       DocumentRepository.findAll(),
       ChatRepository.findAll(),
       ModelRepository.findAll(),
       db.settings.toArray(),
       db.collections.toArray(),
       db.collectionItems.toArray(),
+      db.feeds.toArray(),
+      db.promptTemplates.toArray(),
       // WebDAV 配置存在 kvMeta 表（键 'webdav-config'）。只导出这一个键，
       // 不导出 'sync-state' —— 同步基线是设备本地的，跨设备恢复会破坏 LWW 三方合并。
       MetaRepository.get('webdav-config'),
+      MetaRepository.get('s3-config'),
     ])
+
+    // 导出时脱敏：移除 raw 大字段，与 sync.service.ts 中的 stripRawFields 保持一致
+    const strippedDocuments = documents.map(({ rawHtml, rawHtmlCompressed, rawText, ...rest }) => rest)
 
     const backup = {
       version: 2,
       exportedAt: new Date().toISOString(),
-      documents,
+      documents: strippedDocuments,
       conversations,
       models,
       settings,
       collections,
       collectionItems,
+      feeds,
+      promptTemplates,
       webdavConfig,
+      s3Config,
     }
 
     const json = JSON.stringify(backup, null, 2)
@@ -118,10 +127,12 @@ async function doImport(file: File) {
 
     const collections = Array.isArray(data.collections) ? data.collections : []
     const collectionItems = Array.isArray(data.collectionItems) ? data.collectionItems : []
+    const feeds = Array.isArray(data.feeds) ? data.feeds : []
+    const promptTemplates = Array.isArray(data.promptTemplates) ? data.promptTemplates : []
 
     await db.transaction(
       'rw',
-      [db.documents, db.conversations, db.models, db.settings, db.collections, db.collectionItems],
+      [db.documents, db.conversations, db.models, db.settings, db.collections, db.collectionItems, db.feeds, db.promptTemplates],
       async () => {
         await Promise.all([
           db.documents.clear(),
@@ -130,6 +141,8 @@ async function doImport(file: File) {
           db.settings.clear(),
           db.collections.clear(),
           db.collectionItems.clear(),
+          db.feeds.clear(),
+          db.promptTemplates.clear(),
         ])
 
         if (data.documents.length > 0) await db.documents.bulkAdd(data.documents)
@@ -137,7 +150,11 @@ async function doImport(file: File) {
         if (data.models.length > 0) await db.models.bulkAdd(data.models)
         if (data.settings?.length > 0) await db.settings.bulkAdd(data.settings)
         if (collections.length > 0) await db.collections.bulkAdd(collections)
+        // collectionItems 采用 rebuild 策略，与 sync 侧保持一致
+        await db.collectionItems.clear()
         if (collectionItems.length > 0) await db.collectionItems.bulkAdd(collectionItems)
+        if (feeds.length > 0) await db.feeds.bulkAdd(feeds)
+        if (promptTemplates.length > 0) await db.promptTemplates.bulkAdd(promptTemplates)
       },
     )
 
@@ -146,6 +163,11 @@ async function doImport(file: File) {
     const webdavConfig = data.webdavConfig
     if (webdavConfig && typeof webdavConfig === 'object') {
       await MetaRepository.set('webdav-config', webdavConfig)
+    }
+
+    const s3Config = data.s3Config
+    if (s3Config && typeof s3Config === 'object') {
+      await MetaRepository.set('s3-config', s3Config)
     }
 
     await refreshStats()

@@ -4,6 +4,7 @@ import type { ModelConfig } from './model'
 import type { AppSettings } from './settings'
 import type { CollectionEntity, CollectionItemEntity } from './collection'
 import type { FeedEntity } from './feed'
+import type { PromptTemplate } from './prompt-template'
 
 /** Device-local WebDAV connection config. Never synced across devices. */
 export interface WebDAVConfig {
@@ -30,6 +31,16 @@ export type EntityKey =
   | 'collectionItems'
   | 'settings'
   | 'feeds'
+  | 'promptTemplates'
+  | 'webdavConfig'
+  | 's3Config'
+
+/** A single row from the kvMeta key-value store. */
+export interface KvMetaRow {
+  id: string
+  value: unknown
+  updatedAt?: string
+}
 
 /** The dataset that participates in sync. */
 export interface SyncedDataset {
@@ -40,6 +51,9 @@ export interface SyncedDataset {
   collectionItems: CollectionItemEntity[]
   settings: AppSettings[]
   feeds: FeedEntity[]
+  promptTemplates: PromptTemplate[]
+  webdavConfig: KvMetaRow[]
+  s3Config: KvMetaRow[]
 }
 
 export interface RemoteSnapshot {

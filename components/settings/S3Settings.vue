@@ -9,7 +9,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
 import { testConnection, runSync, previewSync, forceUpload, forceDownload, listBackups, restoreFromSnapshot, getSyncState } from '@/services/sync/sync.service'
-import { createWebDAVRemote, normalizeBasePath } from '@/services/webdav/webdav.client'
+import { createS3Remote, normalizeBasePath } from '@/services/s3/s3.client'
 import type { SyncPreview, SyncDeleteItem, BackupEntry } from '@/types/sync'
 
 const settingsStore = useSettingsStore()
@@ -31,20 +31,23 @@ const lastResult = ref('')
 const lastSyncAt = ref('')
 const busy = computed(() => testing.value || syncing.value || uploading.value || downloading.value || restoring.value)
 
-function getTransport() {
-  const cfg = { ...settingsStore.webdav, basePath: normalizeBasePath(settingsStore.webdav.basePath) }
-  return createWebDAVRemote(cfg)
-}
-
-const url = computed({ get: () => settingsStore.webdav.url, set: (v) => settingsStore.updateWebDAVConfig({ url: v }) })
-const username = computed({ get: () => settingsStore.webdav.username, set: (v) => settingsStore.updateWebDAVConfig({ username: v }) })
-const password = computed({ get: () => settingsStore.webdav.password, set: (v) => settingsStore.updateWebDAVConfig({ password: v }) })
-const basePath = computed({ get: () => settingsStore.webdav.basePath, set: (v) => settingsStore.updateWebDAVConfig({ basePath: v }) })
-const enabled = computed({ get: () => settingsStore.webdav.enabled, set: (v) => settingsStore.updateWebDAVConfig({ enabled: v }) })
+const endpoint = computed({ get: () => settingsStore.s3.endpoint, set: (v) => settingsStore.updateS3Config({ endpoint: v }) })
+const bucket = computed({ get: () => settingsStore.s3.bucket, set: (v) => settingsStore.updateS3Config({ bucket: v }) })
+const region = computed({ get: () => settingsStore.s3.region, set: (v) => settingsStore.updateS3Config({ region: v }) })
+const accessKeyId = computed({ get: () => settingsStore.s3.accessKeyId, set: (v) => settingsStore.updateS3Config({ accessKeyId: v }) })
+const secretAccessKey = computed({ get: () => settingsStore.s3.secretAccessKey, set: (v) => settingsStore.updateS3Config({ secretAccessKey: v }) })
+const basePath = computed({ get: () => settingsStore.s3.basePath, set: (v) => settingsStore.updateS3Config({ basePath: v }) })
+const enabled = computed({ get: () => settingsStore.s3.enabled, set: (v) => settingsStore.updateS3Config({ enabled: v }) })
+const forcePathStyle = computed({ get: () => settingsStore.s3.forcePathStyle, set: (v) => settingsStore.updateS3Config({ forcePathStyle: v }) })
 const maxBackups = computed({
-  get: () => settingsStore.webdav.maxBackups ?? 10,
-  set: (v: number) => settingsStore.updateWebDAVConfig({ maxBackups: v > 0 ? v : 10 }),
+  get: () => settingsStore.s3.maxBackups ?? 10,
+  set: (v: number) => settingsStore.updateS3Config({ maxBackups: v > 0 ? v : 10 }),
 })
+
+function getTransport() {
+  const cfg = { ...settingsStore.s3, basePath: normalizeBasePath(settingsStore.s3.basePath) }
+  return createS3Remote(cfg)
+}
 
 async function refreshStatus() {
   const st = await getSyncState()
@@ -55,8 +58,8 @@ onMounted(refreshStatus)
 
 async function onForceUpload() {
   showForceConfirm.value = false
-  if (!url.value) {
-    appStore.showToast('请先填写 WebDAV 地址', 'error')
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
   }
   uploading.value = true
@@ -75,8 +78,8 @@ async function onForceUpload() {
 
 async function onForceDownload() {
   showDownloadConfirm.value = false
-  if (!url.value) {
-    appStore.showToast('请先填写 WebDAV 地址', 'error')
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
   }
   downloading.value = true
@@ -103,8 +106,8 @@ function fmt(iso: string) {
 }
 
 async function onTest() {
-  if (!url.value) {
-    appStore.showToast('请先填写 WebDAV 地址', 'error')
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
   }
   testing.value = true
@@ -133,8 +136,8 @@ const previewDesc = computed(() => {
 })
 
 async function onSync() {
-  if (!url.value) {
-    appStore.showToast('请先填写 WebDAV 地址', 'error')
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
   }
   syncing.value = true
@@ -150,7 +153,6 @@ async function onSync() {
   }
   preview.value = p
   syncing.value = false
-  // Nothing destructive → proceed immediately. Otherwise require confirmation.
   if (!p.abortReason && p.deletedLocal === 0 && p.deletedRemote === 0) {
     await doSync()
   } else {
@@ -163,7 +165,7 @@ async function doSync() {
   syncing.value = true
   lastResult.value = ''
   try {
-    const r = await runSync(getTransport(), settingsStore.webdav.maxBackups ?? 10)
+    const r = await runSync(getTransport(), settingsStore.s3.maxBackups ?? 10)
     await refreshAfterDataChange()
     await refreshStatus()
     lastResult.value = `↑${r.pushed} ↓${r.pulled} · 本地删${r.deletedLocal} · 远端删${r.deletedRemote}${r.conflicts ? ` · 冲突${r.conflicts}` : ''}`
@@ -177,8 +179,8 @@ async function doSync() {
 }
 
 async function onShowBackups() {
-  if (!url.value) {
-    appStore.showToast('请先填写 WebDAV 地址', 'error')
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
   }
   restoring.value = true
@@ -220,30 +222,53 @@ async function onRestore() {
     <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
       <span class="text-zinc-700 flex items-center gap-1.5">
         <Cloud class="w-3.5 h-3.5 text-zinc-400" />
-        WebDAV 同步
+        S3 同步
       </span>
       <Switch :model-value="enabled" @update:model-value="enabled = $event" />
     </div>
 
     <div class="p-3 space-y-2.5">
       <div>
-        <label class="text-[11px] text-zinc-500 font-medium">服务器地址</label>
+        <label class="text-[11px] text-zinc-500 font-medium">Endpoint</label>
         <UInput
-          v-model="url"
-          placeholder="https://dav.example.com/"
+          v-model="endpoint"
+          placeholder="https://s3.amazonaws.com"
+          class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
+        />
+      </div>
+
+      <div>
+        <label class="text-[11px] text-zinc-500 font-medium">Bucket</label>
+        <UInput
+          v-model="bucket"
+          placeholder="my-bucket"
           class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
         />
       </div>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
-          <label class="text-[11px] text-zinc-500 font-medium">用户名</label>
-          <UInput v-model="username" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 text-[12px]" />
+          <label class="text-[11px] text-zinc-500 font-medium">Region</label>
+          <UInput v-model="region" placeholder="us-east-1" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 text-[12px]" />
         </div>
         <div>
-          <label class="text-[11px] text-zinc-500 font-medium">密码</label>
+          <label class="text-[11px] text-zinc-500 font-medium">Path Style</label>
+          <div class="mt-1.5">
+            <Switch :model-value="forcePathStyle" @update:model-value="forcePathStyle = $event" />
+            <span class="ml-1.5 text-[11px] text-zinc-400">MinIO / 非 AWS 端点</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] text-zinc-500 font-medium">Access Key ID</label>
+          <UInput v-model="accessKeyId" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]" />
+        </div>
+        <div>
+          <label class="text-[11px] text-zinc-500 font-medium">Secret Access Key</label>
           <UInput
-            v-model="password"
+            v-model="secretAccessKey"
             type="password"
             class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
           />
@@ -251,7 +276,7 @@ async function onRestore() {
       </div>
 
       <div>
-        <label class="text-[11px] text-zinc-500 font-medium">远程目录</label>
+        <label class="text-[11px] text-zinc-500 font-medium">远程目录 (Key 前缀)</label>
         <UInput
           v-model="basePath"
           placeholder="/auramind"

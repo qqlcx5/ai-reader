@@ -29,6 +29,7 @@
     "minisearch": "^7.2.0",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
+    "aws4fetch": "^1.0.20",
     "vue": "^3.5.29",
     "webdav": "^5.10.0"
   },

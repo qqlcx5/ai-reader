@@ -8,7 +8,7 @@ export const MetaRepository = {
   },
 
   async set<T>(id: string, value: T): Promise<void> {
-    await db.kvMeta.put({ id, value })
+    await db.kvMeta.put({ id, value, updatedAt: new Date().toISOString() })
   },
 
   async remove(id: string): Promise<void> {
