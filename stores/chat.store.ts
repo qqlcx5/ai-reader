@@ -341,6 +341,20 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /**
+   * Reset all in-memory state. Called by refreshAfterDataChange() after bulk
+   * DB mutations (import / sync) to prevent stale conversations/messages from
+   * being displayed. The per-document conversation list will be reloaded
+   * lazily when the user next clicks a document in LibraryView.
+   */
+  function resetState(): void {
+    conversations.value = []
+    messages.value = []
+    currentConversationId.value = null
+    currentDocumentId.value = null
+    streamStates.value.clear()
+  }
+
   async function deleteConversation(id: string): Promise<void> {
     // Persist current conversation first (unless we're deleting it — no point)
     if (currentConversationId.value && currentConversationId.value !== id) {
@@ -814,5 +828,6 @@ export const useChatStore = defineStore('chat', () => {
     createConversation,
     switchConversation,
     deleteConversation,
+    resetState,
   }
 })

@@ -1,5 +1,6 @@
 import { db } from '@/db'
 import { MetaRepository } from '@/db/repositories/meta.repository'
+import { refreshAfterDataChange } from '@/services/sync/refresh'
 import { mergeSet, type VersionedEntry } from './merge'
 import type {
   SyncState,
@@ -225,6 +226,8 @@ export async function forceUpload(transport: RemoteTransport): Promise<void> {
     s3Config: (await db.kvMeta.toArray()).filter((e) => e.id === 's3-config'),
   }
 
+  // NOTE: The sync data.json schema is incompatible with the export JSON schema.
+  // These are two independent formats — do not cross-use sync files with export/import.
   await transport.putText(
     DATA_FILE,
     JSON.stringify({ version: SYNC_VERSION, syncedAt: new Date().toISOString(), data } satisfies RemoteSnapshot),
@@ -244,6 +247,7 @@ export async function forceDownload(transport: RemoteTransport): Promise<void> {
 
   const snap = JSON.parse(await transport.getText(DATA_FILE)) as RemoteSnapshot
   await applyDatasetAndResetBase(snap.data ?? emptyDataset())
+  await refreshAfterDataChange()
 }
 
 export async function restoreFromSnapshot(transport: RemoteTransport, name: string): Promise<void> {
@@ -454,5 +458,6 @@ export async function runSync(transport: RemoteTransport, maxBackups = 10): Prom
     base: c.newBase,
   } satisfies SyncState)
 
+  await refreshAfterDataChange()
   return c.result
 }

@@ -72,33 +72,35 @@ async function doExport() {
       DocumentRepository.findAll(),
       ChatRepository.findAll(),
       ModelRepository.findAll(),
-      db.settings.toArray(),
+      db.settings.toArray().then(arr => arr.filter(s => s.id === 'app-settings')),
       db.collections.toArray(),
       db.collectionItems.toArray(),
       db.feeds.toArray(),
       db.promptTemplates.toArray(),
       // WebDAV 配置存在 kvMeta 表（键 'webdav-config'）。只导出这一个键，
       // 不导出 'sync-state' —— 同步基线是设备本地的，跨设备恢复会破坏 LWW 三方合并。
-      MetaRepository.get('webdav-config'),
-      MetaRepository.get('s3-config'),
+      db.kvMeta.toArray().then(arr => arr.filter(e => e.id === 'webdav-config')),
+      db.kvMeta.toArray().then(arr => arr.filter(e => e.id === 's3-config')),
     ])
 
     // 导出时脱敏：移除 raw 大字段，与 sync.service.ts 中的 stripRawFields 保持一致
     const strippedDocuments = documents.map(({ rawHtml, rawHtmlCompressed, rawText, ...rest }) => rest)
 
     const backup = {
-      version: 2,
+      version: 1,
       exportedAt: new Date().toISOString(),
-      documents: strippedDocuments,
-      conversations,
-      models,
-      settings,
-      collections,
-      collectionItems,
-      feeds,
-      promptTemplates,
-      webdavConfig,
-      s3Config,
+      data: {
+        documents: strippedDocuments,
+        conversations,
+        models,
+        settings,
+        collections,
+        collectionItems,
+        feeds,
+        promptTemplates,
+        webdavConfig,
+        s3Config,
+      },
     }
 
     const json = JSON.stringify(backup, null, 2)
@@ -118,7 +120,12 @@ async function doExport() {
 async function doImport(file: File) {
   try {
     const text = await file.text()
-    const data = JSON.parse(text)
+    let data = JSON.parse(text)
+
+    // Auto-unwrap nested format (export & sync both use { version, ..., data: { ... } }).
+    if (data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+      data = data.data
+    }
 
     if (!data || typeof data !== 'object') throw new Error('Invalid JSON structure')
     if (!Array.isArray(data.documents)) throw new Error('Missing documents array')
@@ -160,14 +167,16 @@ async function doImport(file: File) {
 
     // 恢复 WebDAV 配置（只覆盖这一个键，不动 sync-state）。refreshAfterDataChange
     // 会重新触发 loadSettings，让 WebDAV 设置面板的 UI 同步更新。
-    const webdavConfig = data.webdavConfig
-    if (webdavConfig && typeof webdavConfig === 'object') {
-      await MetaRepository.set('webdav-config', webdavConfig)
+    // webdavConfig / s3Config are now KvMetaRow[] arrays, aligned with sync.service.ts sharedTable shape.
+    for (const row of (data.webdavConfig ?? [])) {
+      if (row && row.id && row.value !== undefined) {
+        await MetaRepository.set(row.id, row.value)
+      }
     }
-
-    const s3Config = data.s3Config
-    if (s3Config && typeof s3Config === 'object') {
-      await MetaRepository.set('s3-config', s3Config)
+    for (const row of (data.s3Config ?? [])) {
+      if (row && row.id && row.value !== undefined) {
+        await MetaRepository.set(row.id, row.value)
+      }
     }
 
     await refreshStats()
