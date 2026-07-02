@@ -180,6 +180,13 @@ onMounted(() => {
   nextTick(setupLoadMore)
 })
 
+watch(
+  () => documentStore.documents.length,
+  () => {
+    loadConversationIndex()
+  },
+)
+
 // Incremental render: bound DOM nodes by rendering PAGE_SIZE at a time,
 // appending as the user nears the bottom. Avoids windowing jitter on
 // variable-height cards; enough to scale to thousands of captures.
