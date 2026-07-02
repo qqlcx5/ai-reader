@@ -74,4 +74,10 @@ export const CollectionRepository = {
       .count()
     return n > 0
   },
+
+  /** Cascade-clean all collectionItems references for a set of documents. */
+  async removeDocumentsFromAllCollections(documentIds: string[]): Promise<number> {
+    if (!documentIds.length) return 0
+    return db.collectionItems.where('documentId').anyOf(documentIds).delete()
+  },
 }

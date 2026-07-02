@@ -7,6 +7,7 @@ export const DocumentRepository: IRepository<DocumentEntity> & {
   findByDateRange(start: string, end: string): Promise<DocumentEntity[]>
   findPaginated(offset: number, limit: number): Promise<DocumentEntity[]>
   touchLastOpened(id: string, iso: string): Promise<void>
+  deleteMany(ids: string[]): Promise<void>
 } = {
   async findById(id: string): Promise<DocumentEntity | undefined> {
     return db.documents.get(id)
@@ -80,6 +81,11 @@ export const DocumentRepository: IRepository<DocumentEntity> & {
 
   async delete(id: string): Promise<void> {
     await db.documents.delete(id)
+  },
+
+  async deleteMany(ids: string[]): Promise<void> {
+    if (!ids.length) return
+    await db.documents.bulkDelete(ids)
   },
 
   /** Partial update of just lastOpenedAt (avoids the URL-dedup path in `save`). */

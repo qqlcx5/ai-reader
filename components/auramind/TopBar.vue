@@ -157,6 +157,7 @@ async function handleRefresh() {
       :doc-count="libraryDocCount"
       @refresh="handleLibraryRefresh"
     />
+    <div v-else></div>
 
     <!-- Right: Refresh + nav buttons -->
     <div class="flex items-center gap-1">

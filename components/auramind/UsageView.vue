@@ -158,6 +158,9 @@ function exportCsv() {
       <div class="text-[14px] font-semibold flex items-center gap-2">
         <Gauge class="w-4 h-4 text-brand" />
         模型用量
+        <template v-if="hasData">
+          <span class="text-[11px] font-normal text-zinc-400">{{ usage.totalMessages }} 条对话 · {{ formatCNY(usage.totalCost) }}</span>
+        </template>
       </div>
     </div>
 

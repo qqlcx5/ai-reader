@@ -1,11 +1,13 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
-import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus } from '@lucide/vue'
+import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus, Check } from '@lucide/vue'
 import type { DocumentEntity } from '@/types/document'
 
 const props = defineProps<{
   document: DocumentEntity
   hasConversation?: boolean
+  selectionMode?: boolean
+  selected?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,6 +16,7 @@ const emit = defineEmits<{
   delete: [doc: DocumentEntity]
   openUrl: [doc: DocumentEntity]
   addToCollection: [doc: DocumentEntity]
+  toggleSelect: [doc: DocumentEntity]
 }>()
 
 const unread = computed(() => !props.document.lastOpenedAt)
@@ -64,8 +67,18 @@ const excerpt = computed(() => {
 <template>
   <article
     class="group relative p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-zinc-200 hover:shadow-sm cursor-pointer transition-all flex gap-3"
-    @click="emit('select', document)"
+    :class="{ 'bg-white border-brand/20 shadow-sm': selected && selectionMode }"
+    @click="selectionMode ? emit('toggleSelect', document) : emit('select', document)"
   >
+    <!-- Selection checkbox -->
+    <div
+      v-if="selectionMode"
+      class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+      :class="selected ? 'bg-brand border-brand text-white' : 'border-zinc-300 text-transparent'"
+    >
+      <Check v-if="selected" class="w-3 h-3" />
+    </div>
+
     <div class="w-7 h-7 rounded-lg border border-zinc-200 flex items-center justify-center shrink-0 bg-zinc-50 overflow-hidden">
       <img
         v-if="favicon"
@@ -96,7 +109,7 @@ const excerpt = computed(() => {
       <div v-if="excerpt" class="text-[11px] text-zinc-400 truncate mt-0.5">{{ excerpt }}</div>
     </div>
 
-    <div class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
+    <div v-if="!selectionMode" class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">
       <button class="p-1 rounded-md text-zinc-500 hover:bg-zinc-100" title="打开原网页" @click.stop="emit('openUrl', document)">
         <ExternalLink class="w-3.5 h-3.5" />
       </button>

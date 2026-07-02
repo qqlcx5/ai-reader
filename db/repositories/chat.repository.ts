@@ -5,6 +5,7 @@ import type { IRepository } from '../repository'
 export const ChatRepository: IRepository<ConversationEntity> & {
   findByDocumentId(documentId: string): Promise<ConversationEntity[]>
   findAllSorted(): Promise<ConversationEntity[]>
+  deleteByDocumentIds(documentIds: string[]): Promise<number>
 } = {
   async findById(id: string): Promise<ConversationEntity | undefined> {
     return db.conversations.get(id)
@@ -29,6 +30,11 @@ export const ChatRepository: IRepository<ConversationEntity> & {
 
   async delete(id: string): Promise<void> {
     await db.conversations.delete(id)
+  },
+
+  async deleteByDocumentIds(documentIds: string[]): Promise<number> {
+    if (!documentIds.length) return 0
+    return db.conversations.where('documentId').anyOf(documentIds).delete()
   },
 
   async count(): Promise<number> {

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { SlidersHorizontal, Plus, RefreshCw } from '@lucide/vue'
+import { Plus, RefreshCw } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
 import ModelCard from './ModelCard.vue'
@@ -20,7 +20,6 @@ const modelStore = useModelStore()
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
 
-const enabledCount = computed(() => modelStore.models.filter(m => m.enabled).length)
 
 const showEditor = ref(false)
 const editModelId = ref<string | undefined>(undefined)
@@ -124,21 +123,11 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 
 <template>
   <div class="flex-1 min-h-0 flex-col bg-[#F4F4F5] flex">
-    <!-- Header -->
-    <div class="h-12 shrink-0 px-4 flex items-center justify-between border-b border-zinc-200/70 bg-[#F4F4F5]/90 backdrop-blur-md">
-      <div class="text-[14px] font-semibold flex items-center gap-2">
-        <SlidersHorizontal class="w-4 h-4 text-brand" />
-        核心配置
-      </div>
-      <UButton variant="link" size="sm">保存</UButton>
-    </div>
-
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-5 flex flex-col gap-7">
       <!-- AI 模型池 -->
       <section class="flex flex-col gap-2.5">
         <div class="flex items-center justify-between pl-1">
           <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider">AI 模型池</h2>
-          <span class="text-[10px] bg-zinc-200 text-zinc-500 px-1.5 py-0.5 rounded">{{ enabledCount }} 启用</span>
         </div>
 
         <div class="flex flex-col gap-2">

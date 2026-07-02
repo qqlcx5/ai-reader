@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ListChecks, Trash2, FolderPlus, Download } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -10,6 +11,7 @@ import { ChatRepository } from '@/db/repositories/chat.repository'
 import type { DocumentEntity } from '@/types/document'
 import type { LibrarySortKey } from '@/types/document'
 import SearchBar from '@/components/library/SearchBar.vue'
+import { exportDocumentsToZip, downloadBlob } from '@/utils/export'
 import DocumentItem from '@/components/library/DocumentItem.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import Select from '@/components/ui/Select.vue'
@@ -32,6 +34,66 @@ const statusFilter = ref<'all' | 'unread' | 'read' | 'conversation'>('all')
 const siteFilter = ref<string | null>(null)
 const tagFilter = ref<string | null>(null)
 const conversationDocIds = ref<Set<string>>(new Set())
+
+// ── Multi-select mode ──
+const multiSelectActive = ref(false)
+const showBatchDeleteConfirm = ref(false)
+
+function enterMultiSelect() {
+  multiSelectActive.value = true
+}
+
+function exitMultiSelect() {
+  multiSelectActive.value = false
+  documentStore.clearSelection()
+}
+
+function handleSelectAll() {
+  documentStore.selectAll(displayedDocs.value.map((d) => d.id))
+}
+
+async function handleBatchDelete() {
+  if (documentStore.selectedIds.size === 0) return
+  showBatchDeleteConfirm.value = true
+}
+
+async function confirmBatchDelete() {
+  showBatchDeleteConfirm.value = false
+  await documentStore.deleteSelectedDocuments()
+  await loadConversationIndex()
+  multiSelectActive.value = false
+}
+
+function handleBatchExport() {
+  if (documentStore.selectedIds.size === 0) return
+  const ids = [...documentStore.selectedIds]
+  const byId = new Map(documentStore.documents.map((d) => [d.id, d]))
+  const docs = ids.map((id) => byId.get(id)).filter((d): d is DocumentEntity => !!d)
+  if (!docs.length) return
+  const blob = exportDocumentsToZip(docs)
+  const date = new Date().toISOString().slice(0, 10)
+  downloadBlob(blob, `auramind-export-${date}.zip`)
+  appStore.showToast(`已导出 ${docs.length} 篇文档`, 'success')
+}
+
+// ── Batch add to collection ──
+const showBatchPicker = ref(false)
+
+function openBatchPicker() {
+  if (documentStore.selectedIds.size === 0) return
+  showBatchPicker.value = true
+}
+
+function batchPickerCreate() {
+  // Save selected IDs before closing for create flow
+  pendingBatchDocIds.value = [...documentStore.selectedIds]
+  showBatchPicker.value = false
+  openCreateCollection()
+}
+
+// When creating collection from batch picker, track pending IDs
+const pendingBatchDocIds = ref<string[] | null>(null)
+const pendingPickerDocId = ref<string | null>(null)
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
@@ -162,7 +224,7 @@ const displayedDocs = computed(() => {
   if (!preserveOrder) {
     filtered = sortDocs(filtered)
   }
-  return hasActiveFilter.value ? filtered : filtered.slice(0, 20)
+  return filtered
 })
 
 async function loadConversationIndex() {
@@ -267,8 +329,16 @@ async function submitCollection(name: string, description: string) {
   }
   showCollectionDialog.value = false
 
-  // Launched from the picker: add the pending doc to the freshly created collection, then reopen.
-  if (created && pendingPickerDocId.value) {
+  // Launched from the batch picker: add all pending docs to the new collection, then reopen.
+  if (created && pendingBatchDocIds.value) {
+    for (const docId of pendingBatchDocIds.value) {
+      await collectionStore.addDocument(created.id, docId)
+    }
+    pendingBatchDocIds.value = null
+    showBatchPicker.value = true
+  }
+  // Launched from single picker: add the pending doc, then reopen.
+  else if (created && pendingPickerDocId.value) {
     await collectionStore.addDocument(created.id, pendingPickerDocId.value)
     pickerDocumentId.value = pendingPickerDocId.value
     pendingPickerDocId.value = null
@@ -297,7 +367,6 @@ function openPicker(doc: DocumentEntity) {
 
 // "新建合集" launched from inside the picker: close picker, open create dialog,
 // keep the target doc so we can add it after creation.
-const pendingPickerDocId = ref<string | null>(null)
 function pickerCreateCollection() {
   pendingPickerDocId.value = pickerDocumentId.value
   showPicker.value = false
@@ -349,16 +418,6 @@ async function confirmDelete() {
   if (!deleteTargetId.value) return
   const id = deleteTargetId.value
 
-  // Delete associated conversations
-  try {
-    const convs = await ChatRepository.findByDocumentId(id)
-    for (const c of convs) {
-      await ChatRepository.delete(c.id)
-    }
-  } catch {
-    // non-critical
-  }
-
   await documentStore.deleteDocument(id)
   await documentStore.refreshDocuments()
   await loadConversationIndex()
@@ -379,6 +438,20 @@ function cancelDelete() {
       <!-- Search -->
       <div class="sticky top-0 z-10 p-4 pb-3 bg-[#FCFCFC]/95 backdrop-blur-md border-b border-zinc-100">
         <SearchBar v-model="searchQuery" @search="onSearch" />
+      </div>
+
+      <!-- Multi-select toolbar -->
+      <div
+        v-if="multiSelectActive"
+        class="sticky top-[69px] z-10 px-4 py-2 bg-indigo-50/95 backdrop-blur-md border-b border-indigo-100 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-3 text-[12px]">
+          <span class="font-semibold text-indigo-700">已选 {{ documentStore.selectedIds.size }} 项</span>
+          <button class="text-indigo-600 hover:text-indigo-800 font-medium" @click="handleSelectAll">全选</button>
+          <span class="text-zinc-300">|</span>
+          <span class="text-zinc-400">{{ displayedDocs.length }} 项可见</span>
+        </div>
+        <button class="text-[11px] text-zinc-500 hover:text-zinc-700 font-medium" @click="exitMultiSelect">取消</button>
       </div>
 
       <!-- Heatmap -->
@@ -433,7 +506,15 @@ function cancelDelete() {
               :class="statusFilter === opt.value ? 'bg-white shadow-sm text-zinc-800 font-medium' : 'text-zinc-500 hover:text-zinc-700'"
               @click="statusFilter = opt.value"
             >{{ opt.label }}</button>
+            <button
+              v-if="!multiSelectActive && documentStore.documents.length"
+              class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-zinc-500 border border-zinc-200 hover:border-brand hover:text-brand transition-colors"
+              @click="enterMultiSelect"
+            >
+              <ListChecks class="w-3 h-3" />选择
+            </button>
           </div>
+
           <div class="w-[120px] shrink-0">
             <Select
               :model-value="documentStore.librarySortKey"
@@ -492,11 +573,14 @@ function cancelDelete() {
           :key="doc.id"
           :document="doc"
           :has-conversation="conversationDocIds.has(doc.id)"
+          :selection-mode="multiSelectActive"
+          :selected="documentStore.selectedIds.has(doc.id)"
           @select="handleDocumentClick"
           @chat="handleChatClick"
           @open-url="handleOpenUrl"
           @delete="requestDelete"
           @add-to-collection="handleAddToCollection"
+          @toggle-select="documentStore.toggleSelection($event.id)"
         />
 
         <div v-if="hasMore" ref="sentinelRef" class="flex items-center justify-center py-3 text-[11px] text-zinc-400">
@@ -511,6 +595,34 @@ function cancelDelete() {
           {{ selectedDate ? `${formatDateLabel(selectedDate)} 没有捕获` : (hasActiveFilter ? '没有匹配的文档' : '暂无捕获的文档') }}
         </div>
       </div>
+    </div>
+
+    <!-- Batch action bar -->
+    <div
+      v-if="multiSelectActive"
+      class="flex items-center justify-center gap-3 px-4 py-3 border-t border-zinc-200 bg-white/95 backdrop-blur-md"
+    >
+      <button
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="documentStore.selectedIds.size === 0"
+        @click="handleBatchDelete"
+      >
+        <Trash2 class="w-4 h-4" />批量删除
+      </button>
+      <button
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="documentStore.selectedIds.size === 0"
+        @click="openBatchPicker"
+      >
+        <FolderPlus class="w-4 h-4" />批量加入合集
+      </button>
+      <button
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-zinc-700 bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="documentStore.selectedIds.size === 0"
+        @click="handleBatchExport"
+      >
+        <Download class="w-4 h-4" />导出 Markdown
+      </button>
     </div>
 
     <!-- Delete Confirm -->
@@ -551,6 +663,26 @@ function cancelDelete() {
       :document-title="pickerDocumentTitle"
       @close="showPicker = false"
       @create="pickerCreateCollection"
+    />
+
+    <!-- Batch Delete Confirm -->
+    <ConfirmModal
+      v-if="showBatchDeleteConfirm"
+      title="批量删除"
+      :desc="`确定删除 ${documentStore.selectedIds.size} 篇文档吗？关联的对话记录也将被删除。此操作不可撤销。`"
+      confirm-text="删除"
+      danger
+      @confirm="confirmBatchDelete"
+      @cancel="showBatchDeleteConfirm = false"
+    />
+
+    <!-- Batch Add to Collection Picker -->
+    <CollectionPickerDialog
+      :open="showBatchPicker"
+      :document-id="null"
+      :document-ids="[...documentStore.selectedIds]"
+      @close="showBatchPicker = false"
+      @create="batchPickerCreate"
     />
   </div>
 </template>

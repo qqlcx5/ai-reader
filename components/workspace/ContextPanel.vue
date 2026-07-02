@@ -97,8 +97,13 @@ async function handleRefresh() {
       await documentStore.saveDocument(doc)
       workspaceStore.setCaptureStatus('ready')
     } else {
-      // Reload from IndexedDB for library-sourced documents
-      const docId = documentStore.currentDocument?.id
+      // Reload from IndexedDB for library-sourced documents.
+      // Fall back to chatStore.currentDocumentId: after the popup is enlarged
+      // to a standalone window, documentStore.currentDocument may be null because
+      // only the document ID is persisted (the full entity is re-hydrated from
+      // IndexedDB via afterRestore, but there is a window between mount and
+      // re-hydration where currentDocument can still be null).
+      const docId = documentStore.currentDocument?.id || chatStore.currentDocumentId
       if (!docId) {
         appStore.showToast('没有当前文档', 'error')
         return

@@ -7,6 +7,7 @@ import { useCollectionStore } from '@/stores/collection.store'
 const props = defineProps<{
   open: boolean
   documentId: string | null
+  documentIds?: string[]
   documentTitle?: string
 }>()
 
@@ -17,6 +18,9 @@ const emit = defineEmits<{
 
 const collectionStore = useCollectionStore()
 
+const isBatch = computed(() => props.documentIds && props.documentIds.length > 0)
+const batchCount = computed(() => props.documentIds?.length ?? 0)
+
 interface Row {
   id: string
   name: string
@@ -25,18 +29,34 @@ interface Row {
 }
 
 const rows = computed<Row[]>(() =>
-  collectionStore.collections.map((c) => ({
-    id: c.id,
-    name: c.name,
-    count: collectionStore.counts[c.id] ?? 0,
-    member: props.documentId ? collectionStore.isMember(c.id, props.documentId) : false,
-  })),
+  collectionStore.collections.map((c) => {
+    let member = false
+    if (isBatch.value && props.documentIds) {
+      // In batch mode, show "checked" only when ALL selected docs are members
+      const ids = props.documentIds
+      member = ids.length > 0 && ids.every((docId) => collectionStore.isMember(c.id, docId))
+    } else if (props.documentId) {
+      member = collectionStore.isMember(c.id, props.documentId)
+    }
+    return {
+      id: c.id,
+      name: c.name,
+      count: collectionStore.counts[c.id] ?? 0,
+      member,
+    }
+  }),
 )
 
 async function toggle(row: Row) {
-  if (!props.documentId) return
-  if (row.member) await collectionStore.removeDocument(row.id, props.documentId)
-  else await collectionStore.addDocument(row.id, props.documentId)
+  if (isBatch.value && props.documentIds) {
+    for (const docId of props.documentIds) {
+      if (row.member) await collectionStore.removeDocument(row.id, docId)
+      else await collectionStore.addDocument(row.id, docId)
+    }
+  } else if (props.documentId) {
+    if (row.member) await collectionStore.removeDocument(row.id, props.documentId)
+    else await collectionStore.addDocument(row.id, props.documentId)
+  }
 }
 </script>
 
@@ -54,7 +74,8 @@ async function toggle(row: Row) {
             <X class="w-4 h-4" />
           </UButton>
         </div>
-        <p v-if="documentTitle" class="px-1 mb-2 text-[11px] text-zinc-400 truncate">{{ documentTitle }}</p>
+        <p v-if="isBatch" class="px-1 mb-2 text-[11px] text-zinc-400">已选 {{ batchCount }} 篇文档</p>
+        <p v-else-if="documentTitle" class="px-1 mb-2 text-[11px] text-zinc-400 truncate">{{ documentTitle }}</p>
 
         <div class="max-h-60 overflow-y-auto -mx-1 px-1">
           <button
