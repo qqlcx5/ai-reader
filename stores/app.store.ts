@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { TabInfo } from '../types/message'
+import { toast as toastService } from '@/utils/toast'
 
 export type AppView = 'workspace' | 'library' | 'settings' | 'usage' | 'feeds'
 
@@ -38,12 +39,18 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    // 镜像状态保留，以便外部读 store.toastMessage 仍可工作
     toastMessage.value = message
     toastType.value = type
+    // 真正显示由 vue-sonner 接管
+    if (type === 'success') toastService.success(message)
+    else if (type === 'error') toastService.error(message)
+    else toastService.info(message)
   }
 
   function clearToast() {
     toastMessage.value = ''
+    toastService.clear()
   }
 
   function setActiveTab(tab: TabInfo) {

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -18,6 +18,7 @@ import SettingsView from '@/components/auramind/SettingsView.vue'
 import UsageView from '@/components/auramind/UsageView.vue'
 import FeedsView from '@/components/auramind/FeedsView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
+import Toaster from '@/components/Toaster.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
 
@@ -35,23 +36,6 @@ const windowMode = isWindowMode()
 
 // Register mouse-back / Alt+Left / Esc → goBack listeners.
 useBackNavigation()
-
-// Toast notification state
-const toastVisible = ref(false)
-const toastText = ref('')
-const toastKind = ref<'success' | 'error' | 'info'>('info')
-let toastTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(() => appStore.toastMessage, (msg) => {
-  if (!msg) return
-  toastText.value = msg
-  toastKind.value = appStore.toastType
-  toastVisible.value = true
-  if (toastTimer) clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => {
-    toastVisible.value = false
-  }, 2500)
-})
 
 function handleBackgroundMessage(
   message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload>,
@@ -193,7 +177,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   removeListener?.()
-  if (toastTimer) clearTimeout(toastTimer)
 })
 </script>
 
@@ -208,39 +191,6 @@ onUnmounted(() => {
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 
-    <!-- Toast notification -->
-    <Transition name="toast">
-      <div
-        v-if="toastVisible"
-        class="absolute bottom-4 left-4 right-4 z-50 px-4 py-3 rounded-xl text-white text-[13px] font-medium flex items-center gap-2.5"
-        :class="{
-          'bg-green-600': toastKind === 'success',
-          'bg-red-600': toastKind === 'error',
-          'bg-zinc-800': toastKind === 'info',
-        }"
-      >
-        <span class="text-[15px] leading-none shrink-0">
-          {{ toastKind === 'success' ? '\u2713' : toastKind === 'error' ? '\u2717' : '\u2139' }}
-        </span>
-        <span>{{ toastText }}</span>
-      </div>
-    </Transition>
+    <Toaster />
   </div>
 </template>
-
-<style scoped>
-.toast-enter-active {
-  transition: all 0.24s ease;
-}
-.toast-leave-active {
-  transition: all 0.24s ease;
-}
-.toast-enter-from {
-  opacity: 0;
-  transform: translateY(18px);
-}
-.toast-leave-to {
-  opacity: 0;
-  transform: translateY(18px);
-}
-</style>
