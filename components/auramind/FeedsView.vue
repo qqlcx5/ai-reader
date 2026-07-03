@@ -127,6 +127,7 @@ async function onOpenItem(itemId: string) {
 function onSelectFeed(id: string | null) {
   feedStore.selectFeed(id)
   showFeeds.value = false
+  selectedItemId.value = null
 }
 
 // Inline "move to folder" editor: click the folder icon on a feed row, then
