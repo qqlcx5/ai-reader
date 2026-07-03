@@ -195,7 +195,7 @@ function handleStop() {
         <div class="flex items-center gap-1.5">
           <button
             class="text-[10px] px-1.5 py-0.5 rounded border text-zinc-400 hover:text-zinc-600 hover:border-zinc-300 transition-colors"
-            :class="templateDirectSend ? 'bg-blue-50 border-blue-200 text-blue-600' : 'border-zinc-200'"
+            :class="templateDirectSend ? 'bg-brand/10 border-brand/20 text-brand' : 'border-zinc-200'"
             @click="templateDirectSend = !templateDirectSend"
           >
             {{ templateDirectSend ? '立即发送' : '二次编辑' }}
@@ -235,13 +235,13 @@ function handleStop() {
             v-model="newTemplateTitle"
             type="text"
             placeholder="模板标题"
-            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 outline-none focus:border-blue-400"
+            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 transition-all"
           />
           <textarea
             v-model="newTemplateContent"
             placeholder="模板内容"
             rows="3"
-            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 outline-none focus:border-blue-400 resize-none"
+            class="w-full text-[12px] px-2 py-1.5 rounded-lg border border-zinc-200 bg-zinc-50 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 transition-all resize-none"
           />
           <UButton
             variant="primary"
@@ -273,7 +273,7 @@ function handleStop() {
                 <UButton
                   variant="ghost"
                   size="sm"
-                  class="p-0.5 text-zinc-400 hover:text-blue-500"
+                  class="p-0.5 text-zinc-400 hover:text-brand"
                   @click="startEditTemplate(t)"
                 >
                   <Pencil class="w-3 h-3" />
@@ -294,12 +294,12 @@ function handleStop() {
                 <input
                   v-model="editTemplateTitle"
                   type="text"
-                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 outline-none focus:border-blue-400"
+                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 bg-zinc-50 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 transition-all"
                 />
                 <textarea
                   v-model="editTemplateContent"
                   rows="2"
-                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 outline-none focus:border-blue-400 resize-none"
+                  class="w-full text-[11px] px-1.5 py-0.5 rounded border border-zinc-200 bg-zinc-50 outline-none focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 transition-all resize-none"
                 />
                 <div class="flex items-center gap-1">
                   <UButton

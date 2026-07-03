@@ -248,7 +248,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="rootRef" class="flex-1 min-h-0 flex flex-col bg-[#FCFCFC]">
+  <div ref="rootRef" class="flex-1 min-h-0 flex flex-col bg-surface">
     <!-- Compact top bar: back when reading, else feed-picker toggle + refresh -->
     <header v-if="compact" class="flex items-center gap-2 h-9 px-2.5 border-b border-zinc-100 shrink-0 bg-white">
       <template v-if="showReader">
@@ -260,7 +260,7 @@ onUnmounted(() => {
       <template v-else>
         <button
           class="flex items-center gap-1 text-[12px] px-1.5 py-0.5 rounded transition-colors"
-          :class="showFeeds ? 'text-brand bg-indigo-50' : 'text-zinc-500 hover:bg-zinc-100'"
+          :class="showFeeds ? 'text-brand bg-brand/10' : 'text-zinc-500 hover:bg-zinc-100'"
           @click="showFeeds = !showFeeds"
         >
           <Globe class="w-3.5 h-3.5" /> 源
@@ -307,7 +307,7 @@ onUnmounted(() => {
       </div>
 
       <div class="px-2 py-1.5 flex items-center justify-between">
-        <span class="text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">订阅源</span>
+        <span class="text-[10px] text-zinc-400 font-medium">订阅源</span>
         <button
           class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors"
           title="全部刷新"
@@ -321,7 +321,7 @@ onUnmounted(() => {
       <div class="flex-1 overflow-y-auto px-1.5 pb-2 no-scrollbar">
         <button
           class="w-full text-left px-2 py-1.5 rounded-md text-[12px] flex items-center justify-between transition-colors"
-          :class="feedStore.selectedFeedId === null ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
+          :class="feedStore.selectedFeedId === null ? 'bg-brand/10 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
           @click="onSelectFeed(null)"
         >
           <span>全部</span>
@@ -363,7 +363,7 @@ onUnmounted(() => {
               v-else
               v-show="!collapsed.has(g.folder)"
               class="w-full text-left pr-2 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 transition-colors"
-              :class="feedStore.selectedFeedId === f.id ? 'bg-indigo-50 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
+              :class="feedStore.selectedFeedId === f.id ? 'bg-brand/10 text-brand font-medium' : 'text-zinc-600 hover:bg-zinc-100'"
               :title="f.title"
               @click="onSelectFeed(f.id)"
             >

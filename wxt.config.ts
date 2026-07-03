@@ -12,25 +12,17 @@ export default defineConfig({
     permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms'],
     host_permissions: ['<all_urls>'],
   },
-  // unocss: {
-  //   excludeEntrypoints: ['background'],
-  // },
-  // dev: {
-  //   server: {
-  //     port: 3001,
+  // vite: () => ({
+  //   build: {
+  //     chunkSizeWarningLimit: 500,
+  //     rollupOptions: {
+  //       onwarn(warning, warn) {
+  //         if (warning.code === 'INVALID_ANNOTATION') return
+  //         warn(warning)
+  //       },
+  //     },
   //   },
-  // },
-  vite: () => ({
-    build: {
-      chunkSizeWarningLimit: 500,
-      rollupOptions: {
-        onwarn(warning, warn) {
-          if (warning.code === 'INVALID_ANNOTATION') return
-          warn(warning)
-        },
-      },
-    },
-  }),
+  // }),
   webExt: {
     // Mac
     // chromiumProfile: './.wxt/chrome-data',

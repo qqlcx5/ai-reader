@@ -35,7 +35,7 @@ watch(() => documentStore.currentDocument, () => {
 
 const statusColorMap: Record<string, string> = {
   idle: 'bg-zinc-300',
-  extracting: 'bg-blue-400',
+  extracting: 'bg-amber-400',
   ready: 'bg-emerald-400',
   cached: 'bg-cyan-400',
   failed: 'bg-red-400',

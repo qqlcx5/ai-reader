@@ -46,7 +46,7 @@ const selected = computed<AcceptableValue>({
             v-for="opt in options"
             :key="opt.value"
             :value="opt.value"
-            class="text-xs px-2.5 py-2 rounded-md outline-none cursor-pointer hover:bg-zinc-100 data-[highlighted]:bg-zinc-100 data-[state=checked]:bg-indigo-50 data-[state=checked]:text-brand"
+            class="text-xs px-2.5 py-2 rounded-md outline-none cursor-pointer hover:bg-zinc-100 data-[highlighted]:bg-zinc-100 data-[state=checked]:bg-brand/10 data-[state=checked]:text-brand"
           >
             <SelectItemText>{{ opt.label }}</SelectItemText>
           </SelectItem>

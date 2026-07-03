@@ -152,9 +152,9 @@ function exportCsv() {
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 flex-col bg-[#F4F4F5] flex">
+  <div class="flex-1 min-h-0 flex-col bg-surface flex">
     <!-- Header -->
-    <div class="h-12 shrink-0 px-4 flex items-center border-b border-zinc-200/70 bg-[#F4F4F5]/90 backdrop-blur-md">
+    <div class="h-12 shrink-0 px-4 flex items-center border-b border-zinc-200/70 bg-surface/90 backdrop-blur-md">
       <div class="text-[14px] font-semibold flex items-center gap-2">
         <Gauge class="w-4 h-4 text-brand" />
         模型用量
@@ -223,7 +223,7 @@ function exportCsv() {
 
         <!-- Daily token trend -->
         <section v-if="daily.length >= 2" class="flex flex-col gap-2.5">
-          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">每日 Token 趋势</h2>
+          <h2 class="text-[12px] font-medium text-zinc-400 pl-1">每日 Token 趋势</h2>
           <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3.5">
             <svg viewBox="0 0 300 50" class="w-full h-14 text-brand" preserveAspectRatio="none">
               <polyline
@@ -244,7 +244,7 @@ function exportCsv() {
 
         <!-- Per model -->
         <section v-if="usage.byModel.length > 0" class="flex flex-col gap-2.5">
-          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">按模型</h2>
+          <h2 class="text-[12px] font-medium text-zinc-400 pl-1">按模型</h2>
           <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
             <template v-for="m in usage.byModel" :key="m.modelId">
               <div

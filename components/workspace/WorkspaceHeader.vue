@@ -45,9 +45,7 @@ const statusColor = computed(() => {
   return statusColorMap[workspaceStore.captureStatus] || statusColorMap.idle
 })
 
-const showRefresh = computed(() => {
-  return workspaceStore.documentSource === 'current-page'
-})
+const showRefresh = computed(() => true)
 
 function buildDocumentEntity(data: {
   url: string
@@ -115,6 +113,7 @@ async function handleRefresh() {
     documentStore.setCurrentDocument(doc)
     documentStore.setPageDocument(doc)
     await documentStore.saveDocument(doc)
+    workspaceStore.setDocumentSource('current-page')
 
     workspaceStore.setCaptureStatus('ready')
     appStore.showToast('抓取完成', 'success')

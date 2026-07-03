@@ -151,7 +151,7 @@ describe('WorkspaceHeader', () => {
     expect(button.attributes('disabled')).toBeUndefined()
   })
 
-  it('hides refresh button when source is library', () => {
+  it('shows refresh button even when source is library', () => {
     ;(wspStore as any).documentSource = 'library'
 
     const wrapper = mount(WorkspaceHeader, {
@@ -161,7 +161,7 @@ describe('WorkspaceHeader', () => {
     })
 
     const button = wrapper.find('button')
-    expect(button.exists()).toBe(false)
+    expect(button.exists()).toBe(true)
   })
 
   it('shows correct status color for idle', () => {

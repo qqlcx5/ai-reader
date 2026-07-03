@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
-import { HardDrive, Download, Upload, Database, FileText, MessageCircle, Cpu, RefreshCw, Trash2 } from '@lucide/vue'
-import UButton from '@/components/ui/UButton.vue'
+import { HardDrive, Download, Upload, Database, FileText, MessageCircle, Cpu, RefreshCw, Trash2, AlertTriangle } from '@lucide/vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ChatRepository } from '@/db/repositories/chat.repository'
@@ -16,9 +15,12 @@ const docCount = ref(0)
 const convCount = ref(0)
 const modelCount = ref(0)
 const storageUsage = ref('—')
+const exporting = ref(false)
+const importing = ref(false)
 const showExportConfirm = ref(false)
 const showClearConfirm = ref(false)
 const showFinalClearConfirm = ref(false)
+const rebuilding = ref(false)
 const importInput = ref<HTMLInputElement | null>(null)
 const appStore = useAppStore()
 
@@ -67,6 +69,7 @@ function getBackupFilename(): string {
 
 async function doExport() {
   showExportConfirm.value = false
+  exporting.value = true
   try {
     const [documents, conversations, models, settings, collections, collectionItems, feeds, promptTemplates, webdavConfig, s3Config] = await Promise.all([
       DocumentRepository.findAll(),
@@ -114,10 +117,14 @@ async function doExport() {
     URL.revokeObjectURL(url)
   } catch (e) {
     console.error('Export failed:', e)
+    appStore.showToast('导出失败', 'error')
+  } finally {
+    exporting.value = false
   }
 }
 
 async function doImport(file: File) {
+  importing.value = true
   try {
     const text = await file.text()
     let data = JSON.parse(text)
@@ -181,9 +188,14 @@ async function doImport(file: File) {
 
     await refreshStats()
     await refreshAfterDataChange()
+    appStore.showToast('导入成功', 'success')
   } catch (e) {
     console.error('Import failed:', e)
+    const msg = e instanceof Error ? e.message : '解析失败'
+    appStore.showToast(`导入失败：${msg}`, 'error')
     throw e
+  } finally {
+    importing.value = false
   }
 }
 
@@ -195,25 +207,31 @@ async function handleFileChange(event: Event) {
   if (!file) return
   try {
     await doImport(file)
-    appStore.showToast('导入成功', 'success')
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '解析失败'
-    appStore.showToast(`导入失败：${msg}`, 'error')
+    // toast already shown in doImport
   }
 }
 
 async function rebuildIndex() {
-  searchIndex.removeAll()
-  const docs = await DocumentRepository.findAll()
-  for (const doc of docs) {
-    searchIndex.add({
-      id: doc.id,
-      title: doc.title || '',
-      url: doc.url || '',
-      siteName: doc.siteName || '',
-      markdown: doc.markdown || '',
-      excerpt: doc.excerpt || '',
-    })
+  rebuilding.value = true
+  try {
+    searchIndex.removeAll()
+    const docs = await DocumentRepository.findAll()
+    for (const doc of docs) {
+      searchIndex.add({
+        id: doc.id,
+        title: doc.title || '',
+        url: doc.url || '',
+        siteName: doc.siteName || '',
+        markdown: doc.markdown || '',
+        excerpt: doc.excerpt || '',
+      })
+    }
+    appStore.showToast(`已重建索引（${docs.length} 篇文档）`, 'success')
+  } catch (e) {
+    appStore.showToast('重建索引失败', 'error')
+  } finally {
+    rebuilding.value = false
   }
 }
 
@@ -233,48 +251,61 @@ onMounted(refreshStats)
 </script>
 
 <template>
-  <div class="flex flex-col gap-2.5">
-    <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
-      <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
-        <span class="text-zinc-700 flex items-center gap-1.5">
-          <HardDrive class="w-3.5 h-3.5 text-zinc-400" />
-          IndexedDB 占用
-        </span>
-        <span class="font-mono text-[12px] text-zinc-500">{{ storageUsage }}</span>
+  <div class="flex flex-col gap-3">
+    <!-- 存储概览：横向 4 格统计 -->
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 flex flex-col gap-1">
+        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <HardDrive class="w-3 h-3" />
+          存储占用
+        </div>
+        <span class="font-mono text-[15px] font-semibold text-zinc-800">{{ storageUsage }}</span>
       </div>
-      <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
-        <span class="text-zinc-700 flex items-center gap-1.5">
-          <FileText class="w-3.5 h-3.5 text-zinc-400" />
-          文档数量
-        </span>
-        <span class="font-mono text-[12px] text-zinc-500">{{ docCount }}</span>
+      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 flex flex-col gap-1">
+        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <FileText class="w-3 h-3" />
+          文档
+        </div>
+        <span class="font-mono text-[15px] font-semibold text-zinc-800">{{ docCount }}</span>
       </div>
-      <div class="p-3 border-b border-zinc-100 flex justify-between items-center">
-        <span class="text-zinc-700 flex items-center gap-1.5">
-          <MessageCircle class="w-3.5 h-3.5 text-zinc-400" />
-          对话数量
-        </span>
-        <span class="font-mono text-[12px] text-zinc-500">{{ convCount }}</span>
+      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 flex flex-col gap-1">
+        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <MessageCircle class="w-3 h-3" />
+          对话
+        </div>
+        <span class="font-mono text-[15px] font-semibold text-zinc-800">{{ convCount }}</span>
       </div>
-      <div class="p-3 flex justify-between items-center">
-        <span class="text-zinc-700 flex items-center gap-1.5">
-          <Cpu class="w-3.5 h-3.5 text-zinc-400" />
-          模型数量
-        </span>
-        <span class="font-mono text-[12px] text-zinc-500">{{ modelCount }}</span>
+      <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3 flex flex-col gap-1">
+        <div class="flex items-center gap-1.5 text-[11px] text-zinc-400">
+          <Cpu class="w-3 h-3" />
+          模型
+        </div>
+        <span class="font-mono text-[15px] font-semibold text-zinc-800">{{ modelCount }}</span>
       </div>
     </div>
 
-    <div class="flex flex-col gap-2">
-      <UButton variant="secondary" size="lg" class="w-full" @click="showExportConfirm = true">
-        <Download class="w-4 h-4" />
-        导出 JSON
-      </UButton>
-
-      <UButton variant="secondary" size="lg" class="w-full" @click="importInput?.click()">
-        <Upload class="w-4 h-4" />
-        导入 JSON
-      </UButton>
+    <!-- 数据备份 -->
+    <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div class="px-3 py-2 border-b border-zinc-100 text-[11px] font-medium text-zinc-400">数据备份</div>
+      <div class="p-2 flex gap-2">
+        <button
+          class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-50 disabled:cursor-wait"
+          :class="exporting ? 'bg-brand/20 text-brand' : 'text-brand bg-brand/10 hover:bg-brand/20'"
+          :disabled="exporting || importing"
+          @click="showExportConfirm = true"
+        >
+          <Download class="w-3.5 h-3.5" :class="{ 'animate-bounce': exporting }" />
+          {{ exporting ? '导出中…' : '导出 JSON' }}
+        </button>
+        <button
+          class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-colors disabled:opacity-50 disabled:cursor-wait"
+          :disabled="exporting || importing"
+          @click="importInput?.click()"
+        >
+          <Upload class="w-3.5 h-3.5" :class="{ 'animate-bounce': importing }" />
+          {{ importing ? '导入中…' : '导入 JSON' }}
+        </button>
+      </div>
       <input
         ref="importInput"
         type="file"
@@ -282,16 +313,39 @@ onMounted(refreshStats)
         class="hidden"
         @change="handleFileChange"
       />
+    </div>
 
-      <UButton variant="secondary" size="lg" class="w-full" @click="rebuildIndex">
-        <RefreshCw class="w-4 h-4" />
-        重建搜索索引
-      </UButton>
+    <!-- 维护 -->
+    <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+      <div class="px-3 py-2 border-b border-zinc-100 text-[11px] font-medium text-zinc-400">维护</div>
+      <div class="p-2">
+        <button
+          class="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium transition-colors disabled:opacity-50 disabled:cursor-wait"
+          :class="rebuilding ? 'bg-brand/10 text-brand' : 'text-zinc-600 bg-zinc-100 hover:bg-zinc-200'"
+          :disabled="rebuilding"
+          @click="rebuildIndex"
+        >
+          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': rebuilding }" />
+          {{ rebuilding ? '重建中…' : '重建搜索索引' }}
+        </button>
+      </div>
+    </div>
 
-      <UButton variant="danger" size="lg" class="w-full" @click="showClearConfirm = true">
-        <Trash2 class="w-4 h-4" />
-        清空本地数据
-      </UButton>
+    <!-- 危险操作 -->
+    <div class="bg-red-50/40 rounded-xl border border-red-100">
+      <div class="px-3 py-2 border-b border-red-100/60 text-[11px] font-medium text-red-400 flex items-center gap-1">
+        <AlertTriangle class="w-3 h-3" />
+        危险操作
+      </div>
+      <div class="p-2">
+        <button
+          class="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-medium text-red-500 bg-white border border-red-100 hover:bg-red-50 transition-colors"
+          @click="showClearConfirm = true"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+          清空本地数据
+        </button>
+      </div>
     </div>
 
     <!-- Export confirm -->

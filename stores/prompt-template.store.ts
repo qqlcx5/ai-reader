@@ -5,60 +5,65 @@ import type { PromptTemplate } from '../types/prompt-template'
 
 const INITIAL_TEMPLATES: Omit<PromptTemplate, 'id' | 'createdAt'>[] = [
   {
-    title: '快速总结',
-    content: '请用 3-5 句话总结以上内容的核心要点。',
+    title: '深度分析',
+    content: `请对以上内容进行深度分析。要求：
+1. 识别核心论点和逻辑链
+2. 指出隐含假设和未明说的前提
+3. 分析论证中的薄弱环节或逻辑跳跃
+4. 指出作者可能遗漏的角度或反驳点
+5. 用 2-3 句话给出你的整体评价`,
     category: '模板',
     isBuiltin: false,
-    sortOrder: 0,
+    sortOrder: 8,
   },
   {
-    title: '提取金句',
-    content: '从以上内容中提取最有价值的 5-10 条金句或核心观点，按重要性排序。',
+    title: '反方视角',
+    content: `请站在批判者和对立立场审视以上内容。要求：
+1. 提出 3-5 个有力的反驳论点
+2. 指出作者可能忽略的替代方案或相反案例
+3. 如果文章有数据，质疑数据来源和解读方式
+4. 总结：如果让你和作者辩论，你的开场陈述是什么？`,
     category: '模板',
     isBuiltin: false,
-    sortOrder: 1,
+    sortOrder: 9,
   },
   {
-    title: '生成 Obsidian 卡片',
-    content: '将以上内容整理为 Obsidian 笔记卡片格式，使用 YAML frontmatter、标签、双向链接。',
+    title: '行动清单',
+    content: `请从以上内容中提取所有可执行的行动项，按优先级分为三档：
+
+## 立即做（本周内）
+- [ ] ...
+## 规划中（本月内）
+- [ ] ...
+## 待关注（长期）
+- [ ] ...
+
+每个行动项需具体、可检验完成标准。如果原文没有明确行动项，请基于内容推断合理的最优下一步。`,
     category: '模板',
     isBuiltin: false,
-    sortOrder: 2,
+    sortOrder: 10,
   },
   {
-    title: '翻译为英文',
-    content: '请将以上内容翻译为地道流畅的英文，保持原文风格与语气。',
+    title: '对比表格',
+    content: `请将以上内容中的对比信息整理为 Markdown 表格。要求：
+1. 列名：维度 | 方案/观点A | 方案/观点B | 评价
+2. 至少覆盖 5 个对比维度
+3. "评价"列给出你的判断（A 更优/B 更优/各有优劣/取决于场景）
+4. 表格下方用 2-3 句话总结关键差异`,
     category: '模板',
     isBuiltin: false,
-    sortOrder: 3,
+    sortOrder: 11,
   },
   {
-    title: '解释核心概念',
-    content: '解释以上内容中涉及的核心概念，用通俗易懂的语言说明，必要时给出例子。',
+    title: '费曼讲解',
+    content: `请用费曼学习法的方式讲解以上内容的核心概念。要求：
+1. 假设读者完全不懂该领域，避免任何专业术语
+2. 用日常生活中的类比来解释（比如"就像..."）
+3. 先一句话讲清楚"这到底是什么"，再展开
+4. 最后设计一个简单的小问题检验读者是否真正理解了`,
     category: '模板',
     isBuiltin: false,
-    sortOrder: 4,
-  },
-  {
-    title: '列出关键论点',
-    content: '列出以上内容中的所有关键论点，按逻辑关系归类，用简洁的列表形式呈现。',
-    category: '模板',
-    isBuiltin: false,
-    sortOrder: 5,
-  },
-  {
-    title: '改写为更简洁的表达',
-    content: '请将以上内容改写为更简洁的表达，保留核心信息，压缩至原文的 50% 以内。',
-    category: '模板',
-    isBuiltin: false,
-    sortOrder: 6,
-  },
-  {
-    title: '生成思维导图大纲',
-    content: '将以上内容的结构梳理为思维导图大纲，使用缩进层级表示，方便导入 XMind 或 Markmap。',
-    category: '模板',
-    isBuiltin: false,
-    sortOrder: 7,
+    sortOrder: 12,
   },
 ]
 

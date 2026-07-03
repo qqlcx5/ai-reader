@@ -92,7 +92,7 @@ const maxHistory = computed({
           :value="maxHistory"
           min="1"
           max="100"
-          class="w-16 h-7 text-center text-[12px] border border-zinc-200 rounded-md bg-zinc-50 focus:border-brand outline-none"
+          class="w-16 h-7 text-center text-[12px] border border-zinc-200 rounded-md bg-zinc-50 px-1 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 outline-none transition-all"
           @input="maxHistory = Number(($event.target as HTMLInputElement).value)"
         />
       </div>

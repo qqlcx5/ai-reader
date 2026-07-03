@@ -51,7 +51,7 @@ const iconBg = computed(() => {
 const statusColors = computed(() => {
   switch (props.model.lastTestStatus) {
     case 'untested': return 'bg-zinc-300'
-    case 'testing': return 'bg-blue-400 animate-pulse'
+    case 'testing': return 'bg-amber-400 animate-pulse'
     case 'success': return 'bg-emerald-400'
     case 'failed': return 'bg-red-400'
     default: return 'bg-zinc-300'
@@ -119,7 +119,7 @@ function onPing() {
         </button>
 
         <button
-          class="p-1.5 rounded-md text-zinc-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="p-1.5 rounded-md text-zinc-400 hover:text-brand hover:bg-brand/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="model.lastTestStatus === 'testing'"
           title="Ping"
           @click="onPing"

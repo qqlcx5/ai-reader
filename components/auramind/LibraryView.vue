@@ -433,21 +433,21 @@ function cancelDelete() {
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 flex-col bg-[#FCFCFC] flex">
+  <div class="flex-1 min-h-0 flex-col bg-surface flex">
     <div ref="scrollRootRef" class="flex-1 min-h-0 overflow-y-auto">
       <!-- Search -->
-      <div class="sticky top-0 z-10 p-4 pb-3 bg-[#FCFCFC]/95 backdrop-blur-md border-b border-zinc-100">
+      <div class="sticky top-0 z-10 p-4 pb-3 bg-surface/95 backdrop-blur-md border-b border-zinc-100">
         <SearchBar v-model="searchQuery" @search="onSearch" />
       </div>
 
       <!-- Multi-select toolbar -->
       <div
         v-if="multiSelectActive"
-        class="sticky top-[69px] z-10 px-4 py-2 bg-indigo-50/95 backdrop-blur-md border-b border-indigo-100 flex items-center justify-between"
+        class="sticky top-[69px] z-10 px-4 py-2 bg-brand/5 backdrop-blur-md border-b border-brand/10 flex items-center justify-between"
       >
         <div class="flex items-center gap-3 text-[12px]">
-          <span class="font-semibold text-indigo-700">已选 {{ documentStore.selectedIds.size }} 项</span>
-          <button class="text-indigo-600 hover:text-indigo-800 font-medium" @click="handleSelectAll">全选</button>
+          <span class="font-semibold text-brand">已选 {{ documentStore.selectedIds.size }} 项</span>
+          <button class="text-brand hover:text-brand/80 font-medium" @click="handleSelectAll">全选</button>
           <span class="text-zinc-300">|</span>
           <span class="text-zinc-400">{{ displayedDocs.length }} 项可见</span>
         </div>
@@ -482,13 +482,13 @@ function cancelDelete() {
         <!-- Selected collection manage bar -->
         <div
           v-if="collectionStore.selectedCollection"
-          class="mt-2 flex items-center justify-between bg-indigo-50/70 border border-indigo-100 rounded-lg px-2.5 py-1.5"
+          class="mt-2 flex items-center justify-between bg-brand/5 border border-brand/10 rounded-lg px-2.5 py-1.5"
         >
-          <span class="text-[11px] text-indigo-700 font-medium truncate">
+          <span class="text-[11px] text-brand font-medium truncate">
             {{ collectionStore.selectedCollection.name }} · {{ collectionStore.selectedDocIds.length }} 篇
           </span>
           <span class="flex items-center gap-2 shrink-0 text-[11px]">
-            <button class="text-indigo-600 hover:text-indigo-800" @click="openRenameCollection">重命名</button>
+            <button class="text-brand hover:text-brand/80" @click="openRenameCollection">重命名</button>
             <button class="text-red-500 hover:text-red-700" @click="requestDeleteCollection">删除</button>
             <button class="text-zinc-400 hover:text-zinc-600" @click="collectionStore.clearSelection()">取消</button>
           </span>
@@ -551,9 +551,9 @@ function cancelDelete() {
         <!-- Date filter chip -->
         <div
           v-if="selectedDate"
-          class="mx-2 mb-2 flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5"
+          class="mx-2 mb-2 flex items-center justify-between bg-brand/5 border border-brand/10 rounded-lg px-2.5 py-1.5"
         >
-          <span class="text-[11px] text-emerald-700 font-medium">
+          <span class="text-[11px] text-brand font-medium">
             {{ formatDateLabel(selectedDate) }} · {{ displayedDocs.length }} 篇
           </span>
           <button
@@ -564,7 +564,7 @@ function cancelDelete() {
           </button>
         </div>
 
-        <div class="px-2 pt-2 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+        <div class="px-2 pt-2 pb-1 text-[11px] font-medium text-zinc-400">
           {{ selectedDate ? formatDateLabel(selectedDate) : searchQuery ? '搜索结果' : hasActiveFilter ? `筛选 · ${displayedDocs.length} 篇` : '最近捕获' }}
         </div>
 
@@ -610,7 +610,7 @@ function cancelDelete() {
         <Trash2 class="w-4 h-4" />批量删除
       </button>
       <button
-        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-brand bg-brand/10 border border-brand/20 hover:bg-brand/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         :disabled="documentStore.selectedIds.size === 0"
         @click="openBatchPicker"
       >

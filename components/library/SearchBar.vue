@@ -36,7 +36,7 @@ function onInput(value: string) {
 
 <template>
   <div
-    class="h-10 bg-white border border-zinc-200 rounded-xl flex items-center px-3 shadow-sm focus-within:border-brand focus-within:ring-4 focus-within:ring-indigo-50 transition-all"
+    class="h-10 bg-white border border-zinc-200 rounded-xl flex items-center px-3 shadow-sm focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10 transition-all"
   >
     <Search class="w-4 h-4 text-zinc-400 mr-2 shrink-0" />
     <input

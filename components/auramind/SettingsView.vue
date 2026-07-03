@@ -122,12 +122,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 flex-col bg-[#F4F4F5] flex">
+  <div class="flex-1 min-h-0 flex-col bg-surface flex">
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-5 flex flex-col gap-7">
       <!-- AI 模型池 -->
       <section class="flex flex-col gap-2.5">
         <div class="flex items-center justify-between pl-1">
-          <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider">AI 模型池</h2>
+          <h2 class="text-[12px] font-medium text-zinc-400">AI 模型池</h2>
         </div>
 
         <div class="flex flex-col gap-2">
@@ -151,7 +151,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 
       <!-- 上下文与系统指令 -->
       <section class="flex flex-col gap-2.5">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">上下文与系统指令</h2>
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">上下文与系统指令</h2>
 
         <div class="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden text-[13px]">
           <div class="p-3 flex flex-col gap-1.5">
@@ -159,7 +159,8 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
             <UTextarea
               v-model="globalSystemPrompt"
               :rows="4"
-              class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2 text-[11px] text-zinc-600 focus:border-brand font-mono"
+              placeholder="输入全局系统指令，会对所有对话生效…"
+              class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-[12px] text-zinc-700 focus:border-brand focus:bg-white focus:ring-2 focus:ring-brand/10 transition-all font-mono"
             />
           </div>
         </div>
@@ -170,25 +171,25 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 
       <!-- WebDAV 同步 -->
       <section class="flex flex-col gap-2.5">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">WebDAV 同步</h2>
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">WebDAV 同步</h2>
         <WebDAVSettings />
       </section>
 
       <!-- S3 同步 -->
       <section class="flex flex-col gap-2.5">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">S3 同步</h2>
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">S3 同步</h2>
         <S3Settings />
       </section>
 
       <!-- 自动 AI 分析 -->
       <section class="flex flex-col gap-2.5">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">自动 AI 分析</h2>
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">自动 AI 分析</h2>
         <AiJobQueue />
       </section>
 
       <!-- 本地存储 -->
       <section class="flex flex-col gap-2.5 pb-8">
-        <h2 class="text-[12px] font-semibold text-zinc-500 uppercase tracking-wider pl-1">本地存储</h2>
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">本地存储</h2>
         <StorageSettings />
       </section>
     </main>

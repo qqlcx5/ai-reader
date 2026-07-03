@@ -58,7 +58,7 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
   <div class="flex flex-row items-stretch min-h-0 border-b border-zinc-200 bg-white">
     <!-- Left: Title (tight against list) -->
     <div class="flex items-center pl-3 pr-1.5 py-2 shrink-0">
-      <span class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider whitespace-nowrap">
+      <span class="text-[11px] font-medium text-zinc-400 whitespace-nowrap">
         会话
         <span class="font-normal text-zinc-400 ml-1">{{ chatStore.conversations.length }}</span>
       </span>

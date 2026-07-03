@@ -431,7 +431,7 @@ async function onRestore() {
             </div>
 
             <div class="flex flex-wrap gap-1.5 text-[12px]">
-              <span v-if="preview?.pulled" class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 flex items-center gap-1">
+              <span v-if="preview?.pulled" class="px-2 py-0.5 rounded bg-brand/10 text-brand flex items-center gap-1">
                 <ArrowDownCircle class="w-3 h-3" />拉取 {{ preview?.pulled }}
               </span>
               <span v-if="preview?.pushed" class="px-2 py-0.5 rounded bg-green-50 text-green-700 flex items-center gap-1">
@@ -451,15 +451,15 @@ async function onRestore() {
             </div>
 
             <!-- Pull items -->
-            <div v-if="preview?.pullItems?.length" class="border border-blue-100 rounded-lg overflow-hidden">
-              <button class="w-full flex items-center justify-between p-2.5 bg-blue-50 hover:bg-blue-100 transition-colors text-left" @click="toggleSection('pulls')">
-                <span class="text-[12px] font-medium text-blue-700 flex items-center gap-1">
+            <div v-if="preview?.pullItems?.length" class="border border-brand/10 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-brand/10 hover:bg-brand/20 transition-colors text-left" @click="toggleSection('pulls')">
+                <span class="text-[12px] font-medium text-brand flex items-center gap-1">
                   <ArrowDownCircle class="w-3 h-3" />将拉取 {{ preview!.pullItems.length }} 项
                 </span>
-                <ChevronDown v-if="isExpanded('pulls')" class="w-3.5 h-3.5 text-blue-500" />
-                <ChevronRight v-else class="w-3.5 h-3.5 text-blue-500" />
+                <ChevronDown v-if="isExpanded('pulls')" class="w-3.5 h-3.5 text-brand" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-brand" />
               </button>
-              <div v-show="isExpanded('pulls')" class="divide-y divide-blue-50 max-h-48 overflow-y-auto">
+              <div v-show="isExpanded('pulls')" class="divide-y divide-brand/5 max-h-48 overflow-y-auto">
                 <div v-for="item in preview!.pullItems" :key="item.id" class="py-1.5 px-2.5 text-[12px] text-zinc-600">
                   <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(item.type) }}</span>
                   <span class="ml-1.5">{{ item.label || item.id }}</span>
@@ -504,7 +504,7 @@ async function onRestore() {
                     <span>云端：{{ fmtVersion(c.remoteVersion) }}</span>
                   </div>
                   <div class="mt-0.5">
-                    <span :class="c.chosen === 'local' ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50'"
+                    <span :class="c.chosen === 'local' ? 'text-green-600 bg-green-50' : 'text-brand bg-brand/10'"
                       class="text-[10px] font-medium px-1.5 py-0.5 rounded">
                       采用{{ c.chosen === 'local' ? '本地' : '云端' }}版本
                     </span>
@@ -571,7 +571,7 @@ async function onRestore() {
               v-for="b in backups"
               :key="b.name"
               class="mx-1 my-0.5 px-2.5 py-2 rounded-lg cursor-pointer flex items-center justify-between transition-colors"
-              :class="selectedBackup === b.name ? 'bg-indigo-50 text-brand' : 'hover:bg-zinc-100 text-zinc-700'"
+              :class="selectedBackup === b.name ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 text-zinc-700'"
               @click="selectedBackup = b.name"
             >
               <span>{{ b.ts ? new Date(b.ts).toLocaleString() : b.name }}</span>

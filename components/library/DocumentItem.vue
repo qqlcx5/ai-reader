@@ -116,7 +116,7 @@ const excerpt = computed(() => {
       <button class="p-1 rounded-md text-amber-600 hover:bg-amber-50" title="加入合集" @click.stop="emit('addToCollection', document)">
         <FolderPlus class="w-3.5 h-3.5" />
       </button>
-      <button class="p-1 rounded-md text-brand hover:bg-indigo-50" title="对话" @click.stop="emit('chat', document)">
+      <button class="p-1 rounded-md text-brand hover:bg-brand/10" title="对话" @click.stop="emit('chat', document)">
         <MessageSquare class="w-3.5 h-3.5" />
       </button>
       <button class="p-1 rounded-md text-red-500 hover:bg-red-50" title="删除" @click.stop="emit('delete', document)">

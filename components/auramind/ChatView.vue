@@ -197,7 +197,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
     <div class="flex justify-center">
       <span
         v-if="contextTitle"
-        class="text-[10px] border border-brand/20 bg-indigo-50 text-brand px-2 py-0.5 rounded-md flex items-center gap-1"
+        class="text-[10px] border border-brand/20 bg-brand/10 text-brand px-2 py-0.5 rounded-md flex items-center gap-1"
       >
         <PlugZap class="w-3 h-3" />
         已挂载：{{ contextTitle }}

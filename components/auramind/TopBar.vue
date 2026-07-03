@@ -23,9 +23,7 @@ const isRefreshing = ref(false)
 const isLibraryRefreshing = ref(false)
 const windowMode = isWindowMode()
 
-const showRefresh = computed(() => {
-  return appStore.currentView === 'workspace' && workspaceStore.documentSource === 'current-page'
-})
+const showRefresh = computed(() => appStore.currentView === 'workspace')
 
 const libraryDocCount = computed(() => documentStore.documents.length)
 
@@ -129,6 +127,7 @@ async function handleRefresh() {
     documentStore.setCurrentDocument(doc)
     documentStore.setPageDocument(doc)
     await documentStore.saveDocument(doc)
+    workspaceStore.setDocumentSource('current-page')
 
     workspaceStore.setCaptureStatus('ready')
     appStore.showToast('抓取完成', 'success')
@@ -193,7 +192,7 @@ async function handleRefresh() {
         v-for="item in navItems"
         :key="item.key"
         class="p-1.5 rounded-md transition-colors"
-        :class="appStore.currentView === item.key ? 'text-brand bg-indigo-50' : 'text-zinc-500 hover:bg-zinc-100'"
+        :class="appStore.currentView === item.key ? 'text-brand bg-brand/10' : 'text-zinc-500 hover:bg-zinc-100'"
         :title="item.label"
         @click="appStore.setCurrentView(item.key, { resetHistory: true })"
       >

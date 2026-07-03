@@ -71,7 +71,7 @@ const icon = computed(() => (props.danger ? AlertTriangle : Info))
             <button
               :class="[
                 'h-38px rounded-14px text-white text-13px font-bold cursor-pointer transition-all hover:-translate-y-px',
-                danger ? 'bg-#dc2626 hover:bg-#b91c1c' : 'bg-brand hover:bg-indigo-600',
+                danger ? 'bg-#dc2626 hover:bg-#b91c1c' : 'bg-brand hover:bg-brand/90',
               ]"
               @click="$emit('confirm')"
             >

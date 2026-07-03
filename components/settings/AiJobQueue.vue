@@ -44,7 +44,7 @@ const statusLabel: Record<string, string> = {
 }
 const statusClass: Record<string, string> = {
   pending: 'bg-zinc-100 text-zinc-500',
-  processing: 'bg-blue-100 text-blue-600',
+  processing: 'bg-brand/10 text-brand',
   success: 'bg-emerald-100 text-emerald-600',
   failed: 'bg-red-100 text-red-600',
 }
@@ -98,7 +98,7 @@ function fmtTime(iso?: string) {
     <!-- Queue -->
     <div class="border-t border-zinc-100 p-3">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">处理队列</span>
+        <span class="text-[11px] text-zinc-400 font-medium">处理队列</span>
         <div class="flex items-center gap-1">
           <button
             class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors disabled:opacity-40"
