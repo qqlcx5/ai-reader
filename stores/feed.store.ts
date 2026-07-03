@@ -36,6 +36,8 @@ export interface CollectItemDetail {
   itemId: string
   title: string
   link: string
+  feedId: string
+  feedTitle: string
   ok: boolean
   reason?: string
   documentId?: string
@@ -43,8 +45,6 @@ export interface CollectItemDetail {
 }
 
 export interface CollectDetailResult {
-  feedId: string
-  feedTitle: string
   total: number
   collected: number
   failed: number
@@ -112,6 +112,16 @@ export const useFeedStore = defineStore('feed', () => {
   /** Number of feeds with autoCollect enabled. */
   const autoCollectFeeds = computed(() =>
     feeds.value.filter((f) => f.autoCollect),
+  )
+
+  /** Pending items from autoCollect feeds only (matches collectAllPending scope). */
+  const autoPending = computed(() =>
+    autoCollectFeeds.value.reduce((s, f) => s + (feedItemStats.value[f.id]?.pending ?? 0), 0),
+  )
+
+  /** Collected items from autoCollect feeds only. */
+  const autoCollected = computed(() =>
+    autoCollectFeeds.value.reduce((s, f) => s + (feedItemStats.value[f.id]?.collected ?? 0), 0),
   )
 
   // AI analysis summary (across all items in view)
@@ -215,12 +225,10 @@ export const useFeedStore = defineStore('feed', () => {
       return
     }
 
-    const toastId = toast.loading('正在收集所有待入库条目…', { category: 'rss' })
+    const toastId = toast.loading('正在收集已开启自动入库的源…', { category: 'rss' })
     let totalCollected = 0
     let totalFailed = 0
     const allItemResults: CollectItemDetail[] = []
-    let lastFeedId = ''
-    let lastFeedTitle = ''
 
     for (const feed of feedsWithAuto) {
       setCollectStatus(feed.id, { phase: 'collecting', total: 0, collected: 0, failed: 0 })
@@ -239,17 +247,11 @@ export const useFeedStore = defineStore('feed', () => {
           })
           if (res.items?.length) {
             allItemResults.push(...res.items.map((r: any) => ({
-              itemId: r.itemId,
-              title: r.title,
-              link: r.link,
-              ok: r.ok,
-              reason: r.reason,
-              documentId: r.documentId,
-              wordCount: r.wordCount,
-            })))
+            ...r,
+            feedId: feed.id,
+            feedTitle: feed.title,
+          } as CollectItemDetail)))
           }
-          lastFeedId = feed.id
-          lastFeedTitle = feed.title
           setTimeout(() => {
             const s = collectStatus[feed.id]
             if (s?.phase === 'done') clearCollectStatus(feed.id)
@@ -270,8 +272,6 @@ export const useFeedStore = defineStore('feed', () => {
     // Store details for status panel
     if (allItemResults.length) {
       lastCollectDetails.value = {
-        feedId: lastFeedId,
-        feedTitle: lastFeedTitle,
         total: allItemResults.length,
         collected: totalCollected,
         failed: totalFailed,
@@ -497,20 +497,14 @@ export const useFeedStore = defineStore('feed', () => {
         })
         // Store item-level details for the status panel
         lastCollectDetails.value = {
-          feedId: id,
-          feedTitle,
           total,
           collected,
           failed,
           items: (res.items ?? []).map((r: any) => ({
-            itemId: r.itemId,
-            title: r.title,
-            link: r.link,
-            ok: r.ok,
-            reason: r.reason,
-            documentId: r.documentId,
-            wordCount: r.wordCount,
-          })),
+            ...r,
+            feedId: id,
+            feedTitle,
+          } as CollectItemDetail)),
           finishedAt: new Date().toISOString(),
         }
         if (collected > 0 && failed > 0) {
@@ -569,20 +563,14 @@ export const useFeedStore = defineStore('feed', () => {
       if (itemResults?.length) {
         const feed = feeds.value.find((f) => f.id === feedId)
         lastCollectDetails.value = {
-          feedId,
-          feedTitle: feed?.title ?? feedId,
           total: itemResults.length,
           collected,
           failed,
           items: itemResults.map((r: any) => ({
-            itemId: r.itemId,
-            title: r.title,
-            link: r.link,
-            ok: r.ok,
-            reason: r.reason,
-            documentId: r.documentId,
-            wordCount: r.wordCount,
-          })),
+            ...r,
+            feedId,
+            feedTitle: feed?.title ?? feedId,
+          } as CollectItemDetail)),
           finishedAt: new Date().toISOString(),
         }
       }
@@ -615,6 +603,8 @@ export const useFeedStore = defineStore('feed', () => {
     totalPending,
     totalCollected,
     autoCollectFeeds,
+    autoPending,
+    autoCollected,
     aiJobMap,
     aiConvMap,
     aiSummary,

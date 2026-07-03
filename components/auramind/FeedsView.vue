@@ -403,26 +403,26 @@ onUnmounted(() => {
           <div class="text-[11px] text-zinc-500">
             <span class="font-medium text-zinc-700">{{ feedStore.autoCollectFeeds.length }}</span> 个源已开启
             <span class="text-zinc-300 mx-0.5">·</span>
-            <span class="text-amber-500 font-medium">{{ feedStore.totalPending }}</span> 待入库
+            <span class="text-amber-500 font-medium">{{ feedStore.autoPending }}</span> 待入库
             <span class="text-zinc-300 mx-0.5">·</span>
-            <span class="text-emerald-500 font-medium">{{ feedStore.totalCollected }}</span> 已入库
+            <span class="text-emerald-500 font-medium">{{ feedStore.autoCollected }}</span> 已入库
           </div>
         </div>
 
         <!-- 一键收集 -->
         <button
           class="w-full flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-medium transition-colors mb-2"
-          :class="feedStore.totalPending > 0
+          :class="feedStore.autoPending > 0
             ? 'bg-brand/10 text-brand hover:bg-brand/20'
             : 'bg-zinc-100 text-zinc-400 cursor-default'"
-          :disabled="feedStore.totalPending === 0 || feedStore.anyCollecting"
+          :disabled="feedStore.autoPending === 0 || feedStore.anyCollecting"
           @click="feedStore.collectAllPending()"
         >
           <template v-if="feedStore.anyCollecting">
             <RefreshCw class="w-3 h-3 animate-spin" /> 收集中…
           </template>
-          <template v-else-if="feedStore.totalPending > 0">
-            <Zap class="w-3 h-3" /> 收集全部待入库 ({{ feedStore.totalPending }})
+          <template v-else-if="feedStore.autoPending > 0">
+            <Zap class="w-3 h-3" /> 收集待入库 ({{ feedStore.autoPending }})
           </template>
           <template v-else>
             <Check class="w-3 h-3" /> 全部已入库
@@ -468,15 +468,24 @@ onUnmounted(() => {
             <div
               v-for="item in feedStore.lastCollectDetails.items"
               :key="item.itemId"
-              class="flex items-start gap-1 px-1 py-0.5 text-[10px] leading-tight"
+              class="flex items-start gap-1 px-1 py-1 text-[10px] leading-tight rounded transition-colors"
+              :class="[
+                !item.ok ? 'bg-red-50/50' : '',
+                item.link ? 'cursor-pointer hover:bg-zinc-100' : '',
+              ]"
+              @click="item.link && onOpenOriginal(item.link)"
             >
               <Check v-if="item.ok" class="w-2.5 h-2.5 text-emerald-400 shrink-0 mt-px" />
               <X v-else class="w-2.5 h-2.5 text-red-400 shrink-0 mt-px" />
               <span class="flex-1 min-w-0">
-                <span class="text-zinc-600 truncate block">{{ item.title }}</span>
-                <span v-if="!item.ok && item.reason" class="text-red-300 block truncate">{{ item.reason }}</span>
-                <span v-else-if="item.ok && item.wordCount" class="text-zinc-300">{{ item.wordCount }} 词</span>
+                <span class="text-zinc-700 truncate block font-medium">{{ item.title }}</span>
+                <span class="flex items-center gap-1 mt-0.5">
+                  <span class="px-1 rounded bg-zinc-100 text-zinc-500 shrink-0 max-w-[80px] truncate">{{ item.feedTitle }}</span>
+                  <span v-if="!item.ok && item.reason" class="text-red-400 truncate">{{ item.reason }}</span>
+                  <span v-else-if="item.ok && item.wordCount" class="text-zinc-300">{{ item.wordCount }} 词</span>
+                </span>
               </span>
+              <ExternalLink v-if="item.link" class="w-2.5 h-2.5 text-zinc-300 shrink-0 mt-px" />
             </div>
           </div>
         </div>
