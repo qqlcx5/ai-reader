@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AuraMind Privacy Policy</title>
+<style>
+  :root{--ink:#0f172a;--muted:#475569;--line:#e2e8f0;--bg:#f8fafc;--accent:#6366f1}
+  *{box-sizing:border-box}
+  body{font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);margin:0;padding:0}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 24px 96px}
+  h1{font-size:32px;margin:0 0 8px;letter-spacing:-.02em}
+  h2{font-size:20px;margin:48px 0 12px;padding-top:24px;border-top:1px solid var(--line)}
+  h3{font-size:17px;margin:24px 0 8px}
+  p,li{color:var(--muted)}
+  .meta{color:#94a3b8;font-size:14px;margin-bottom:32px}
+  .tag{display:inline-block;background:#eef2ff;color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;letter-spacing:.04em;margin-right:6px}
+  ul{padding-left:20px}
+  li{margin:6px 0}
+  code{background:#eef2ff;padding:2px 6px;border-radius:4px;font-size:14px;color:#4338ca}
+  .note{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);padding:16px 20px;border-radius:6px;margin:24px 0}
+  .note p{margin:0;color:var(--ink)}
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>AuraMind Privacy Policy</h1>
+<p class="meta">Last updated: 2026-07-03 · Effective immediately</p>
+
+<div class="note">
+<p><strong>Short version:</strong> AuraMind stores everything locally in your browser. We do not collect, transmit, sell, or share any of your data. The only network requests are made by <em>you</em>, directly to AI and storage services that <em>you</em> configure.</p>
+</div>
+
+<h2>1. Overview</h2>
+<p>AuraMind ("the extension", "we", "our") is a Chrome / Firefox / Edge extension that helps you clip, summarize, highlight, and review web content. This policy explains what data the extension handles, in plain language.</p>
+
+<h2>2. Data We Do <em>Not</em> Collect</h2>
+<p>AuraMind has no servers. We do not run analytics, telemetry, crash reporting, or any kind of data collection. We do not have access to:</p>
+<ul>
+  <li>Your browsing history</li>
+  <li>The pages you clip</li>
+  <li>Your highlights, notes, or chat history</li>
+  <li>Your AI API keys or sync credentials</li>
+  <li>Your IP address, device identifiers, or any usage statistics</li>
+</ul>
+
+<h2>3. Data Stored Locally in Your Browser</h2>
+<p>All user-generated content is stored in your browser via IndexedDB. This includes:</p>
+<ul>
+  <li>Clipped articles (title, URL, content, metadata)</li>
+  <li>Highlights and notes</li>
+  <li>Chat conversations with AI</li>
+  <li>Configured AI model providers (name, base URL, API key)</li>
+  <li>Configured sync destinations (WebDAV / S3 credentials)</li>
+  <li>User settings and preferences</li>
+  <li>RSS feed subscriptions</li>
+</ul>
+<p>This data <strong>never leaves your device</strong> unless you explicitly enable a feature that sends it elsewhere (see §4).</p>
+
+<h2>4. Optional User-Initiated Data Flows</h2>
+<p>The extension contains two optional features that send data outside your browser. Both are <strong>disabled by default</strong> and only activated when you configure them.</p>
+
+<h3>4.1 AI API Calls</h3>
+<p>When you click "Ask AI" or trigger an auto-analysis, the extension sends the relevant text (usually the page content, your question, and the conversation history) to a model provider <strong>you have configured</strong> in the settings. The extension never proxies these requests through any server we operate.</p>
+<p>Common providers users configure include: OpenAI, Anthropic, Google Gemini, DeepSeek, Ollama (local), LM Studio (local), or any OpenAI-compatible endpoint.</p>
+<p>The data is subject to the privacy policy of whichever provider you choose. AuraMind does not log or store the contents of these requests.</p>
+
+<h3>4.2 Cross-Device Sync</h3>
+<p>If you enable the sync feature, the extension uploads your local data (articles, highlights, conversations) to a storage destination <strong>you have configured</strong>. Supported destinations include:</p>
+<ul>
+  <li>WebDAV servers (e.g. Nextcloud, 坚果云, Apache mod_dav)</li>
+  <li>S3-compatible object storage (e.g. Cloudflare R2, AWS S3, MinIO, Backblaze B2)</li>
+</ul>
+<p>The extension authenticates directly with your chosen destination using credentials stored locally in IndexedDB. AuraMind operators have no access to these credentials or to your synced data.</p>
+
+<h2>5. Permissions Explained</h2>
+<p>The extension requests the following browser permissions, each with a narrow purpose:</p>
+<ul>
+  <li><code>sidePanel</code> — render the workspace and chat UI next to the active tab.</li>
+  <li><code>activeTab</code> — read the URL and title of the tab you are currently viewing (required to start a clip).</li>
+  <li><code>scripting</code> — inject the content extractor into the active page so the extension can read the rendered DOM.</li>
+  <li><code>storage</code> — persist user settings and the local IndexedDB store.</li>
+  <li><code>tabs</code> — re-open the side panel when you switch tabs and broadcast tab-change events to the workspace.</li>
+  <li><code>windows</code> — manage the optional popped-out workspace window.</li>
+  <li><code>alarms</code> — schedule periodic RSS feed refreshes.</li>
+  <li><code>&lt;all_urls&gt;</code> — required to clip content from any site you visit.</li>
+</ul>
+<p>The extension never reads page content from a tab you are not actively clipping.</p>
+
+<h2>6. Third-Party Services</h2>
+<p>The extension itself does not embed any third-party trackers, ad networks, or analytics SDKs. The only third-party services it can talk to are the ones <em>you</em> configure (see §4).</p>
+
+<h2>7. Children's Privacy</h2>
+<p>The extension is not directed at children under 13, and we do not knowingly collect any data from children.</p>
+
+<h2>8. Changes to This Policy</h2>
+<p>If we make material changes, we will update the "Last updated" date above and announce the change in the extension's release notes. Continued use of the extension after a change constitutes acceptance of the updated policy.</p>
+
+<h2>9. Open Source</h2>
+<p>AuraMind is open source. You can audit every line of code, build it yourself, and verify the claims in this policy. The source repository is linked from the Chrome Web Store listing.</p>
+
+<h2>10. Contact</h2>
+<p>For privacy questions or to report an issue, please open an issue on the GitHub repository linked from the Chrome Web Store listing. We do not operate a support email for privacy inquiries.</p>
+
+<footer>
+AuraMind · Local-first knowledge tooling · No servers, no tracking, no middlemen.
+</footer>
+
+</div>
+</body>
+</html>

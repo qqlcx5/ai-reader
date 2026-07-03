@@ -5,7 +5,10 @@ import { resolve } from 'node:path';
 export default defineConfig({
   modules: ['@wxt-dev/module-vue', '@wxt-dev/unocss'],
   manifest: {
-    name: 'AuraMind',
+    name: 'AuraMind - AI-Powered Web Clipper & Smart Reader',
+    version: '0.1.0',
+    short_name: 'AuraMind',
+    description: 'AI-powered web clipper that summarizes, highlights, and turns pages into a spaced-repetition review feed. Local-first, sync via WebDAV/S3.',
     permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms'],
     host_permissions: ['<all_urls>'],
   },
