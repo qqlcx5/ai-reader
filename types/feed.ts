@@ -14,6 +14,11 @@ export interface FeedEntity {
    *  for low-volume curated feeds. */
   autoCollect?: boolean
 
+  /** Minimum word count for auto-collected articles. Items below this are
+   *  skipped to avoid shelving truncated/teaser content. Default 200.
+   *  Manual collects are exempt. */
+  autoCollectMinWords?: number
+
   /** Conditional-fetch tokens, let periodic refresh skip unchanged feeds. */
   etag?: string
   lastModified?: string

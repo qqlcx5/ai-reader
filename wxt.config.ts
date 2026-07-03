@@ -9,7 +9,7 @@ export default defineConfig({
     version: '0.1.0',
     short_name: 'AuraMind',
     description: 'AI-powered web clipper that summarizes, highlights, and turns pages into a spaced-repetition review feed. Local-first, sync via WebDAV/S3.',
-    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms'],
+    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms', 'offscreen'],
     host_permissions: ['<all_urls>'],
   },
   // vite: () => ({

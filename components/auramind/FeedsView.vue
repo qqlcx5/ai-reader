@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import ScrollFab from '@/components/ui/ScrollFab.vue'
@@ -9,13 +9,12 @@ import {
   DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from 'reka-ui'
 import { useFeedStore } from '@/stores/feed.store'
-import { useAppStore } from '@/stores/app.store'
 import { exportOpml, parseOpml } from '@/utils/feed/opml'
 import { sanitizeHtml, enhanceCodeBlocks } from '@/utils/markdown'
+import { toast } from '@/utils/toast'
 import type { FeedEntity } from '@/types/feed'
 
 const feedStore = useFeedStore()
-const appStore = useAppStore()
 
 const newUrl = ref('')
 const newFolder = ref('')
@@ -23,6 +22,7 @@ const selectedItemId = ref<string | null>(null)
 const collecting = ref(false)
 const opmlInput = ref<HTMLInputElement | null>(null)
 const collapsed = ref<Set<string>>(new Set())
+const showCollectPanel = ref(false)
 
 // Responsive layout: wide (≥760px) = 3 panes side-by-side; compact = a single
 // pane with back-style navigation — timeline ↔ reader, feed list behind "源".
@@ -109,9 +109,9 @@ async function onSubscribe() {
   try {
     await feedStore.subscribe(url, newFolder.value.trim() || undefined)
     newUrl.value = ''
-    appStore.showToast('已订阅', 'success')
+    toast.success('已订阅', { category: 'rss' })
   } catch {
-    appStore.showToast('订阅失败', 'error')
+    toast.error('订阅失败', { category: 'rss' })
   }
 }
 
@@ -150,7 +150,7 @@ async function commitMoveFolder(f: FeedEntity) {
   }
   await feedStore.moveFolder(f.id, name || undefined)
   editingFolderFeedId.value = null
-  appStore.showToast(name ? `已移动到「${name}」` : '已移出分组', 'success')
+  toast.success(name ? `已移动到「${name}」` : '已移出分组', { category: 'rss' })
 }
 
 async function onOpenOriginal(url: string) {
@@ -159,33 +159,39 @@ async function onOpenOriginal(url: string) {
   if (tabs) await tabs.create({ url })
 }
 
+/** Trigger refresh via background store method (handles toast + fallback). */
+async function triggerRefresh() {
+  await feedStore.refreshViaBackground()
+}
+
 async function onCollect() {
   if (!selectedItem.value || collecting.value) return
   if (selectedItem.value.documentId) {
-    appStore.showToast('已在记忆库中', 'info')
+    toast.info('已在记忆库中', { category: 'rss' })
     return
   }
   collecting.value = true
   try {
     await feedStore.collect(selectedItem.value.id)
-    appStore.showToast('已收藏到记忆库', 'success')
+    toast.success('已收藏到记忆库', { category: 'rss' })
   } catch (e) {
     const msg = e instanceof Error ? e.message : '收藏失败'
-    appStore.showToast(msg, 'error')
+    toast.error(msg, { category: 'rss' })
   } finally {
     collecting.value = false
   }
 }
 
-// Background alarm (browser.alarms) broadcasts REFRESH_FEEDS; the actual parse
-// runs here (panel has DOMParser, the MV3 service worker doesn't).
+// Background alarm now runs refresh independently. Panel only needs to:
+// 1. Listen for FEEDS_REFRESHED to reload the feed list
+// 2. Request TRIGGER_FEED_REFRESH on stale check (panel just opened)
 function onBackgroundMessage(message: any) {
-  if (message?.type === 'REFRESH_FEEDS') feedStore.refresh()
+  feedStore.onBackgroundEvent(message)
 }
 let removeMsgListener: (() => void) | null = null
 function onExportOpml() {
   if (!feedStore.feeds.length) {
-    appStore.showToast('暂无订阅源', 'info')
+    toast.info('暂无订阅源', { category: 'rss' })
     return
   }
   const xml = exportOpml(feedStore.feeds)
@@ -202,15 +208,15 @@ async function onImportOpml(file: File) {
   try {
     const subs = parseOpml(await file.text())
     if (!subs.length) {
-      appStore.showToast('OPML 中没有订阅源', 'error')
+      toast.error('OPML 中没有订阅源', { category: 'rss' })
       return
     }
     for (const s of subs) {
       await feedStore.subscribe(s.xmlUrl, s.folder)
     }
-    appStore.showToast(`已导入 ${subs.length} 个订阅源`, 'success')
+    toast.success(`已导入 ${subs.length} 个订阅源`, { category: 'rss' })
   } catch {
-    appStore.showToast('OPML 解析失败', 'error')
+    toast.error('OPML 解析失败', { category: 'rss' })
   }
 }
 
@@ -223,7 +229,11 @@ function onOpmlFileChange(event: Event) {
 
 onMounted(async () => {
   await feedStore.loadFeeds()
-  if (isStale()) await feedStore.refresh()
+  if (isStale()) {
+    // Ask background to refresh (runs via offscreen, no panel dependency)
+    const runtime = (globalThis as any).browser?.runtime
+    runtime?.sendMessage({ type: 'TRIGGER_FEED_REFRESH' }).catch(() => {})
+  }
   const runtime = (globalThis as any).browser?.runtime
   runtime?.onMessage.addListener(onBackgroundMessage)
   removeMsgListener = () => runtime?.onMessage.removeListener(onBackgroundMessage)
@@ -270,7 +280,7 @@ onUnmounted(() => {
           class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors"
           :disabled="feedStore.refreshing"
           title="全部刷新"
-          @click="feedStore.refresh()"
+          @click="triggerRefresh()"
         >
           <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': feedStore.refreshing }" />
         </button>
@@ -308,14 +318,112 @@ onUnmounted(() => {
 
       <div class="px-2 py-1.5 flex items-center justify-between">
         <span class="text-[10px] text-zinc-400 font-medium">订阅源</span>
+        <div class="flex items-center gap-0.5">
+          <!-- 入库状态按钮 -->
+          <button
+            class="p-1 rounded transition-colors relative"
+            :class="showCollectPanel ? 'text-brand bg-brand/10' : 'text-zinc-400 hover:text-brand hover:bg-zinc-100'"
+            :title="入库状态"
+            @click="showCollectPanel = !showCollectPanel"
+          >
+            <Database class="w-3 h-3" />
+            <span v-if="feedStore.totalPending > 0" class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+          </button>
+          <button
+            class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors"
+            title="全部刷新"
+            :disabled="feedStore.refreshing"
+            @click="triggerRefresh()"
+          >
+            <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': feedStore.refreshing }" />
+          </button>
+        </div>
+      </div>
+
+      <!-- 入库状态面板 -->
+      <div v-if="showCollectPanel" class="px-2 py-2 border-b border-zinc-100 bg-zinc-50/50">
+        <!-- 概览 -->
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[11px] text-zinc-500">
+            <span class="font-medium text-zinc-700">{{ feedStore.autoCollectFeeds.length }}</span> 个源已开启
+            <span class="text-zinc-300 mx-0.5">·</span>
+            <span class="text-amber-500 font-medium">{{ feedStore.totalPending }}</span> 待入库
+            <span class="text-zinc-300 mx-0.5">·</span>
+            <span class="text-emerald-500 font-medium">{{ feedStore.totalCollected }}</span> 已入库
+          </div>
+        </div>
+
+        <!-- 一键收集 -->
         <button
-          class="p-1 rounded text-zinc-400 hover:text-brand hover:bg-zinc-100 transition-colors"
-          title="全部刷新"
-          :disabled="feedStore.refreshing"
-          @click="feedStore.refresh()"
+          class="w-full flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-medium transition-colors mb-2"
+          :class="feedStore.totalPending > 0
+            ? 'bg-brand/10 text-brand hover:bg-brand/20'
+            : 'bg-zinc-100 text-zinc-400 cursor-default'"
+          :disabled="feedStore.totalPending === 0 || feedStore.anyCollecting"
+          @click="feedStore.collectAllPending()"
         >
-          <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': feedStore.refreshing }" />
+          <template v-if="feedStore.anyCollecting">
+            <RefreshCw class="w-3 h-3 animate-spin" /> 收集中…
+          </template>
+          <template v-else-if="feedStore.totalPending > 0">
+            <Zap class="w-3 h-3" /> 收集全部待入库 ({{ feedStore.totalPending }})
+          </template>
+          <template v-else>
+            <Check class="w-3 h-3" /> 全部已入库
+          </template>
         </button>
+
+        <!-- 每个 feed 的状态 -->
+        <div class="space-y-1 max-h-[180px] overflow-y-auto no-scrollbar">
+          <div
+            v-for="f in feedStore.autoCollectFeeds"
+            :key="f.id"
+            class="flex items-center gap-1.5 px-1 py-0.5 rounded text-[11px]"
+          >
+            <span class="truncate flex-1 text-zinc-600">{{ f.title }}</span>
+            <template v-if="feedStore.collectStatusOf(f.id).phase === 'collecting'">
+              <RefreshCw class="w-2.5 h-2.5 animate-spin text-brand shrink-0" />
+            </template>
+            <template v-else-if="feedStore.collectStatusOf(f.id).phase === 'done'">
+              <Check class="w-2.5 h-2.5 text-emerald-500 shrink-0" />
+            </template>
+            <template v-else-if="feedStore.collectStatusOf(f.id).phase === 'error'">
+              <X class="w-2.5 h-2.5 text-red-400 shrink-0" />
+            </template>
+            <template v-else>
+              <span class="shrink-0 flex items-center gap-1">
+                <span v-if="feedStore.feedItemStats[f.id]?.pending > 0" class="text-amber-500 font-medium">{{ feedStore.feedItemStats[f.id].pending }}</span>
+                <span v-if="feedStore.feedItemStats[f.id]?.collected > 0" class="text-zinc-300">/{{ feedStore.feedItemStats[f.id].collected }}</span>
+              </span>
+            </template>
+          </div>
+          <div v-if="!feedStore.autoCollectFeeds.length" class="text-center text-[11px] text-zinc-400 py-2">
+            暂未开启自动入库
+          </div>
+        </div>
+
+        <!-- 最近收集逐条结果 -->
+        <div v-if="feedStore.lastCollectDetails" class="mt-2 pt-2 border-t border-zinc-100">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] text-zinc-400 font-medium">最近收集结果</span>
+            <span class="text-[10px] text-zinc-300">{{ feedStore.lastCollectDetails.collected }}/{{ feedStore.lastCollectDetails.total }}</span>
+          </div>
+          <div class="space-y-0.5 max-h-[120px] overflow-y-auto no-scrollbar">
+            <div
+              v-for="item in feedStore.lastCollectDetails.items"
+              :key="item.itemId"
+              class="flex items-start gap-1 px-1 py-0.5 text-[10px] leading-tight"
+            >
+              <Check v-if="item.ok" class="w-2.5 h-2.5 text-emerald-400 shrink-0 mt-px" />
+              <X v-else class="w-2.5 h-2.5 text-red-400 shrink-0 mt-px" />
+              <span class="flex-1 min-w-0">
+                <span class="text-zinc-600 truncate block">{{ item.title }}</span>
+                <span v-if="!item.ok && item.reason" class="text-red-300 block truncate">{{ item.reason }}</span>
+                <span v-else-if="item.ok && item.wordCount" class="text-zinc-300">{{ item.wordCount }} 词</span>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto px-1.5 pb-2 no-scrollbar">
@@ -369,7 +477,23 @@ onUnmounted(() => {
             >
               <Globe class="w-3 h-3 shrink-0 opacity-60" />
               <span class="truncate flex-1">{{ f.title }}</span>
-              <span v-if="f.autoCollect" class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
+              <!-- auto-collect status badge -->
+              <template v-if="f.autoCollect">
+                <span v-if="feedStore.collectStatusOf(f.id).phase === 'collecting'"
+                  class="text-[9px] font-semibold text-brand shrink-0 flex items-center gap-0.5" title="正在收集…">
+                  <RefreshCw class="w-2.5 h-2.5 animate-spin" />auto
+                </span>
+                <span v-else-if="feedStore.collectStatusOf(f.id).phase === 'done'"
+                  class="text-[9px] font-semibold text-emerald-500 shrink-0" title="收集完成">
+                  ✓auto
+                </span>
+                <span v-else-if="feedStore.collectStatusOf(f.id).phase === 'error'"
+                  class="text-[9px] font-semibold text-red-400 shrink-0" title="收集失败">
+                  ⚠auto
+                </span>
+                <span v-else
+                  class="text-[9px] font-semibold text-brand shrink-0" title="自动入库">auto</span>
+              </template>
               <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
               <DropdownMenuRoot>
                 <DropdownMenuTrigger as-child>
@@ -440,7 +564,9 @@ onUnmounted(() => {
       >
         <div class="flex items-center gap-1.5">
           <span v-if="!it.readAt" class="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
+          <span v-else-if="it.documentId" class="w-1.5 h-1.5 shrink-0" />
           <span class="text-[12px] font-medium text-zinc-800 line-clamp-2 flex-1" :class="{ 'text-zinc-500': it.readAt }">{{ it.title }}</span>
+          <Check v-if="it.documentId" class="w-3 h-3 text-emerald-400 shrink-0" title="已入库" />
         </div>
         <div class="text-[10px] text-zinc-400 mt-1 flex items-center gap-1.5">
           <span class="truncate">{{ feedStore.feeds.find(f => f.id === it.feedId)?.title }}</span>

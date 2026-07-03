@@ -1,3 +1,5 @@
+import { setupFeedAlarm, onFeedAlarm } from '@/services/feed/bg-refresh'
+
 export default defineBackground(() => {
   console.log('AuraMind background', { id: browser.runtime.id })
 
@@ -90,20 +92,42 @@ export default defineBackground(() => {
     }
   })
 
-  // RSS periodic refresh. MV3 service workers have no DOMParser, so the actual
-  // parse runs in the side panel — the alarm just broadcasts REFRESH_FEEDS; if
-  // the panel is open it refreshes, otherwise the next open catches up via the
-  // stale check in FeedsView.
+  // RSS periodic refresh — runs entirely in background via offscreen document.
+  // No longer depends on the side panel being open.
   const FEED_ALARM = 'feed-refresh'
-  function setupFeedAlarm() {
-    b.alarms?.create(FEED_ALARM, { periodInMinutes: 30 }).catch(() => {})
-  }
-  b.runtime.onInstalled?.addListener(setupFeedAlarm)
-  b.runtime.onStartup?.addListener(setupFeedAlarm)
+  b.runtime.onInstalled?.addListener(() => setupFeedAlarm())
+  b.runtime.onStartup?.addListener(() => setupFeedAlarm())
   setupFeedAlarm()
   b.alarms?.onAlarm?.addListener((alarm: any) => {
-    if (alarm?.name === FEED_ALARM) {
-      b.runtime.sendMessage({ type: 'REFRESH_FEEDS' }).catch(() => {})
+    if (alarm?.name === FEED_ALARM) onFeedAlarm()
+  })
+
+  // Panel can request an immediate refresh (e.g. on open if stale)
+  b.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    if (message?.type === 'TRIGGER_FEED_REFRESH') {
+      import('@/services/feed/bg-refresh').then(({ refreshAllFeeds }) => {
+        refreshAllFeeds().then((results) => {
+          const totalNew = results.reduce((s: number, r: any) => s + r.newItems, 0)
+          const totalCollected = results.reduce((s: number, r: any) => s + r.collected, 0)
+          sendResponse({ ok: true, totalNew, totalCollected })
+        }).catch((e: any) => {
+          sendResponse({ ok: false, error: e?.message || 'refresh failed' })
+        })
+      })
+      return true // async
+    }
+
+    // Panel requests batch collection of a feed's uncollected items
+    if (message?.type === 'COLLECT_FEED_ITEMS') {
+      const { feedId } = message
+      import('@/services/feed/bg-refresh').then(({ collectFeedItems }) => {
+        collectFeedItems(feedId).then((result) => {
+          sendResponse({ ok: true, collected: result.collected, total: result.total, failed: result.failed, items: result.items })
+        }).catch((e: any) => {
+          sendResponse({ ok: false, error: e?.message || 'collect failed' })
+        })
+      })
+      return true // async
     }
   })
 })
