@@ -57,6 +57,7 @@ const thinkingBudgetTokens = ref<number | undefined>(undefined)
 const reasoningEffort = ref('xhigh')
 const inputPricePer1M = ref<number | undefined>(undefined)
 const outputPricePer1M = ref<number | undefined>(undefined)
+const maxRetries = ref(2)
 
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
@@ -81,6 +82,7 @@ function resetForm() {
   reasoningEffort.value = 'xhigh'
   inputPricePer1M.value = undefined
   outputPricePer1M.value = undefined
+  maxRetries.value = 2
   errors.value = {}
 }
 
@@ -99,6 +101,7 @@ function populateFromModel(model: ModelConfig) {
   reasoningEffort.value = model.reasoningEffort || '__default__'
   inputPricePer1M.value = model.inputPricePer1M
   outputPricePer1M.value = model.outputPricePer1M
+  maxRetries.value = model.maxRetries ?? 2
   systemPrompt.value = model.systemPrompt || ''
   enabled.value = model.enabled
   isDefault.value = model.isDefault
@@ -142,6 +145,9 @@ function validate(): boolean {
   if (thinkingEnabled.value && thinkingBudgetTokens.value != null && thinkingBudgetTokens.value <= 0) {
     e.thinkingBudget = '思考预算必须大于 0'
   }
+  if (isNaN(maxRetries.value) || maxRetries.value < 0 || maxRetries.value > 10) {
+    e.maxRetries = '重试次数范围 0-10'
+  }
 
   errors.value = e
   return Object.keys(e).length === 0
@@ -180,6 +186,7 @@ async function handleSubmit() {
         reasoningEffort: reasoningEffort.value !== '__default__' ? reasoningEffort.value : undefined,
         inputPricePer1M: inputPricePer1M.value,
         outputPricePer1M: outputPricePer1M.value,
+        maxRetries: maxRetries.value,
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value,
@@ -201,6 +208,7 @@ async function handleSubmit() {
         reasoningEffort: reasoningEffort.value !== '__default__' ? reasoningEffort.value : undefined,
         inputPricePer1M: inputPricePer1M.value,
         outputPricePer1M: outputPricePer1M.value,
+        maxRetries: maxRetries.value,
         systemPrompt: systemPrompt.value || undefined,
         enabled: enabled.value,
         isDefault: isDefault.value || modelStore.models.length === 0,
@@ -335,6 +343,20 @@ watch(() => props.open, (val) => {
               @update:model-value="outputPricePer1M = $event === '' ? undefined : Number($event)"
             />
           </div>
+        </div>
+
+        <!-- Max Retries -->
+        <div>
+          <label class="text-[11px] text-zinc-500 font-medium">失败重试次数</label>
+          <UInput
+            :model-value="String(maxRetries)"
+            type="number"
+            class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
+            placeholder="0-10，默认 2"
+            @update:model-value="maxRetries = $event === '' ? 0 : Number($event)"
+          />
+          <p class="text-[10px] text-zinc-400 mt-0.5">模型调用失败时自动重试，0 = 不重试</p>
+          <p v-if="errors.maxRetries" class="text-[10px] text-red-400 mt-0.5">{{ errors.maxRetries }}</p>
         </div>
 
         <!-- Temperature -->

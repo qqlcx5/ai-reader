@@ -32,6 +32,9 @@ export interface ModelConfig {
   /** OpenAI-style reasoning effort (e.g. minimal/low/medium/high/xhigh). Only sent when set. */
   reasoningEffort?: string
 
+  /** Per-model max retry count for failed AI calls (0 = no retry). Default 2. */
+  maxRetries?: number
+
   /** Per-1M-tokens input price (CNY). Overrides the built-in pricing table when set. */
   inputPricePer1M?: number
   /** Per-1M-tokens output price (CNY). Overrides the built-in pricing table when set. */

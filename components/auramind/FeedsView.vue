@@ -510,6 +510,7 @@ onUnmounted(() => {
               :key="docId"
               v-show="job.status === 'failed'"
               class="flex items-center gap-1 px-1 text-[10px] leading-tight"
+              :title="job.error"
             >
               <X class="w-2.5 h-2.5 text-red-400 shrink-0" />
               <span class="flex-1 min-w-0 text-zinc-500 truncate">{{ job.documentTitle || docId }}</span>
@@ -709,7 +710,8 @@ onUnmounted(() => {
             <!-- status badge -->
             <span v-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'processing'"
               class="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand flex items-center gap-1">
-              <RefreshCw class="w-2.5 h-2.5 animate-spin" /> 分析中…
+              <RefreshCw class="w-2.5 h-2.5 animate-spin" />
+              {{ feedStore.aiJobOf(selectedItem.documentId)?.error ? '重试中…' : '分析中…' }}
             </span>
             <span v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'pending'"
               class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-500">等待分析</span>
@@ -732,7 +734,7 @@ onUnmounted(() => {
           <!-- processing -->
           <div v-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'processing'"
             class="px-3 py-2 text-[12px] text-zinc-400 italic">
-            正在分析，请稍候…
+            {{ feedStore.aiJobOf(selectedItem.documentId)?.error || '正在分析，请稍候…' }}
           </div>
           <!-- pending -->
           <div v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'pending'"
