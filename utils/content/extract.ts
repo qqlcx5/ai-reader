@@ -2,6 +2,38 @@ import Defuddle from 'defuddle'
 import { createMarkdownContent } from 'defuddle/full'
 import { estimateTokens } from '../token'
 
+/**
+ * Word counter that handles CJK text correctly.
+ *
+ * `markdown.split(/\s+/)` only works for space-delimited languages.
+ * Chinese/Japanese/Korean text has no spaces between characters, so a
+ * 500-character article gets counted as ~1 "word".
+ *
+ * Strategy: strip markdown syntax, then count:
+ *   - CJK characters: each character = 1 word
+ *   - Non-CJK: split by whitespace as usual
+ */
+function countWords(text: string): number {
+  // Remove markdown syntax (headers, links, images, code fences, etc.)
+  const stripped = text
+    .replace(/```[\s\S]*?```/g, ' ')   // code blocks
+    .replace(/`[^`]+`/g, ' ')          // inline code
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, ' ')  // images
+    .replace(/\[[^\]]*\]\([^)]+\)/g, ' ')   // links → keep link text only
+    .replace(/[#>*_~-]/g, ' ')          // markdown markers
+    .replace(/\n+/g, ' ')
+
+  // Count CJK characters (each = 1 word)
+  const cjkMatches = stripped.match(/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/g)
+  const cjkCount = cjkMatches ? cjkMatches.length : 0
+
+  // Remove CJK, then count remaining whitespace-delimited words
+  const nonCjk = stripped.replace(/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/g, ' ')
+  const nonCjkWords = nonCjk.split(/\s+/).filter(Boolean).length
+
+  return cjkCount + nonCjkWords
+}
+
 // ---------------------------------------------------------------------------
 // Types — matches the AuraMind internal data model
 // ---------------------------------------------------------------------------
@@ -129,7 +161,7 @@ export async function extractPage(
   const markdown = createMarkdownContent(content, url)
 
   const contentHash = await computeHash(markdown)
-  const wordCount = markdown.split(/\s+/).filter(Boolean).length
+  const wordCount = countWords(markdown)
   const tokenCount = estimateTokens(markdown)
 
   return {
@@ -163,7 +195,7 @@ export async function extractFromHtml(
 ): Promise<ExtractedPageData> {
   const markdown = createMarkdownContent(html, url)
   const contentHash = await computeHash(markdown)
-  const wordCount = markdown.split(/\s+/).filter(Boolean).length
+  const wordCount = countWords(markdown)
   const tokenCount = estimateTokens(markdown)
   return {
     url,
@@ -191,7 +223,7 @@ function fallbackExtract(doc: Document, url: string): Promise<ExtractedPageData>
   const markdown = title ? `# ${title}\n\n${rawText}` : rawText
 
   return computeHash(markdown).then((contentHash) => {
-    const wordCount = markdown.split(/\s+/).filter(Boolean).length
+    const wordCount = countWords(markdown)
     const tokenCount = estimateTokens(markdown)
 
     return {

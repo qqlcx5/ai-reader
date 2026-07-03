@@ -1,4 +1,7 @@
-export const DEFAULT_TIMEOUT_MS = 30_000
+/** Default timeout for AI chat requests. Large models can take 30-60s on
+ *  long articles, so we default to 240s. Connection tests use a shorter
+ *  10s timeout passed explicitly. */
+export const DEFAULT_TIMEOUT_MS = 240_000
 
 export function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, '')
