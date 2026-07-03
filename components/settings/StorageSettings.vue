@@ -87,7 +87,7 @@ async function doExport() {
     ])
 
     // 导出时脱敏：移除 raw 大字段，与 sync.service.ts 中的 stripRawFields 保持一致
-    const strippedDocuments = documents.map(({ rawHtml, rawHtmlCompressed, rawText, ...rest }) => rest)
+    const strippedDocuments = documents.map(({ rawHtml, rawHtmlCompressed, ...rest }) => rest)
 
     const backup = {
       version: 1,

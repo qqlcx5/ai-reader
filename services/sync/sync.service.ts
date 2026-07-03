@@ -104,7 +104,7 @@ function emptyDataset(): SyncedDataset {
 
 function stripRawFields(doc: any): any {
   if (!doc) return doc
-  const { rawHtml, rawHtmlCompressed, rawText, ...rest } = doc
+  const { rawHtml, rawHtmlCompressed, ...rest } = doc
   return rest
 }
 

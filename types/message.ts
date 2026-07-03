@@ -1,3 +1,5 @@
+import type { ExtractionMethod } from './document'
+
 export enum MessageType {
   TAB_ACTIVATED = 'TAB_ACTIVATED',
   TAB_UPDATED = 'TAB_UPDATED',
@@ -43,7 +45,7 @@ export interface PageExtractedPayload {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback' | 'rss'
+  extractionMethod: ExtractionMethod
   sanitizedHtml?: string
 }
 

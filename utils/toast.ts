@@ -61,15 +61,15 @@ function toButton(a: ToastAction) {
 /** 兼容原 appStore.showToast 签名 */
 export const toast = {
   show,
-  success: (message: string, options: Omit<ToastOptions, 'category'> = {}) =>
+  success: (message: string, options: ToastOptions = {}) =>
     sonner.success(message, { duration: 3000, ...normalize(options) }),
-  error: (message: string, options: Omit<ToastOptions, 'category'> = {}) =>
+  error: (message: string, options: ToastOptions = {}) =>
     sonner.error(message, { duration: 5000, ...normalize(options) }),
-  warning: (message: string, options: Omit<ToastOptions, 'category'> = {}) =>
+  warning: (message: string, options: ToastOptions = {}) =>
     sonner.warning(message, { duration: 4000, ...normalize(options) }),
-  info: (message: string, options: Omit<ToastOptions, 'category'> = {}) =>
+  info: (message: string, options: ToastOptions = {}) =>
     sonner(message, { duration: 3000, ...normalize(options) }),
-  loading: (message: string, options: Omit<ToastOptions, 'category'> = {}) =>
+  loading: (message: string, options: ToastOptions = {}) =>
     sonner.loading(message, { duration: Infinity, ...normalize(options) }),
 
   /** Promise 模式 */

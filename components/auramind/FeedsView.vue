@@ -379,7 +379,7 @@ onUnmounted(() => {
           <button
             class="p-1 rounded transition-colors relative"
             :class="showCollectPanel ? 'text-brand bg-brand/10' : 'text-zinc-400 hover:text-brand hover:bg-zinc-100'"
-            :title="入库状态"
+            title="入库状态"
             @click="showCollectPanel = !showCollectPanel"
           >
             <Database class="w-3 h-3" />

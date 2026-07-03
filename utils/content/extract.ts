@@ -1,6 +1,7 @@
 import Defuddle from 'defuddle'
 import { createMarkdownContent } from 'defuddle/full'
 import { estimateTokens } from '../token'
+import type { ExtractionMethod } from '@/types/document'
 
 /**
  * Word counter that handles CJK text correctly.
@@ -50,7 +51,7 @@ export interface ExtractedPageData {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback' | 'rss'
+  extractionMethod: ExtractionMethod
 }
 
 // ---------------------------------------------------------------------------

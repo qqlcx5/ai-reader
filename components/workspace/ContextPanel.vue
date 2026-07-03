@@ -10,7 +10,7 @@ import { useAppStore } from '@/stores/app.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
-import type { DocumentEntity } from '@/types/document'
+import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
 import RawPreview from '@/components/workspace/RawPreview.vue'
 import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
@@ -40,7 +40,7 @@ function buildDocumentEntity(data: {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback'
+  extractionMethod: ExtractionMethod
 }): DocumentEntity {
   const now = nowISO()
   return {

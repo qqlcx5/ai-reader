@@ -8,7 +8,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
-import type { DocumentEntity } from '@/types/document'
+import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
@@ -59,7 +59,7 @@ function buildDocumentEntity(data: {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback'
+  extractionMethod: ExtractionMethod
 }): DocumentEntity {
   const now = nowISO()
   return {

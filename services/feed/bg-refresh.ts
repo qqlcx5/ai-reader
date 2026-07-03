@@ -24,7 +24,7 @@ import { sendToOffscreen } from '@/services/offscreen/manager'
 import { addToIndex } from '@/services/search'
 import { enqueueForDocument } from '@/services/ai-job/queue'
 import type { FeedEntity, FeedItemEntity } from '@/types/feed'
-import type { DocumentEntity } from '@/types/document'
+import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 import type { ParsedFeed } from '@/services/feed/parser'
 
 const browser: any = (globalThis as any).browser ?? (globalThis as any).chrome
@@ -345,7 +345,7 @@ interface ExtractedData {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback' | 'rss'
+  extractionMethod: ExtractionMethod
 }
 
 const RSS_MIN_WORDS = 40

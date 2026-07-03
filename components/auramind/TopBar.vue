@@ -9,7 +9,7 @@ import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import { openAppWindow, isWindowMode } from '@/utils/open-window'
-import type { DocumentEntity } from '@/types/document'
+import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 import WorkspaceHeader from '@/components/auramind/WorkspaceHeader.vue'
 import LibraryHeader from '@/components/auramind/LibraryHeader.vue'
 
@@ -73,7 +73,7 @@ function buildDocumentEntity(data: {
   contentHash: string
   wordCount: number
   tokenCount: number
-  extractionMethod: 'defuddle' | 'fallback'
+  extractionMethod: ExtractionMethod
 }): DocumentEntity {
   const now = nowISO()
   return {
