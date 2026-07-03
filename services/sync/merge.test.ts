@@ -20,6 +20,8 @@ describe('mergeSet', () => {
     expect(out.stats.pushed).toBe(1)
     expect(out.localDeletes).toEqual([])
     expect(out.newBase.a).toBe('2026-01-01T00:00:00Z')
+    expect(out.pushedIds).toEqual(['a'])
+    expect(out.pulledIds).toEqual([])
   })
 
   it('pulls new remote entities when local is empty', () => {
@@ -30,6 +32,7 @@ describe('mergeSet', () => {
     })
     expect([...out.merged.keys()]).toEqual(['a'])
     expect(out.stats.pulled).toBe(1)
+    expect(out.pulledIds).toEqual(['a'])
   })
 
   it('keeps both local-only and remote-only new entities (union)', () => {
@@ -118,5 +121,29 @@ describe('mergeSet', () => {
       base: { a: '2026-01-01T00:00:00Z' },
     })
     expect(out.merged.get('a').src).toBe('local')
+  })
+
+  it('resolve=local always picks local on real conflict', () => {
+    const out = mergeSet({
+      local: asMap({ a: ve({ id: 'a', src: 'local' }, '2026-01-05T00:00:00Z') }),
+      remote: asMap({ a: ve({ id: 'a', src: 'remote' }, '2026-01-06T00:00:00Z') }),
+      base: { a: '2026-01-01T00:00:00Z' },
+      resolution: 'local',
+    })
+    expect(out.merged.get('a').src).toBe('local')
+    expect(out.stats.conflicts).toBe(1)
+    expect(out.conflicts[0].chosen).toBe('local')
+  })
+
+  it('resolve=remote always picks remote on real conflict', () => {
+    const out = mergeSet({
+      local: asMap({ a: ve({ id: 'a', src: 'local' }, '2026-01-06T00:00:00Z') }),
+      remote: asMap({ a: ve({ id: 'a', src: 'remote' }, '2026-01-05T00:00:00Z') }),
+      base: { a: '2026-01-01T00:00:00Z' },
+      resolution: 'remote',
+    })
+    expect(out.merged.get('a').src).toBe('remote')
+    expect(out.stats.conflicts).toBe(1)
+    expect(out.conflicts[0].chosen).toBe('remote')
   })
 })

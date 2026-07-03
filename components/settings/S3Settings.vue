@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud, RotateCcw } from '@lucide/vue'
+import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Trash2, GitMerge } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -10,7 +10,7 @@ import { useAppStore } from '@/stores/app.store'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
 import { testConnection, runSync, previewSync, forceUpload, forceDownload, listBackups, restoreFromSnapshot, getSyncState } from '@/services/sync/sync.service'
 import { createS3Remote, normalizeBasePath } from '@/services/s3/s3.client'
-import type { SyncPreview, SyncDeleteItem, BackupEntry } from '@/types/sync'
+import type { SyncPreview, SyncDeleteItem, SyncConflictItem, SyncChangeItem, BackupEntry, ConflictResolution } from '@/types/sync'
 
 const settingsStore = useSettingsStore()
 const appStore = useAppStore()
@@ -29,6 +29,8 @@ const selectedBackup = ref('')
 const preview = ref<SyncPreview | null>(null)
 const lastResult = ref('')
 const lastSyncAt = ref('')
+const resolution = ref<ConflictResolution>('lww')
+const expandedSections = ref<Record<string, boolean>>({})
 const busy = computed(() => testing.value || syncing.value || uploading.value || downloading.value || restoring.value)
 
 const endpoint = computed({ get: () => settingsStore.s3.endpoint, set: (v) => settingsStore.updateS3Config({ endpoint: v }) })
@@ -119,23 +121,67 @@ async function onTest() {
   }
 }
 
-function fmtItems(items: SyncDeleteItem[]): string {
-  const labels = items.map((i) => i.label || i.id).slice(0, 5)
-  const more = items.length - labels.length
-  return labels.join('、') + (more > 0 ? ` 等 ${items.length} 项` : '')
+function typeLabel(type: string): string {
+  const map: Record<string, string> = {
+    documents: '文档',
+    conversations: '对话',
+    models: '模型',
+    collections: '收藏夹',
+    collectionItems: '收藏项',
+    settings: '设置',
+    feeds: 'RSS源',
+    promptTemplates: '提示词模板',
+    webdavConfig: 'WebDAV配置',
+    s3Config: 'S3配置',
+  }
+  return map[type] || type
 }
 
-const previewDesc = computed(() => {
-  const p = preview.value
-  if (!p) return ''
-  const lines = [`拉取 ${p.pulled} · 推送 ${p.pushed} · 冲突 ${p.conflicts}`]
-  if (p.deletedLocal) lines.push(`删除本地 ${p.deletedLocal} 条：${fmtItems(p.localDeleteItems)}`)
-  if (p.deletedRemote) lines.push(`删除远端 ${p.deletedRemote} 条：${fmtItems(p.remoteDeleteItems)}`)
-  if (p.abortReason) lines.push(`\n⚠️ ${p.abortReason}`)
-  return lines.join('\n')
-})
+function fmtVersion(iso: string): string {
+  if (!iso) return '无'
+  try {
+    return new Date(iso).toLocaleString()
+  } catch {
+    return iso
+  }
+}
 
-async function onSync() {
+function toggleSection(key: string) {
+  expandedSections.value = { ...expandedSections.value, [key]: !expandedSections.value[key] }
+}
+
+function isExpanded(key: string): boolean {
+  return !!expandedSections.value[key]
+}
+
+function resolutionLabel(r: ConflictResolution): string {
+  return r === 'local' ? '偏向本地' : r === 'remote' ? '偏向云端' : '按时间(LWW)'
+}
+
+async function onPreview(res?: ConflictResolution) {
+  if (!endpoint.value || !bucket.value) {
+    appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
+    return
+  }
+  const r = res ?? resolution.value
+  resolution.value = r
+  syncing.value = true
+  preview.value = null
+  let p: SyncPreview
+  try {
+    p = await previewSync(getTransport(), r)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    appStore.showToast(`预览失败：${msg}`, 'error')
+    syncing.value = false
+    return
+  }
+  preview.value = p
+  syncing.value = false
+  showSyncConfirm.value = true
+}
+
+async function onDirectSync() {
   if (!endpoint.value || !bucket.value) {
     appStore.showToast('请先填写 S3 Endpoint 和 Bucket', 'error')
     return
@@ -144,7 +190,7 @@ async function onSync() {
   preview.value = null
   let p: SyncPreview
   try {
-    p = await previewSync(getTransport())
+    p = await previewSync(getTransport(), resolution.value)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     appStore.showToast(`同步失败：${msg}`, 'error')
@@ -153,7 +199,7 @@ async function onSync() {
   }
   preview.value = p
   syncing.value = false
-  if (!p.abortReason && p.deletedLocal === 0 && p.deletedRemote === 0) {
+  if (!p.abortReason && p.deletedLocal === 0 && p.deletedRemote === 0 && p.conflicts === 0) {
     await doSync()
   } else {
     showSyncConfirm.value = true
@@ -165,7 +211,7 @@ async function doSync() {
   syncing.value = true
   lastResult.value = ''
   try {
-    const r = await runSync(getTransport(), settingsStore.s3.maxBackups ?? 10)
+    const r = await runSync(getTransport(), settingsStore.s3.maxBackups ?? 10, resolution.value)
     await refreshAfterDataChange()
     await refreshStatus()
     lastResult.value = `↑${r.pushed} ↓${r.pulled} · 本地删${r.deletedLocal} · 远端删${r.deletedRemote}${r.conflicts ? ` · 冲突${r.conflicts}` : ''}`
@@ -299,10 +345,28 @@ async function onRestore() {
           <Plug class="w-3.5 h-3.5" />
           {{ testing ? '测试中…' : '测试连接' }}
         </UButton>
-        <UButton variant="primary" size="md" class="flex-1" :disabled="busy" @click="onSync">
+        <UButton variant="primary" size="md" class="flex-1" :disabled="busy" @click="onDirectSync">
           <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': syncing }" />
           {{ syncing ? '同步中…' : '立即同步' }}
         </UButton>
+      </div>
+
+      <!-- Conflict resolution selector -->
+      <div class="flex items-center gap-1.5 text-[11px]">
+        <span class="text-zinc-400 shrink-0">冲突策略：</span>
+        <label
+          v-for="opt in [
+            { value: 'lww' as ConflictResolution, label: '按时间' },
+            { value: 'local' as ConflictResolution, label: '偏向本地' },
+            { value: 'remote' as ConflictResolution, label: '偏向云端' },
+          ]"
+          :key="opt.value"
+          class="px-2 py-0.5 rounded cursor-pointer border transition-colors"
+          :class="resolution === opt.value ? 'bg-brand/10 border-brand/30 text-brand' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'"
+          @click="resolution = opt.value"
+        >
+          {{ opt.label }}
+        </label>
       </div>
 
       <div class="flex items-center gap-2">
@@ -343,14 +407,154 @@ async function onRestore() {
         @cancel="showDownloadConfirm = false"
       />
 
-      <ConfirmModal
+      <!-- ========== Detailed Sync Preview Modal ========== -->
+      <div
         v-if="showSyncConfirm"
-        title="确认同步"
-        :desc="previewDesc"
-        :confirm-text="preview?.abortReason ? '仍要同步' : '确认同步'"
-        @confirm="doSync"
-        @cancel="showSyncConfirm = false"
-      />
+        class="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="showSyncConfirm = false"
+      >
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-2xl w-full max-w-[520px] max-h-[85vh] flex flex-col text-[13px]">
+          <div class="shrink-0 border-b border-zinc-100 p-4">
+            <h3 class="text-[15px] font-semibold flex items-center gap-2">
+              <RefreshCw class="w-4 h-4 text-brand" />
+              同步预览
+            </h3>
+            <div class="text-[11px] text-zinc-400 mt-0.5">
+              策略：<span class="text-zinc-600 font-medium">{{ resolutionLabel(resolution) }}</span>
+              &nbsp;·&nbsp;本地 {{ preview?.localTotal }} 条 &nbsp;·&nbsp;远端 {{ preview?.remoteTotal }} 条
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-4 space-y-3">
+            <div v-if="preview?.abortReason" class="bg-red-50 border border-red-200 rounded-lg p-3 text-[12px] text-red-700">
+              <AlertTriangle class="w-3.5 h-3.5 inline mr-1" />{{ preview!.abortReason }}
+            </div>
+
+            <div class="flex flex-wrap gap-1.5 text-[12px]">
+              <span v-if="preview?.pulled" class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 flex items-center gap-1">
+                <ArrowDownCircle class="w-3 h-3" />拉取 {{ preview?.pulled }}
+              </span>
+              <span v-if="preview?.pushed" class="px-2 py-0.5 rounded bg-green-50 text-green-700 flex items-center gap-1">
+                <ArrowUpCircle class="w-3 h-3" />推送 {{ preview?.pushed }}
+              </span>
+              <span v-if="preview?.conflicts" class="px-2 py-0.5 rounded bg-orange-50 text-orange-700 flex items-center gap-1">
+                <GitMerge class="w-3 h-3" />冲突 {{ preview?.conflicts }}
+              </span>
+              <span v-if="preview?.deletedLocal" class="px-2 py-0.5 rounded bg-red-50 text-red-700 flex items-center gap-1">
+                <Trash2 class="w-3 h-3" />删本地 {{ preview?.deletedLocal }}
+              </span>
+              <span v-if="preview?.deletedRemote" class="px-2 py-0.5 rounded bg-red-50 text-red-700 flex items-center gap-1">
+                <Trash2 class="w-3 h-3" />删远端 {{ preview?.deletedRemote }}
+              </span>
+              <span v-if="!preview?.pulled && !preview?.pushed && !preview?.deletedLocal && !preview?.deletedRemote"
+                class="text-zinc-400 text-[12px]">无变更，已是最新状态</span>
+            </div>
+
+            <!-- Pull items -->
+            <div v-if="preview?.pullItems?.length" class="border border-blue-100 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-blue-50 hover:bg-blue-100 transition-colors text-left" @click="toggleSection('pulls')">
+                <span class="text-[12px] font-medium text-blue-700 flex items-center gap-1">
+                  <ArrowDownCircle class="w-3 h-3" />将拉取 {{ preview!.pullItems.length }} 项
+                </span>
+                <ChevronDown v-if="isExpanded('pulls')" class="w-3.5 h-3.5 text-blue-500" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-blue-500" />
+              </button>
+              <div v-show="isExpanded('pulls')" class="divide-y divide-blue-50 max-h-48 overflow-y-auto">
+                <div v-for="item in preview!.pullItems" :key="item.id" class="py-1.5 px-2.5 text-[12px] text-zinc-600">
+                  <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(item.type) }}</span>
+                  <span class="ml-1.5">{{ item.label || item.id }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Push items -->
+            <div v-if="preview?.pushItems?.length" class="border border-green-100 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-green-50 hover:bg-green-100 transition-colors text-left" @click="toggleSection('pushes')">
+                <span class="text-[12px] font-medium text-green-700 flex items-center gap-1">
+                  <ArrowUpCircle class="w-3 h-3" />将推送 {{ preview!.pushItems.length }} 项
+                </span>
+                <ChevronDown v-if="isExpanded('pushes')" class="w-3.5 h-3.5 text-green-500" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-green-500" />
+              </button>
+              <div v-show="isExpanded('pushes')" class="divide-y divide-green-50 max-h-48 overflow-y-auto">
+                <div v-for="item in preview!.pushItems" :key="item.id" class="py-1.5 px-2.5 text-[12px] text-zinc-600">
+                  <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(item.type) }}</span>
+                  <span class="ml-1.5">{{ item.label || item.id }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conflict items -->
+            <div v-if="preview?.conflictItems?.length" class="border border-orange-200 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-orange-50 hover:bg-orange-100 transition-colors text-left" @click="toggleSection('conflicts')">
+                <span class="text-[12px] font-medium text-orange-700 flex items-center gap-1">
+                  <GitMerge class="w-3 h-3" />冲突 {{ preview!.conflictItems.length }} 项
+                </span>
+                <ChevronDown v-if="isExpanded('conflicts')" class="w-3.5 h-3.5 text-orange-500" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-orange-500" />
+              </button>
+              <div v-show="isExpanded('conflicts')" class="divide-y divide-orange-100 max-h-60 overflow-y-auto">
+                <div v-for="c in preview!.conflictItems" :key="c.id" class="py-2 px-2.5 text-[12px]">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(c.type) }}</span>
+                    <span class="font-medium text-zinc-700">{{ c.label || c.id }}</span>
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-zinc-400 flex items-center gap-2">
+                    <span>本地：{{ fmtVersion(c.localVersion) }}</span>
+                    <span>云端：{{ fmtVersion(c.remoteVersion) }}</span>
+                  </div>
+                  <div class="mt-0.5">
+                    <span :class="c.chosen === 'local' ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50'"
+                      class="text-[10px] font-medium px-1.5 py-0.5 rounded">
+                      采用{{ c.chosen === 'local' ? '本地' : '云端' }}版本
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Local deletes -->
+            <div v-if="preview?.localDeleteItems?.length" class="border border-red-200 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-red-50 hover:bg-red-100 transition-colors text-left" @click="toggleSection('localDeletes')">
+                <span class="text-[12px] font-medium text-red-700 flex items-center gap-1">
+                  <Trash2 class="w-3 h-3" />删除本地 {{ preview!.localDeleteItems.length }} 条
+                </span>
+                <ChevronDown v-if="isExpanded('localDeletes')" class="w-3.5 h-3.5 text-red-500" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-red-500" />
+              </button>
+              <div v-show="isExpanded('localDeletes')" class="divide-y divide-red-100 max-h-48 overflow-y-auto">
+                <div v-for="item in preview!.localDeleteItems" :key="item.id" class="py-1.5 px-2.5 text-[12px] text-zinc-600">
+                  <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(item.type) }}</span>
+                  <span class="ml-1.5">{{ item.label || item.id }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Remote deletes -->
+            <div v-if="preview?.remoteDeleteItems?.length" class="border border-red-200 rounded-lg overflow-hidden">
+              <button class="w-full flex items-center justify-between p-2.5 bg-red-50 hover:bg-red-100 transition-colors text-left" @click="toggleSection('remoteDeletes')">
+                <span class="text-[12px] font-medium text-red-700 flex items-center gap-1">
+                  <Trash2 class="w-3 h-3" />删除远端 {{ preview!.remoteDeleteItems.length }} 条
+                </span>
+                <ChevronDown v-if="isExpanded('remoteDeletes')" class="w-3.5 h-3.5 text-red-500" />
+                <ChevronRight v-else class="w-3.5 h-3.5 text-red-500" />
+              </button>
+              <div v-show="isExpanded('remoteDeletes')" class="divide-y divide-red-100 max-h-48 overflow-y-auto">
+                <div v-for="item in preview!.remoteDeleteItems" :key="item.id" class="py-1.5 px-2.5 text-[12px] text-zinc-600">
+                  <span class="text-zinc-400 font-mono text-[10px]">{{ typeLabel(item.type) }}</span>
+                  <span class="ml-1.5">{{ item.label || item.id }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shrink-0 border-t border-zinc-100 p-3 flex gap-2">
+            <UButton variant="secondary" size="md" class="flex-1" @click="onPreview('local')">偏向本地重算</UButton>
+            <UButton variant="secondary" size="md" class="flex-1" @click="onPreview('remote')">偏向云端重算</UButton>
+            <UButton variant="primary" size="md" class="flex-1" :disabled="!!preview?.abortReason" @click="doSync">确认同步</UButton>
+          </div>
+        </div>
+      </div>
 
       <div
         v-if="showBackupsModal"
@@ -387,7 +591,7 @@ async function onRestore() {
       </div>
 
       <p class="text-[10px] text-zinc-400 leading-relaxed">
-        三方合并（本地 / 远端 / 上次同步态），按更新时间 LWW；删除通过基线检测传播。同步前若有删除会弹窗确认；单次删除超过 50% 自动中止；每次覆盖前自动备份上一次远端，可「从备份恢复」回滚。
+        三方合并（本地 / 远端 / 上次同步态），默认按更新时间 LWW；冲突时可选偏向本地或云端；删除通过基线检测传播；单次删除超 50% 自动中止；每次覆盖前自动备份。
       </p>
     </div>
   </div>

@@ -11,6 +11,9 @@ import type {
   SyncResult,
   SyncPreview,
   SyncDeleteItem,
+  SyncConflictItem,
+  SyncChangeItem,
+  ConflictResolution,
   BackupEntry,
 } from '@/types/sync'
 
@@ -145,11 +148,11 @@ function labelFor(type: EntityKey, e: any): string | undefined {
     case 'documents':
       return e.title || e.url
     case 'conversations':
-      return e.title || '新对话'
+      return e.title || (e.firstMessage ? (typeof e.firstMessage === 'string' ? e.firstMessage.slice(0, 30) : '新对话') : '新对话')
     case 'collections':
       return e.name
     case 'models':
-      return e.name
+      return e.name || e.id
     case 'feeds':
       return e.title || e.url
     case 'webdavConfig':
@@ -292,11 +295,14 @@ interface Computed {
   remoteTotal: number
   localDeleteItems: SyncDeleteItem[]
   remoteDeleteItems: SyncDeleteItem[]
+  conflictItems: SyncConflictItem[]
+  pullItems: SyncChangeItem[]
+  pushItems: SyncChangeItem[]
   abortReason?: string
   prevRemoteRaw: string | null
 }
 
-async function computeMerge(transport: RemoteTransport): Promise<Computed> {
+async function computeMerge(transport: RemoteTransport, resolution: ConflictResolution = 'lww'): Promise<Computed> {
   const remoteData: SyncedDataset = emptyDataset()
   let prevRemoteRaw: string | null = null
   if (await transport.hasData()) {
@@ -319,6 +325,9 @@ async function computeMerge(transport: RemoteTransport): Promise<Computed> {
   }
   const localDeleteItems: SyncDeleteItem[] = []
   const remoteDeleteItems: SyncDeleteItem[] = []
+  const conflictItems: SyncConflictItem[] = []
+  const pullItems: SyncChangeItem[] = []
+  const pushItems: SyncChangeItem[] = []
 
   let localTotal = 0
   let remoteTotal = 0
@@ -328,7 +337,7 @@ async function computeMerge(transport: RemoteTransport): Promise<Computed> {
     localTotal += localMap.size
     const remoteMap = toMap(remoteData[cfg2.type], cfg2)
     remoteTotal += remoteMap.size
-    const out = mergeSet({ local: localMap, remote: remoteMap, base: state.base[cfg2.type] ?? {} })
+    const out = mergeSet({ local: localMap, remote: remoteMap, base: state.base[cfg2.type] ?? {}, resolution })
 
     const mergedEntities = [...out.merged.values()]
     ;(mergedDataset[cfg2.type] as any[]).push(...mergedEntities)
@@ -361,6 +370,30 @@ async function computeMerge(transport: RemoteTransport): Promise<Computed> {
     result.deletedLocal += out.stats.deletedLocal
     result.deletedRemote += out.stats.deletedRemote
     result.conflicts += out.stats.conflicts
+
+    // Collect conflict details
+    for (const c of out.conflicts) {
+      const localE = localMap.get(c.id)?.entity
+      const remoteE = remoteMap.get(c.id)?.entity
+      conflictItems.push({
+        type: cfg2.type,
+        id: c.id,
+        label: (localE || remoteE) ? labelFor(cfg2.type, localE ?? remoteE) : undefined,
+        localVersion: c.localVersion,
+        remoteVersion: c.remoteVersion,
+        chosen: c.chosen,
+      })
+    }
+
+    // Collect pull/push detail items
+    for (const id of out.pulledIds) {
+      const e = remoteMap.get(id)?.entity
+      pullItems.push({ type: cfg2.type, id, label: e ? labelFor(cfg2.type, e) : undefined })
+    }
+    for (const id of out.pushedIds) {
+      const e = localMap.get(id)?.entity
+      pushItems.push({ type: cfg2.type, id, label: e ? labelFor(cfg2.type, e) : undefined })
+    }
   }
 
   let abortReason: string | undefined
@@ -377,15 +410,16 @@ async function computeMerge(transport: RemoteTransport): Promise<Computed> {
   return {
     mergedDataset, newBase, puts, deletes, result,
     localTotal, remoteTotal, localDeleteItems, remoteDeleteItems,
+    conflictItems, pullItems, pushItems,
     abortReason, prevRemoteRaw,
   }
 }
 
-export async function previewSync(transport: RemoteTransport): Promise<SyncPreview> {
+export async function previewSync(transport: RemoteTransport, resolution: ConflictResolution = 'lww'): Promise<SyncPreview> {
   const test = await transport.test()
   if (!test.ok) throw new Error(test.error || '远端连接失败')
 
-  const c = await computeMerge(transport)
+  const c = await computeMerge(transport, resolution)
   return {
     pulled: c.result.pulled,
     pushed: c.result.pushed,
@@ -397,14 +431,18 @@ export async function previewSync(transport: RemoteTransport): Promise<SyncPrevi
     abortReason: c.abortReason,
     localDeleteItems: c.localDeleteItems,
     remoteDeleteItems: c.remoteDeleteItems,
+    conflictItems: c.conflictItems,
+    pullItems: c.pullItems,
+    pushItems: c.pushItems,
+    resolution,
   }
 }
 
-export async function runSync(transport: RemoteTransport, maxBackups = 10): Promise<SyncResult> {
+export async function runSync(transport: RemoteTransport, maxBackups = 10, resolution: ConflictResolution = 'lww'): Promise<SyncResult> {
   const test = await transport.test()
   if (!test.ok) throw new Error(test.error || '远端连接失败')
 
-  const c = await computeMerge(transport)
+  const c = await computeMerge(transport, resolution)
   if (c.abortReason) throw new Error(c.abortReason)
 
   // 1. Apply locally.

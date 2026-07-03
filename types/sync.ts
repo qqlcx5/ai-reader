@@ -88,9 +88,30 @@ export interface SyncDeleteItem {
   label?: string
 }
 
+/** A single conflicting item with details about what diverged. */
+export interface SyncConflictItem {
+  type: EntityKey
+  id: string
+  label?: string
+  localVersion: string
+  remoteVersion: string
+  /** Which side won the merge: 'local' or 'remote'. */
+  chosen: 'local' | 'remote'
+}
+
+/** How to resolve real conflicts (both sides changed since base). */
+export type ConflictResolution = 'lww' | 'local' | 'remote'
+
+/** A pulled/pushed item with its label for preview detail. */
+export interface SyncChangeItem {
+  type: EntityKey
+  id: string
+  label?: string
+}
+
 /**
- * Dry-run preview of a sync: counts, totals, and labelled deletion items so
- * the UI can show exactly what would be removed before applying anything.
+ * Dry-run preview of a sync: counts, totals, and labelled items so
+ * the UI can show exactly what would happen before applying anything.
  * `abortReason` is set when a wipe safeguard would trigger.
  */
 export interface SyncPreview {
@@ -104,4 +125,9 @@ export interface SyncPreview {
   abortReason?: string
   localDeleteItems: SyncDeleteItem[]
   remoteDeleteItems: SyncDeleteItem[]
+  conflictItems: SyncConflictItem[]
+  pullItems: SyncChangeItem[]
+  pushItems: SyncChangeItem[]
+  /** The resolution strategy used to produce this preview. */
+  resolution: ConflictResolution
 }
