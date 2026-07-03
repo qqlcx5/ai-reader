@@ -186,7 +186,7 @@ onUnmounted(() => {
     <PageChangeHint v-show="appStore.currentView === 'workspace'" />
 
     <WorkspaceView v-show="appStore.currentView === 'workspace'" />
-    <LibraryView v-show="appStore.currentView === 'library'" />
+    <LibraryView v-if="appStore.currentView === 'library'" />
     <FeedsView v-show="appStore.currentView === 'feeds'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />

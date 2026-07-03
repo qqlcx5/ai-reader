@@ -686,10 +686,10 @@ export const useChatStore = defineStore('chat', () => {
             if (msg && typeof msg === 'object') {
               for (const key of Object.keys(msg)) {
                 try {
-                  structuredClone({ [key]: (msg as Record<string, unknown>)[key] })
+                  structuredClone({ [key]: (msg as unknown as Record<string, unknown>)[key] })
                 } catch {
                   console.error(
-                    `[chat.store] cloneMessages: property '${key}' (type=${typeof (msg as Record<string, unknown>)[key]}) is not cloneable`,
+                    `[chat.store] cloneMessages: property '${key}' (type=${typeof (msg as unknown as Record<string, unknown>)[key]}) is not cloneable`,
                   )
                 }
               }

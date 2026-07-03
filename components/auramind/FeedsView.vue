@@ -789,7 +789,7 @@ onUnmounted(() => {
           <!-- 已收藏：跳转记忆库 + 取消收藏 -->
           <template v-else>
             <UButton variant="ghost" size="sm" @click="goToLibrary(selectedItem.documentId!)">
-              <BookOpen class="w-3 h-3" />在记忆库中查看
+              <BookOpen class="w-3 h-3" />在工作区中查看
             </UButton>
             <UButton
               variant="ghost"
