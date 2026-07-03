@@ -38,6 +38,10 @@ export const FeedItemRepository = {
     await db.feedItems.update(id, { documentId, collectedAt })
   },
 
+  async clearDocument(id: string): Promise<void> {
+    await db.feedItems.update(id, { documentId: undefined, collectedAt: undefined })
+  },
+
   async unreadCount(feedId?: string): Promise<number> {
     const col = feedId ? db.feedItems.where('feedId').equals(feedId) : db.feedItems.toCollection()
     const rows = await col.toArray()

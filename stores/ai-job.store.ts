@@ -46,6 +46,8 @@ export const useAiJobStore = defineStore('ai-job', () => {
       await loadJobs()
     } finally {
       draining.value = false
+      // Notify other stores that AI jobs may have changed
+      ;(globalThis as any).__aiJobsChanged?.()
     }
   }
 

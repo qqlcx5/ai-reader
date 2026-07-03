@@ -4,8 +4,13 @@ import { FeedRepository } from '../db/repositories/feed.repository'
 import { FeedItemRepository } from '../db/repositories/feed-item.repository'
 import { refreshFeed, refreshAll, addSubscription } from '../services/feed/refresh'
 import { collectFeedItem } from '../services/feed/collect'
+import { AiJobRepository } from '../db/repositories/ai-job.repository'
+import { ChatRepository } from '../db/repositories/chat.repository'
+import { DocumentRepository } from '../db/repositories/document.repository'
 import { toast } from '@/utils/toast'
 import type { FeedEntity, FeedItemEntity } from '@/types/feed'
+import type { AiJobEntity } from '@/types/ai-job'
+import type { ConversationEntity } from '@/types/chat'
 import { db } from '@/db/index'
 
 // ---------------------------------------------------------------------------
@@ -67,6 +72,11 @@ export const useFeedStore = defineStore('feed', () => {
   // Last collect result details (per-item, for status panel)
   const lastCollectDetails = ref<CollectDetailResult | null>(null)
 
+  // AI analysis jobs keyed by documentId (for items in the current view)
+  const aiJobMap = ref<Record<string, AiJobEntity>>({})
+  // AI analysis conversations keyed by documentId (for result preview)
+  const aiConvMap = ref<Record<string, ConversationEntity>>({})
+
   const totalUnread = computed(() =>
     Object.values(unreadByFeed.value).reduce((s, n) => s + n, 0),
   )
@@ -103,6 +113,82 @@ export const useFeedStore = defineStore('feed', () => {
   const autoCollectFeeds = computed(() =>
     feeds.value.filter((f) => f.autoCollect),
   )
+
+  // AI analysis summary (across all items in view)
+  const aiSummary = computed(() => {
+    const jobs = Object.values(aiJobMap.value)
+    return {
+      total: jobs.length,
+      pending: jobs.filter((j) => j.status === 'pending').length,
+      processing: jobs.filter((j) => j.status === 'processing').length,
+      success: jobs.filter((j) => j.status === 'success').length,
+      failed: jobs.filter((j) => j.status === 'failed').length,
+    }
+  })
+  const aiAnyProcessing = computed(() => aiSummary.value.processing > 0)
+
+  /** Get AI job status for a feed item (by its documentId). */
+  function aiJobOf(documentId?: string): AiJobEntity | undefined {
+    if (!documentId) return undefined
+    return aiJobMap.value[documentId]
+  }
+
+  /** Get AI analysis conversation for a feed item (by its documentId). */
+  function aiConvOf(documentId?: string): ConversationEntity | undefined {
+    if (!documentId) return undefined
+    return aiConvMap.value[documentId]
+  }
+
+  /** Load AI jobs for all collected items in the current feed view. */
+  async function loadAiJobs() {
+    const docIds = items.value
+      .filter((i) => i.documentId)
+      .map((i) => i.documentId!)
+    if (!docIds.length) {
+      aiJobMap.value = {}
+      aiConvMap.value = {}
+      return
+    }
+    // Batch load: for each docId, find its AI job
+    const allJobs = await AiJobRepository.findAll()
+    const map: Record<string, AiJobEntity> = {}
+    for (const job of allJobs) {
+      if (docIds.includes(job.documentId)) {
+        map[job.documentId] = job
+      }
+    }
+    aiJobMap.value = map
+
+    // Load conversations for ALL docIds that have conversations (not just AI job successes)
+    const allConvs = await ChatRepository.findAll()
+    const convMap: Record<string, ConversationEntity> = {}
+    for (const c of allConvs) {
+      if (c.documentId && docIds.includes(c.documentId)) {
+        // Prefer the conversation that matches the AI job's conversationId,
+        // otherwise just take the first one found for this document
+        if (!convMap[c.documentId]) {
+          convMap[c.documentId] = c
+        }
+      }
+    }
+    aiConvMap.value = convMap
+  }
+
+  /** Retry a failed AI job. */
+  async function retryAiJob(jobId: string) {
+    const job = aiJobMap.value[jobId] ?? (await AiJobRepository.findById(jobId))
+    if (!job || job.status !== 'failed') return
+    await AiJobRepository.save({
+      ...job,
+      status: 'pending',
+      error: undefined,
+      retries: job.retries + 1,
+    })
+    await loadAiJobs()
+    // Trigger drain
+    const { drainAll } = await import('../services/ai-job/processor')
+    drainAll().then(() => loadAiJobs())
+  }
 
   /** Load item stats (total / collected / pending) for all feeds. */
   async function loadFeedItemStats() {
@@ -235,6 +321,7 @@ export const useFeedStore = defineStore('feed', () => {
   async function selectFeed(id: string | null) {
     selectedFeedId.value = id
     items.value = id ? await FeedItemRepository.findByFeed(id) : []
+    void loadAiJobs()
   }
 
   /** Set a feed's collect status. */
@@ -338,6 +425,34 @@ export const useFeedStore = defineStore('feed', () => {
         collectedAt: new Date().toISOString(),
       }
     }
+  }
+
+  /** Remove a feed item's document from memory (uncollect). */
+  async function uncollect(itemId: string) {
+    const item = items.value.find((i) => i.id === itemId)
+    if (!item?.documentId) return
+    const docId = item.documentId
+    // 1. Delete AI jobs for this document
+    await AiJobRepository.deleteByDocument(docId)
+    // 2. Delete conversations for this document
+    await ChatRepository.deleteByDocumentIds([docId])
+    // 3. Delete the document itself
+    await DocumentRepository.delete(docId)
+    // 4. Clear feed item's document reference
+    await FeedItemRepository.clearDocument(itemId)
+    // 5. Update local state
+    const idx = items.value.findIndex((i) => i.id === itemId)
+    if (idx >= 0) {
+      items.value[idx] = {
+        ...items.value[idx],
+        documentId: undefined,
+        collectedAt: undefined,
+      }
+    }
+    // 6. Refresh AI job state
+    delete aiJobMap.value[docId]
+    delete aiConvMap.value[docId]
+    await loadFeedItemStats()
   }
 
   /** Toggle auto-collect for a feed. */
@@ -476,6 +591,7 @@ export const useFeedStore = defineStore('feed', () => {
         if (s?.phase === 'done') clearCollectStatus(feedId)
       }, 5000)
       await loadFeedItemStats()
+      void loadAiJobs()
     }
   }
 
@@ -499,6 +615,14 @@ export const useFeedStore = defineStore('feed', () => {
     totalPending,
     totalCollected,
     autoCollectFeeds,
+    aiJobMap,
+    aiConvMap,
+    aiSummary,
+    aiAnyProcessing,
+    aiJobOf,
+    aiConvOf,
+    loadAiJobs,
+    retryAiJob,
     loadFeedItemStats,
     collectAllPending,
     loadFeeds,
@@ -510,6 +634,7 @@ export const useFeedStore = defineStore('feed', () => {
     moveFolder,
     markRead,
     collect,
+    uncollect,
     setAutoCollect,
     onBackgroundEvent,
   }

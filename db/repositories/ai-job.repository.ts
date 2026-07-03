@@ -43,4 +43,8 @@ export const AiJobRepository = {
   async deleteByStatus(status: AiJobStatus): Promise<void> {
     await db.aiJobs.where('status').equals(status).delete()
   },
+
+  async deleteByDocument(documentId: string): Promise<void> {
+    await db.aiJobs.where('documentId').equals(documentId).delete()
+  },
 }

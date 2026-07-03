@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database, Bot, RotateCcw, MessageSquare, BookOpen } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import ScrollFab from '@/components/ui/ScrollFab.vue'
@@ -9,8 +9,12 @@ import {
   DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from 'reka-ui'
 import { useFeedStore } from '@/stores/feed.store'
+import { useAppStore } from '@/stores/app.store'
+import { useDocumentStore } from '@/stores/document.store'
+import { useChatStore } from '@/stores/chat.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { exportOpml, parseOpml } from '@/utils/feed/opml'
-import { sanitizeHtml, enhanceCodeBlocks } from '@/utils/markdown'
+import { sanitizeHtml, enhanceCodeBlocks, renderMarkdown } from '@/utils/markdown'
 import { toast } from '@/utils/toast'
 import type { FeedEntity } from '@/types/feed'
 
@@ -182,6 +186,38 @@ async function onCollect() {
   }
 }
 
+const uncollecting = ref(false)
+async function onUncollect() {
+  if (!selectedItem.value?.documentId || uncollecting.value) return
+  uncollecting.value = true
+  try {
+    await feedStore.uncollect(selectedItem.value.id)
+    toast.success('已从记忆库移除', { category: 'rss' })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '移除失败'
+    toast.error(msg, { category: 'rss' })
+  } finally {
+    uncollecting.value = false
+  }
+}
+
+/** Jump to workspace to view this article's document & conversations. */
+async function goToLibrary(documentId: string) {
+  const appStore = useAppStore()
+  const documentStore = useDocumentStore()
+  const chatStore = useChatStore()
+  const workspaceStore = useWorkspaceStore()
+  await documentStore.loadDocument(documentId)
+  documentStore.markOpened(documentId)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(documentId)
+  } catch {
+    // non-critical
+  }
+  appStore.setCurrentView('workspace')
+}
+
 // Background alarm now runs refresh independently. Panel only needs to:
 // 1. Listen for FEEDS_REFRESHED to reload the feed list
 // 2. Request TRIGGER_FEED_REFRESH on stale check (panel just opened)
@@ -251,9 +287,28 @@ onMounted(() => {
   if (rootRef.value) ro.observe(rootRef.value)
 })
 
+// AI job polling: refresh when there are pending/processing jobs
+let aiPollTimer: ReturnType<typeof setInterval> | null = null
+watch(() => feedStore.aiSummary, (s) => {
+  const needPoll = s.pending > 0 || s.processing > 0
+  if (needPoll && !aiPollTimer) {
+    aiPollTimer = setInterval(() => feedStore.loadAiJobs(), 3000)
+  } else if (!needPoll && aiPollTimer) {
+    clearInterval(aiPollTimer)
+    aiPollTimer = null
+  }
+}, { deep: true })
+
+// Also refresh when ai-job store finishes draining (e.g. from Settings page)
+onMounted(() => {
+  ;(globalThis as any).__aiJobsChanged = () => feedStore.loadAiJobs()
+})
+
 onUnmounted(() => {
   removeMsgListener?.()
   ro?.disconnect()
+  if (aiPollTimer) clearInterval(aiPollTimer)
+  delete (globalThis as any).__aiJobsChanged
 })
 </script>
 
@@ -424,6 +479,49 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- AI 分析状态区块 -->
+        <div class="mt-2 pt-2 border-t border-zinc-100">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-[10px] text-zinc-400 font-medium flex items-center gap-1">
+              <Bot class="w-3 h-3" />
+              AI 分析
+            </span>
+            <span class="text-[10px] text-zinc-300">
+              <template v-if="feedStore.aiSummary.total === 0">无</template>
+              <template v-else>
+                <span v-if="feedStore.aiSummary.pending" class="text-amber-500">{{ feedStore.aiSummary.pending }} 等</span>
+                <span v-if="feedStore.aiSummary.processing" class="text-brand">{{ feedStore.aiSummary.processing }} 析</span>
+                <span v-if="feedStore.aiSummary.success" class="text-emerald-500">{{ feedStore.aiSummary.success }} 成</span>
+                <span v-if="feedStore.aiSummary.failed" class="text-red-400">{{ feedStore.aiSummary.failed }} 败</span>
+              </template>
+            </span>
+          </div>
+          <!-- 正在处理 spin -->
+          <div v-if="feedStore.aiAnyProcessing" class="flex items-center gap-1 text-[10px] text-brand py-0.5">
+            <RefreshCw class="w-2.5 h-2.5 animate-spin" />
+            正在分析…
+          </div>
+          <!-- 失败项 + 重试 -->
+          <div v-if="feedStore.aiSummary.failed" class="space-y-0.5 mt-0.5">
+            <div
+              v-for="(job, docId) in feedStore.aiJobMap"
+              :key="docId"
+              v-show="job.status === 'failed'"
+              class="flex items-center gap-1 px-1 text-[10px] leading-tight"
+            >
+              <X class="w-2.5 h-2.5 text-red-400 shrink-0" />
+              <span class="flex-1 min-w-0 text-zinc-500 truncate">{{ job.documentTitle || docId }}</span>
+              <button
+                class="p-0.5 rounded text-brand hover:bg-zinc-100 shrink-0"
+                title="重试"
+                @click="feedStore.retryAiJob(job.id)"
+              >
+                <RotateCcw class="w-2.5 h-2.5" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto px-1.5 pb-2 no-scrollbar">
@@ -567,6 +665,17 @@ onUnmounted(() => {
           <span v-else-if="it.documentId" class="w-1.5 h-1.5 shrink-0" />
           <span class="text-[12px] font-medium text-zinc-800 line-clamp-2 flex-1" :class="{ 'text-zinc-500': it.readAt }">{{ it.title }}</span>
           <Check v-if="it.documentId" class="w-3 h-3 text-emerald-400 shrink-0" title="已入库" />
+          <!-- AI analysis status icon -->
+          <template v-if="it.documentId">
+            <RefreshCw v-if="feedStore.aiJobOf(it.documentId)?.status === 'processing'"
+              class="w-2.5 h-2.5 text-brand shrink-0 animate-spin" title="AI 分析中" />
+            <Bot v-else-if="feedStore.aiJobOf(it.documentId)?.status === 'pending'"
+              class="w-2.5 h-2.5 text-amber-400 shrink-0" title="AI 等待分析" />
+            <MessageSquare v-else-if="feedStore.aiJobOf(it.documentId)?.status === 'success'"
+              class="w-2.5 h-2.5 text-brand shrink-0" title="AI 分析完成" />
+            <X v-else-if="feedStore.aiJobOf(it.documentId)?.status === 'failed'"
+              class="w-2.5 h-2.5 text-red-400 shrink-0" title="AI 分析失败" />
+          </template>
         </div>
         <div class="text-[10px] text-zinc-400 mt-1 flex items-center gap-1.5">
           <span class="truncate">{{ feedStore.feeds.find(f => f.id === it.feedId)?.title }}</span>
@@ -589,22 +698,107 @@ onUnmounted(() => {
       @scroll.passive="onReaderScroll"
     >
       <article v-if="selectedItem" class="p-5 mx-auto">
+        <!-- AI 分析结果（文章上方） -->
+        <div v-if="selectedItem?.documentId" class="mb-4 rounded-lg border border-zinc-200 overflow-hidden">
+          <div class="flex items-center justify-between px-3 py-2 bg-zinc-50 border-b border-zinc-100">
+            <span class="text-[13px] font-medium text-zinc-700 flex items-center gap-1.5">
+              <Bot class="w-4 h-4 text-brand" />
+              AI 分析
+            </span>
+            <!-- status badge -->
+            <span v-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'processing'"
+              class="text-[10px] px-2 py-0.5 rounded-full bg-brand/10 text-brand flex items-center gap-1">
+              <RefreshCw class="w-2.5 h-2.5 animate-spin" /> 分析中…
+            </span>
+            <span v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'pending'"
+              class="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-500">等待分析</span>
+            <span v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'failed'"
+              class="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 flex items-center gap-1">
+              失败
+              <button class="p-0.5 rounded hover:bg-red-100" title="重试" @click="feedStore.retryAiJob(feedStore.aiJobOf(selectedItem.documentId)!.id)">
+                <RotateCcw class="w-2.5 h-2.5" />
+              </button>
+            </span>
+            <button
+              v-else-if="feedStore.aiConvOf(selectedItem.documentId)"
+              class="text-[10px] text-brand hover:underline"
+              @click="goToLibrary(selectedItem.documentId!)"
+            >
+              查看完整对话 →
+            </button>
+          </div>
+
+          <!-- processing -->
+          <div v-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'processing'"
+            class="px-3 py-2 text-[12px] text-zinc-400 italic">
+            正在分析，请稍候…
+          </div>
+          <!-- pending -->
+          <div v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'pending'"
+            class="px-3 py-2 text-[12px] text-zinc-400 italic">
+            已排队，等待处理…
+          </div>
+          <!-- failed error -->
+          <div v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'failed'"
+            class="px-3 py-2 text-[12px] text-red-400">
+            {{ feedStore.aiJobOf(selectedItem.documentId)?.error || '分析失败' }}
+          </div>
+          <!-- success: preview assistant reply -->
+          <div v-else-if="feedStore.aiJobOf(selectedItem.documentId)?.status === 'success' && feedStore.aiConvOf(selectedItem.documentId)"
+            class="px-3 py-2.5 text-[13px] text-zinc-700 leading-relaxed max-h-[280px] overflow-y-auto no-scrollbar md-render">
+            <template v-for="msg in feedStore.aiConvOf(selectedItem.documentId)?.messages" :key="msg.id">
+              <div v-if="msg.role === 'assistant'" v-html="renderMarkdown(msg.content)"></div>
+            </template>
+          </div>
+          <!-- has conversation but no successful AI job (e.g. manual chat) -->
+          <div v-else-if="feedStore.aiConvOf(selectedItem.documentId)"
+            class="px-3 py-2.5 text-[13px] text-zinc-700 leading-relaxed max-h-[280px] overflow-y-auto no-scrollbar md-render">
+            <template v-for="msg in feedStore.aiConvOf(selectedItem.documentId)?.messages" :key="msg.id">
+              <div v-if="msg.role === 'assistant'" v-html="renderMarkdown(msg.content)"></div>
+            </template>
+          </div>
+          <!-- no job -->
+          <div v-else class="px-3 py-2 text-[11px] text-zinc-400 italic">
+            未触发 AI 分析（检查设置 → 自动 AI 分析是否开启）
+          </div>
+        </div>
+
+        <!-- 标题 + 元信息 -->
         <h1 class="text-[18px] font-bold text-zinc-900 leading-snug">{{ selectedItem.title }}</h1>
         <div class="text-[11px] text-zinc-400 mt-1.5 flex items-center gap-2">
           <span v-if="selectedItem.author">{{ selectedItem.author }}</span>
           <span v-if="selectedItem.publishedAt">· {{ displayDate(selectedItem.publishedAt) }}</span>
         </div>
 
+        <!-- 操作按钮 -->
         <div class="flex items-center gap-2 mt-3 mb-4">
+          <!-- 未收藏：收藏按钮 -->
           <UButton
+            v-if="!selectedItem.documentId"
             variant="primary"
             size="sm"
-            :disabled="collecting || !!selectedItem.documentId"
+            :disabled="collecting"
             @click="onCollect"
           >
             <Plus class="w-3 h-3" />
-            {{ selectedItem.documentId ? '已收藏' : collecting ? '收藏中…' : '收藏到记忆库' }}
+            {{ collecting ? '收藏中…' : '收藏到记忆库' }}
           </UButton>
+          <!-- 已收藏：跳转记忆库 + 取消收藏 -->
+          <template v-else>
+            <UButton variant="ghost" size="sm" @click="goToLibrary(selectedItem.documentId!)">
+              <BookOpen class="w-3 h-3" />在记忆库中查看
+            </UButton>
+            <UButton
+              variant="ghost"
+              size="sm"
+              :disabled="uncollecting"
+              class="text-red-500 hover:text-red-600"
+              @click="onUncollect"
+            >
+              <Trash2 class="w-3 h-3" />
+              {{ uncollecting ? '移除中…' : '取消收藏' }}
+            </UButton>
+          </template>
           <UButton variant="ghost" size="sm" @click="onOpenOriginal(selectedItem.link)">
             <ExternalLink class="w-3 h-3" />原文
           </UButton>
