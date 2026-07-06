@@ -43,8 +43,18 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
     try {
       const doc = await DocumentRepository.findById(job.documentId)
       if (!doc) throw new Error('文档不存在')
-      const template = await db.promptTemplates.get(job.promptTemplateId)
-      if (!template) throw new Error('提示词模板不存在')
+      // promptTemplateId is optional. If unset, we use whatever system prompt
+      // the model / global settings already provide. If both system and
+      // template are empty, fall back to a minimal instruction so the model
+      // always has something to act on.
+      const template = job.promptTemplateId
+        ? await db.promptTemplates.get(job.promptTemplateId)
+        : null
+      // Only complain if a template id was *explicitly* set but the row is gone
+      // (e.g. the user deleted it). An unset id is a valid "no template" choice.
+      if (job.promptTemplateId && !template) {
+        throw new Error('提示词模板不存在')
+      }
 
       let context: string | undefined
       if (doc.markdown) {
@@ -66,10 +76,13 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
         context = truncateContext(pageCtx, maxContext)
       }
 
+      const system = model.systemPrompt || settings?.globalSystemPrompt
+      const userInput = template?.content ?? ''
+
       const out = new PromptBuilder().build({
-        systemPrompt: model.systemPrompt || settings?.globalSystemPrompt,
+        systemPrompt: system,
         context,
-        userInput: template.content,
+        userInput,
       })
 
       const result = await createProvider(model).chat({
@@ -82,9 +95,9 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
       const conversation: ConversationEntity = {
         id: uuid(),
         documentId: doc.id,
-        title: template.title,
+        title: template?.title ?? '自动分析',
         messages: [
-          { id: uuid(), role: 'user', content: template.content, createdAt: now },
+          { id: uuid(), role: 'user', content: userInput, createdAt: now },
           {
             id: uuid(),
             role: 'assistant',

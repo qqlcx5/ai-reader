@@ -22,9 +22,10 @@ const modelOptions = computed(() =>
     .map((m) => ({ value: m.id, label: m.name })),
 )
 
-const templateOptions = computed(() =>
-  promptStore.templates.map((t) => ({ value: t.id, label: t.title })),
-)
+const templateOptions = computed(() => [
+  { value: '__none__', label: '不使用模板（仅系统提示词）' },
+  ...promptStore.templates.map((t) => ({ value: t.id, label: t.title })),
+])
 
 function setStatus(v: boolean) {
   settingsStore.updateAutoAnalysis({ enabled: v })
@@ -83,15 +84,17 @@ function fmtTime(iso?: string) {
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">提示词模板</label>
           <Select
-            :model-value="cfg.promptTemplateId ?? ''"
+            :model-value="cfg.promptTemplateId ?? '__none__'"
             :options="templateOptions"
+            placeholder="不选则使用系统提示词"
             class="mt-1"
-            @update:model-value="(v: string) => settingsStore.updateAutoAnalysis({ promptTemplateId: v })"
+            @update:model-value="(v: string) => settingsStore.updateAutoAnalysis({ promptTemplateId: v === '__none__' ? undefined : v })"
           />
         </div>
       </div>
       <p class="text-[10px] text-zinc-400 leading-relaxed">
-        开启后，自动入库的文章会用所选模型 + 模板自动分析，结果存为该文档的一条会话。仅对「自动入库」的订阅源生效。
+        开启后，自动入库的文章会用所选模型 + 模板自动分析，结果存为该文档的一条会话。
+        模板可留空 —— 只用系统提示词也能工作。仅对「自动入库」的订阅源生效。
       </p>
     </div>
 

@@ -20,7 +20,8 @@ async function resetDB() {
 
 describe('ai-job processor', () => {
   beforeEach(async () => {
-    chatMock.mockClear()
+    chatMock.mockReset()
+    chatMock.mockResolvedValue({ content: 'AI 摘要内容', usage: { totalTokens: 42 } })
     await resetDB()
     await db.documents.put({
       id: 'doc-1',
@@ -44,6 +45,7 @@ describe('ai-job processor', () => {
       isDefault: true,
       contextWindow: 128000,
       temperature: 0.7,
+      maxRetries: 0, // tests should run fast — no exponential backoff delays
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',
     } as any)
@@ -86,7 +88,9 @@ describe('ai-job processor', () => {
   })
 
   it('marks the job failed when the model call throws', async () => {
-    chatMock.mockRejectedValueOnce(new Error('rate limited'))
+    // mockRejectedValue (not Once) — the processor may retry up to maxRetries
+    // times, so the mock has to fail every call for the job to be marked failed.
+    chatMock.mockRejectedValue(new Error('rate limited'))
     await AiJobRepository.save({
       id: 'job-2',
       documentId: 'doc-1',
@@ -116,5 +120,98 @@ describe('ai-job processor', () => {
     })
     await drainAll()
     expect((await AiJobRepository.findById('job-3'))?.status).toBe('failed')
+  })
+
+  it('succeeds when promptTemplateId is undefined and the model has a systemPrompt', async () => {
+    await db.models.put({
+      id: 'm2',
+      name: 'Test 2',
+      provider: 'openai-compatible',
+      modelId: 'gpt-x',
+      enabled: true,
+      isDefault: false,
+      contextWindow: 128000,
+      temperature: 0.7,
+      maxRetries: 0,
+      systemPrompt: '你是一个严谨的阅读助手。',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as any)
+    await AiJobRepository.save({
+      id: 'job-no-tpl',
+      documentId: 'doc-1',
+      modelId: 'm2',
+      // promptTemplateId intentionally omitted
+      status: 'pending',
+      retries: 0,
+      createdAt: '2026-01-02T00:00:00Z',
+    } as any)
+
+    const r = await drainAll()
+    expect(r.succeeded).toBe(1)
+    const job = await AiJobRepository.findById('job-no-tpl')
+    expect(job?.status).toBe('success')
+    // system 和 template 是正交的：无 template → 只发 1 条 user message (context)
+    expect(chatMock).toHaveBeenCalledTimes(1)
+    const callArgs = (chatMock.mock.calls as unknown as Array<[{ systemPrompt?: string; messages: Array<{ role: string; content: string }> }]>)[0]?.[0]
+    expect(callArgs).toBeDefined()
+    expect(callArgs!.systemPrompt).toBe('你是一个严谨的阅读助手。')
+    const userMessages = callArgs!.messages.filter((m) => m.role === 'user')
+    expect(userMessages.length).toBe(1) // 只发 context
+  })
+
+  it('runs in pure context-only mode when neither template nor system prompt is set', async () => {
+    await db.models.put({
+      id: 'm3',
+      name: 'Test 3',
+      provider: 'openai-compatible',
+      modelId: 'gpt-x',
+      enabled: true,
+      isDefault: false,
+      contextWindow: 128000,
+      temperature: 0.7,
+      maxRetries: 0,
+      // no systemPrompt
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as any)
+    await AiJobRepository.save({
+      id: 'job-no-sys',
+      documentId: 'doc-1',
+      modelId: 'm3',
+      // promptTemplateId intentionally omitted
+      status: 'pending',
+      retries: 0,
+      createdAt: '2026-01-02T00:00:00Z',
+    } as any)
+
+    const r = await drainAll()
+    expect(r.succeeded).toBe(1)
+    const job = await AiJobRepository.findById('job-no-sys')
+    expect(job?.status).toBe('success')
+    // 纯裸调：无 system、无 template → 只发 1 条 user message (context)
+    expect(chatMock).toHaveBeenCalledTimes(1)
+    const callArgs = (chatMock.mock.calls as unknown as Array<[{ systemPrompt?: string; messages: Array<{ role: string; content: string }> }]>)[0]?.[0]
+    expect(callArgs).toBeDefined()
+    expect(callArgs!.systemPrompt).toBeUndefined()
+    const userMessages = callArgs!.messages.filter((m) => m.role === 'user')
+    expect(userMessages.length).toBe(1) // 只发 context
+  })
+
+  it('fails when promptTemplateId is set but the template row is missing', async () => {
+    await AiJobRepository.save({
+      id: 'job-tpl-gone',
+      documentId: 'doc-1',
+      modelId: 'm1',
+      promptTemplateId: 'tpl-deleted',
+      status: 'pending',
+      retries: 0,
+      createdAt: '2026-01-02T00:00:00Z',
+    })
+    const r = await drainAll()
+    expect(r.failed).toBe(1)
+    const job = await AiJobRepository.findById('job-tpl-gone')
+    expect(job?.status).toBe('failed')
+    expect(job?.error).toContain('提示词模板不存在')
   })
 })
