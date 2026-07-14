@@ -85,7 +85,12 @@ function reportReaderProgress() {
   const el = readerScrollRef.value
   if (!el) return
   const { scrollTop, scrollHeight, clientHeight } = el
-  if (scrollHeight <= clientHeight) return // too short to track
+  // Short article: no scroll needed → mark as fully read
+  if (scrollHeight <= clientHeight) {
+    documentStore.updateReadProgress(item.documentId, 1)
+    lastReportedProgress = 1
+    return
+  }
   const maxScroll = scrollHeight - clientHeight
   if (maxScroll <= 0) return
   const p = Math.min(1, scrollTop / maxScroll)
@@ -113,9 +118,21 @@ function backToTop() {
 // reset scroll on item change so a new article always opens at the top.
 watch(safeContent, async () => {
   await nextTick()
-  if (readerScrollRef.value) readerScrollRef.value.scrollTop = 0
+  if (readerScrollRef.value) {
+    // Restore reading position if available
+    const docId = selectedItem.value?.documentId
+    const doc = docId ? documentStore.documents.find((d) => d.id === docId) : null
+    const progress = doc?.readProgress
+    if (progress && progress > 0 && progress < 1) {
+      const maxScroll = readerScrollRef.value.scrollHeight - readerScrollRef.value.clientHeight
+      readerScrollRef.value.scrollTop = maxScroll * progress
+      lastReportedProgress = progress
+    } else {
+      readerScrollRef.value.scrollTop = 0
+      lastReportedProgress = -1
+    }
+  }
   showBackToTop.value = false
-  lastReportedProgress = -1
   if (readerRef.value) enhanceCodeBlocks(readerRef.value)
 })
 

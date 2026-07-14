@@ -25,6 +25,16 @@ export class AuraMindDB extends Dexie {
   constructor() {
     super('AuraMindDB')
     this.version(DB_VERSION).stores(STORE_MAP)
+
+    // v11: backfill readProgress for legacy documents so they show a progress
+    // bar instead of being stuck in "unread" despite having lastOpenedAt.
+    this.version(DB_VERSION).upgrade(async () => {
+      await this.documents.toCollection().modify((doc) => {
+        if (doc.readProgress == null) {
+          doc.readProgress = doc.readAt ? 1 : (doc.lastOpenedAt ? 0 : undefined)
+        }
+      })
+    })
   }
 }
 

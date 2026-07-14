@@ -20,7 +20,7 @@ const emit = defineEmits<{
   toggleSelect: [doc: DocumentEntity]
 }>()
 
-const unread = computed(() => !props.document.lastOpenedAt && (props.document.readProgress == null || props.document.readProgress === 0))
+const unread = computed(() => readStatus.value === 'unread')
 const readStatus = computed(() => getReadStatus(props.document))
 const progressPct = computed(() => {
   const p = props.document.readProgress

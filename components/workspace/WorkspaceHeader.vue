@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
-import { RefreshCw } from '@lucide/vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { RefreshCw, Download, FileText, FileJson } from '@lucide/vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
@@ -9,6 +9,13 @@ import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity, ExtractionMethod } from '@/types/document'
+import { ChatRepository } from '@/db/repositories/chat.repository'
+import { DocumentRepository } from '@/db/repositories/document.repository'
+import {
+  exportConversationAsMarkdown,
+  exportConversationAsJson,
+  downloadBlob,
+} from '@/utils/conversation-export'
 
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
@@ -17,6 +24,7 @@ const settingsStore = useSettingsStore()
 const chatStore = useChatStore()
 
 const isRefreshing = ref(false)
+const showExportMenu = ref(false)
 
 const domain = computed(() => {
   const url = documentStore.currentDocument?.url
@@ -131,6 +139,44 @@ async function handleRefresh() {
     workspaceStore.setExtracting(false)
   }
 }
+
+// ── Export current conversation ──
+async function handleExportCurrent(format: 'md' | 'json') {
+  const cid = chatStore.currentConversationId
+  if (!cid) {
+    appStore.showToast('没有活动对话', 'info')
+    return
+  }
+  const conv = await ChatRepository.findById(cid)
+  if (!conv) {
+    appStore.showToast('对话不存在', 'error')
+    return
+  }
+  const doc = conv.documentId ? await DocumentRepository.findById(conv.documentId) : undefined
+
+  if (format === 'md') {
+    const md = exportConversationAsMarkdown(conv, doc)
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+    downloadBlob(blob, (conv.title || 'conversation') + '.md')
+    appStore.showToast('已导出 Markdown', 'success')
+  } else {
+    const json = exportConversationAsJson(conv, doc)
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    downloadBlob(blob, (conv.title || 'conversation') + '.json')
+    appStore.showToast('已导出 JSON', 'success')
+  }
+  showExportMenu.value = false
+}
+
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.relative')) {
+    showExportMenu.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -155,17 +201,47 @@ async function handleRefresh() {
       </div>
     </div>
 
-    <button
-      v-if="showRefresh"
-      class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
-      :disabled="isRefreshing"
-      title="重新抓取"
-      @click="handleRefresh"
-    >
-      <RefreshCw
-        class="w-4 h-4"
-        :class="{ 'animate-spin': isRefreshing }"
-      />
-    </button>
+    <div class="flex items-center gap-1">
+      <!-- Export dropdown -->
+      <div class="relative">
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          :disabled="!chatStore.currentConversationId"
+          :title="chatStore.currentConversationId ? '导出对话' : '需要先发起对话'"
+          @click="chatStore.currentConversationId && (showExportMenu = !showExportMenu)"
+        >
+          <Download class="w-4 h-4" />
+        </button>
+        <div
+          v-if="showExportMenu"
+          class="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-20 py-0.5 min-w-[140px]"
+        >
+          <button
+            class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
+            @click="handleExportCurrent('md')"
+          >
+            <FileText class="w-3 h-3" /> Markdown
+          </button>
+          <button
+            class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
+            @click="handleExportCurrent('json')"
+          >
+            <FileJson class="w-3 h-3" /> JSON
+          </button>
+        </div>
+      </div>
+      <button
+        v-if="showRefresh"
+        class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+        :disabled="isRefreshing"
+        title="重新抓取"
+        @click="handleRefresh"
+      >
+        <RefreshCw
+          class="w-4 h-4"
+          :class="{ 'animate-spin': isRefreshing }"
+        />
+      </button>
+    </div>
   </div>
 </template>

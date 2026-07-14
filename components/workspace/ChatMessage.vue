@@ -1,7 +1,8 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
-import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil } from '@lucide/vue'
+import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
+import { formatMessageForCopy, copyToClipboard } from '@/utils/conversation-export'
 import type { ChatMessage } from '@/types/chat'
 
 const props = defineProps<{
@@ -30,6 +31,22 @@ const isAborted = computed(() => props.message.status === 'aborted')
 const isHovered = ref(false)
 const thinkingExpanded = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
+const copied = ref(false)
+
+/** Copy this message as formatted Markdown (includes role label + thinking). */
+async function handleCopyAsMarkdown() {
+  const text = formatMessageForCopy(props.message)
+  const ok = await copyToClipboard(text)
+  if (ok) {
+    copied.value = true
+    setTimeout(() => (copied.value = false), 1500)
+  }
+}
+
+/** Copy raw content only (original behavior). */
+function handleCopyRaw() {
+  emit('copy', props.message.content)
+}
 
 // Markdown rendering. During streaming we re-render throttled (leading +
 // trailing edge) so live markdown feels smooth; hljs highlight + copy-button
@@ -115,10 +132,11 @@ onUnmounted(() => {
       </button>
       <button
         class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
-        title="复制"
-        @click.stop="emit('copy', message.content)"
+        :title="copied ? '已复制!' : '复制为 Markdown'"
+        @click.stop="handleCopyAsMarkdown"
       >
-        <Copy class="w-3 h-3" />
+        <Clipboard v-if="copied" class="w-3 h-3 text-emerald-500" />
+        <Copy v-else class="w-3 h-3" />
       </button>
       <button
         class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
@@ -166,10 +184,11 @@ onUnmounted(() => {
         </button>
         <button
           class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
-          title="复制"
-          @click.stop="emit('copy', message.content)"
+          :title="copied ? '已复制!' : '复制为 Markdown'"
+          @click.stop="handleCopyAsMarkdown"
         >
-          <Copy class="w-3 h-3" />
+          <Clipboard v-if="copied" class="w-3 h-3 text-emerald-500" />
+          <Copy v-else class="w-3 h-3" />
         </button>
         <button
           class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"

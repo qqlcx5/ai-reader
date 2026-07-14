@@ -75,7 +75,7 @@ describe('ConversationList', () => {
 
     const wrapper = mount(ConversationList)
 
-    const activeButtons = wrapper.findAll('button.bg-brand\\/10')
+    const activeButtons = wrapper.findAll('.bg-brand\\/10')
     expect(activeButtons.length).toBe(1)
   })
 

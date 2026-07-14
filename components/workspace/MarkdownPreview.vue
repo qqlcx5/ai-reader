@@ -60,7 +60,23 @@ function onScroll() {
 // For each highlight, we search the DOM text for hl.text and wrap the
 // first match. This avoids fragile offset mapping across markdown→HTML.
 
+function clearMarks(container: HTMLElement) {
+  const marks = container.querySelectorAll('mark[data-hl-id]')
+  for (const mark of marks) {
+    const parent = mark.parentNode
+    if (!parent) continue
+    // Move children out of <mark> into parent, then remove <mark>
+    while (mark.firstChild) {
+      parent.insertBefore(mark.firstChild, mark)
+    }
+    parent.removeChild(mark)
+    // Normalize adjacent text nodes back together
+    parent.normalize()
+  }
+}
+
 function applyMarks(container: HTMLElement, hls: Highlight[]) {
+  clearMarks(container)
   if (!hls.length) return
 
   for (const hl of hls) {
@@ -183,15 +199,13 @@ function wrapTextInContainer(container: HTMLElement, hl: Highlight): boolean {
 }
 
 // Re-apply marks whenever content or highlights change.
-// v-html replaces the DOM subtree on re-render, so old marks are
-// automatically gone — no clearMarks needed.
+// When renderedHtml changes, v-html replaces the DOM subtree (marks gone).
+// When only highlights change, clearMarks() unwraps old marks before re-wrapping.
 watch([renderedHtml, highlights], async () => {
   await nextTick()
   const container = containerRef.value
   if (!container) return
-  if (highlights.value.length) {
-    applyMarks(container, highlights.value)
-  }
+  applyMarks(container, highlights.value)
   enhanceCodeBlocks(container)
 }, { flush: 'post' })
 
@@ -208,6 +222,86 @@ const selectionToolbar = ref<{
 const HIGHLIGHT_COLORS: { color: HighlightColor; label: string }[] = HighlightColors
 
 let suppressClear = false
+
+// ── Click existing mark → action popover ──────────────────
+const markPopover = ref<{
+  visible: boolean
+  x: number
+  y: number
+  highlight: Highlight | null
+} | null>(null)
+
+function findHighlightByMarkId(markEl: HTMLElement): Highlight | undefined {
+  const id = markEl.dataset.hlId
+  if (!id) return undefined
+  return highlights.value.find((h) => h.id === id)
+}
+
+function handleMarkClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  const markEl = target.closest('mark[data-hl-id]') as HTMLElement | null
+  if (!markEl) return
+
+  const hl = findHighlightByMarkId(markEl)
+  if (!hl) return
+
+  e.preventDefault()
+  e.stopPropagation()
+
+  const markRect = markEl.getBoundingClientRect()
+
+  suppressClear = true
+  setTimeout(() => { suppressClear = false }, 300)
+
+  markPopover.value = {
+    visible: true,
+    x: e.clientX,
+    y: markRect.bottom + 4,
+    highlight: hl,
+  }
+}
+
+function closeMarkPopover(e?: Event) {
+  // If clicking inside the popover, don't close
+  if (e) {
+    const target = e.target as HTMLElement
+    if (target.closest('.mark-popover')) return
+    // If clicking a mark, let handleMarkClick handle it
+    if (target.closest('mark[data-hl-id]')) return
+  }
+  markPopover.value = null
+}
+
+async function popoverChangeColor(color: HighlightColor) {
+  if (!markPopover.value?.highlight || !documentStore.currentDocument) return
+  await documentStore.updateHighlightColor(documentStore.currentDocument.id, markPopover.value.highlight.id, color)
+  closeMarkPopover()
+}
+
+async function popoverDelete() {
+  if (!markPopover.value?.highlight || !documentStore.currentDocument) return
+  await documentStore.removeHighlight(documentStore.currentDocument.id, markPopover.value.highlight.id)
+  closeMarkPopover()
+}
+
+async function popoverAddNote() {
+  if (!markPopover.value?.highlight || !documentStore.currentDocument) return
+  const hl = markPopover.value.highlight
+  closeMarkPopover()
+  const note = window.prompt('编辑批注', hl.note ?? '')
+  if (note === null) return
+  await documentStore.updateHighlightNote(documentStore.currentDocument.id, hl.id, note.trim())
+}
+
+function popoverSendToChat() {
+  if (!markPopover.value?.highlight) return
+  const hl = markPopover.value.highlight
+  const snippet = hl.note ? `> ${hl.text}\n\n批注: ${hl.note}` : `> ${hl.text}`
+  const current = chatStore.inputText.trim()
+  chatStore.setInputText(current ? `${current}\n\n${snippet}` : snippet)
+  appStore.showToast('已发送到对话框', 'success')
+  closeMarkPopover()
+}
 
 function handleMouseUp() {
   const sel = window.getSelection()
@@ -236,16 +330,14 @@ function handleMouseUp() {
   }
 
   const rect = range.getBoundingClientRect()
-  const scrollEl = scrollRef.value
-  const containerRect = scrollEl ? scrollEl.getBoundingClientRect() : container.getBoundingClientRect()
 
   suppressClear = true
   setTimeout(() => { suppressClear = false }, 300)
 
   selectionToolbar.value = {
     visible: true,
-    x: rect.left + rect.width / 2 - containerRect.left,
-    y: rect.top - containerRect.top + scrollRef.value!.scrollTop - 8,
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
     selectedText,
     startOffset,
   }
@@ -258,6 +350,10 @@ function handleSelectionClear() {
     const sel = window.getSelection()
     if (!sel || sel.isCollapsed) {
       selectionToolbar.value = null
+    }
+    // Also close mark popover on selection clear
+    if (markPopover.value && !sel?.toString().trim()) {
+      markPopover.value = null
     }
   }, 200)
 }
@@ -325,6 +421,7 @@ defineExpose({ jumpToHighlight })
 
 onMounted(() => {
   document.addEventListener('selectionchange', handleSelectionClear)
+  document.addEventListener('click', closeMarkPopover, { capture: true })
   const doc = documentStore.currentDocument
   if (doc?.readProgress && doc.readProgress > 0 && doc.readProgress < 1 && scrollRef.value) {
     nextTick(() => {
@@ -339,6 +436,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('selectionchange', handleSelectionClear)
+  document.removeEventListener('click', closeMarkPopover, { capture: true })
   if (throttleTimer) clearTimeout(throttleTimer)
   if (rafId) cancelAnimationFrame(rafId)
   reportProgress()
@@ -353,12 +451,13 @@ onUnmounted(() => {
       class="md-render"
       v-html="renderedHtml"
       @mouseup="handleMouseUp"
+      @click="handleMarkClick"
     />
 
     <!-- Selection toolbar: shows color dots when text is selected -->
     <div
       v-if="selectionToolbar?.visible"
-      class="absolute z-50 flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg shadow-lg px-1 py-1"
+      class="fixed z-50 flex items-center gap-0.5 bg-white border border-zinc-200 rounded-lg shadow-lg px-1 py-1"
       :style="{ left: `${selectionToolbar.x}px`, top: `${selectionToolbar.y}px`, transform: 'translate(-50%, -100%)' }"
       @mousedown.prevent
     >
@@ -370,6 +469,52 @@ onUnmounted(() => {
         :title="c.label"
         @mousedown.prevent="createHighlight(c.color)"
       />
+    </div>
+
+    <!-- Mark popover: shows actions when clicking an existing highlight -->
+    <div
+      v-if="markPopover?.visible && markPopover.highlight"
+      class="mark-popover fixed z-50 bg-white border border-zinc-200 rounded-lg shadow-lg py-1 min-w-[160px]"
+      :style="{ left: `${markPopover.x}px`, top: `${markPopover.y}px`, transform: 'translate(-50%, 0)' }"
+      @click.stop
+      @mousedown.stop
+    >
+      <!-- Color row -->
+      <div class="flex items-center gap-1 px-2 py-1">
+        <button
+          v-for="c in HIGHLIGHT_COLORS"
+          :key="c.color"
+          class="w-4 h-4 rounded-full border transition-transform hover:scale-115"
+          :class="(markPopover.highlight.color ?? 'yellow') === c.color ? 'border-zinc-800 ring-1 ring-zinc-300' : 'border-zinc-200'"
+          :style="{ background: `var(--hl-${c.color}-bg)` }"
+          :title="c.label"
+          @click="popoverChangeColor(c.color)"
+        />
+      </div>
+      <div class="h-px bg-zinc-100 my-1" />
+      <!-- Actions -->
+      <button
+        class="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50 transition-colors text-left"
+        @click="popoverSendToChat"
+      >
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        发送到对话框
+      </button>
+      <button
+        class="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-zinc-600 hover:bg-zinc-50 transition-colors text-left"
+        @click="popoverAddNote"
+      >
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        {{ markPopover.highlight.note ? '编辑批注' : '添加批注' }}
+      </button>
+      <div class="h-px bg-zinc-100 my-1" />
+      <button
+        class="w-full flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-red-500 hover:bg-red-50 transition-colors text-left"
+        @click="popoverDelete"
+      >
+        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        取消高亮
+      </button>
     </div>
 
     <!-- Highlight count hint (full list in 标注 tab) -->
@@ -393,6 +538,10 @@ onUnmounted(() => {
   border-radius: 2px;
   padding: 0 1px;
   cursor: pointer;
+  transition: filter 0.15s;
+}
+:deep(.hl-mark:hover) {
+  filter: brightness(0.92);
 }
 :deep(.hl-yellow) { background: rgba(250, 204, 21, 0.3); border-bottom: 1px solid rgba(202, 138, 4, 0.4); }
 :deep(.hl-green)  { background: rgba(34, 197, 94, 0.2);  border-bottom: 1px solid rgba(22, 101, 52, 0.4); }

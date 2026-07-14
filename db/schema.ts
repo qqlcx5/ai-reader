@@ -1,4 +1,4 @@
-export const DB_VERSION = 10
+export const DB_VERSION = 11
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',

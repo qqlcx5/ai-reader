@@ -67,9 +67,9 @@ export type LibrarySortKey = 'viewed' | 'captured' | 'updated' | 'title'
 export type ReadStatus = 'unread' | 'reading' | 'read'
 
 /** Derive read status from progress + lastOpenedAt. */
-export function getReadStatus(doc: Pick<DocumentEntity, 'readProgress' | 'lastOpenedAt'>): ReadStatus {
-  if (doc.readProgress != null && doc.readProgress >= 1) return 'read'
-  if (doc.readProgress != null && doc.readProgress > 0) return 'reading'
+/** Derive read status. readAt takes priority; lastOpenedAt marks "reading". */
+export function getReadStatus(doc: Pick<DocumentEntity, 'readAt' | 'lastOpenedAt'>): ReadStatus {
+  if (doc.readAt) return 'read'
   if (doc.lastOpenedAt) return 'reading'
   return 'unread'
 }
