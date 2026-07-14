@@ -14,6 +14,7 @@ import { useBackNavigation } from '@/composables/useBackNavigation'
 import TopBar from '@/components/auramind/TopBar.vue'
 import WorkspaceView from '@/components/auramind/WorkspaceView.vue'
 import LibraryView from '@/components/auramind/LibraryView.vue'
+import AnalysisView from '@/components/auramind/AnalysisView.vue'
 import SettingsView from '@/components/auramind/SettingsView.vue'
 import UsageView from '@/components/auramind/UsageView.vue'
 import FeedsView from '@/components/auramind/FeedsView.vue'
@@ -187,6 +188,7 @@ onUnmounted(() => {
 
     <WorkspaceView v-show="appStore.currentView === 'workspace'" />
     <LibraryView v-if="appStore.currentView === 'library'" />
+    <AnalysisView v-show="appStore.currentView === 'analysis'" />
     <FeedsView v-show="appStore.currentView === 'feeds'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />

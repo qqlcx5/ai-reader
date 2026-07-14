@@ -75,10 +75,34 @@ const safeContent = computed(() => {
 const readerScrollRef = ref<HTMLElement | null>(null)
 const showBackToTop = ref(false)
 
+// ── Reading progress tracking (FeedsView reader) ──
+let lastReportedProgress = -1
+let progressThrottle: ReturnType<typeof setTimeout> | null = null
+
+function reportReaderProgress() {
+  const item = selectedItem.value
+  if (!item?.documentId) return
+  const el = readerScrollRef.value
+  if (!el) return
+  const { scrollTop, scrollHeight, clientHeight } = el
+  if (scrollHeight <= clientHeight) return // too short to track
+  const maxScroll = scrollHeight - clientHeight
+  if (maxScroll <= 0) return
+  const p = Math.min(1, scrollTop / maxScroll)
+  if (p - lastReportedProgress < 0.03 && p < 1) return
+  lastReportedProgress = p
+  documentStore.updateReadProgress(item.documentId, p)
+}
+
 function onReaderScroll() {
   const el = readerScrollRef.value
   if (!el) return
   showBackToTop.value = el.scrollTop > 400
+  if (progressThrottle) return
+  progressThrottle = setTimeout(() => {
+    progressThrottle = null
+    reportReaderProgress()
+  }, 200)
 }
 
 function backToTop() {
@@ -91,6 +115,7 @@ watch(safeContent, async () => {
   await nextTick()
   if (readerScrollRef.value) readerScrollRef.value.scrollTop = 0
   showBackToTop.value = false
+  lastReportedProgress = -1
   if (readerRef.value) enhanceCodeBlocks(readerRef.value)
 })
 
@@ -310,6 +335,9 @@ onUnmounted(() => {
   ro?.disconnect()
   if (aiPollTimer) clearInterval(aiPollTimer)
   delete (globalThis as any).__aiJobsChanged
+  // Flush reading progress
+  if (progressThrottle) clearTimeout(progressThrottle)
+  reportReaderProgress()
 })
 </script>
 

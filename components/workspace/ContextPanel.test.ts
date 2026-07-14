@@ -141,18 +141,19 @@ describe('ContextPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('renders three tabs', () => {
+  it('renders four tabs', () => {
     const wrapper = mount(ContextPanel)
 
     const triggers = wrapper.findAll('[role="tab"]')
-    expect(triggers.length).toBe(3)
+    expect(triggers.length).toBe(4)
   })
 
-  it('tab labels are Markdown, Raw, 元数据', () => {
+  it('tab labels are Markdown, 标注, Raw, 元数据', () => {
     const wrapper = mount(ContextPanel)
 
     const text = wrapper.text()
     expect(text).toContain('Markdown')
+    expect(text).toContain('标注')
     expect(text).toContain('Raw')
     expect(text).toContain('元数据')
   })

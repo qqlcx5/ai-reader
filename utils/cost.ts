@@ -2,6 +2,16 @@ import type { ModelConfig } from '@/types/model'
 import type { ConversationEntity } from '@/types/chat'
 import { resolvePricing } from '@/data/model-pricing'
 
+/** Format milliseconds as a human-readable duration. */
+export function formatMs(ms: number): string {
+  if (ms <= 0) return '—'
+  if (ms < 1000) return ms + 'ms'
+  if (ms < 60_000) return (ms / 1000).toFixed(1) + 's'
+  const min = Math.floor(ms / 60_000)
+  const sec = Math.round((ms % 60_000) / 1000)
+  return `${min}m${sec}s`
+}
+
 /**
  * Effective per-1M-token CNY price for a model.
  * Priority: manual override (ModelConfig.inputPricePer1M / outputPricePer1M)

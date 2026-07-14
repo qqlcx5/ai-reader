@@ -1,5 +1,22 @@
 export type ExtractionMethod = 'defuddle' | 'fallback' | 'manual' | 'rss'
 
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
+
+export interface Highlight {
+  id: string
+  /** Start character offset in the raw markdown string. */
+  startOffset: number
+  /** End character offset (exclusive). */
+  endOffset: number
+  /** The highlighted text snippet (redundant for sync dedup and display). */
+  text: string
+  /** Optional user annotation. */
+  note?: string
+  color?: HighlightColor
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DocumentEntity {
   id: string
 
@@ -32,9 +49,27 @@ export interface DocumentEntity {
   updatedAt: string
   lastOpenedAt?: string
 
+  /** Reading progress 0–1 (0 = not started, 1 = finished). */
+  readProgress?: number
+  /** ISO timestamp of when the document was marked as fully read. */
+  readAt?: string
+
   tags?: string[]
+
+  /** User highlights/annotations on the markdown content. */
+  highlights?: Highlight[]
 
   syncStatus?: 'local-only' | 'synced' | 'pending' | 'conflict'
 }
 
 export type LibrarySortKey = 'viewed' | 'captured' | 'updated' | 'title'
+
+export type ReadStatus = 'unread' | 'reading' | 'read'
+
+/** Derive read status from progress + lastOpenedAt. */
+export function getReadStatus(doc: Pick<DocumentEntity, 'readProgress' | 'lastOpenedAt'>): ReadStatus {
+  if (doc.readProgress != null && doc.readProgress >= 1) return 'read'
+  if (doc.readProgress != null && doc.readProgress > 0) return 'reading'
+  if (doc.lastOpenedAt) return 'reading'
+  return 'unread'
+}

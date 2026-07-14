@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { ListChecks, Trash2, FolderPlus, Download } from '@lucide/vue'
+import { ListChecks, Trash2, FolderPlus, Download, Zap } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -10,6 +10,7 @@ import { searchDocuments } from '@/services/search'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import type { DocumentEntity } from '@/types/document'
 import type { LibrarySortKey } from '@/types/document'
+import { getReadStatus } from '@/types/document'
 import SearchBar from '@/components/library/SearchBar.vue'
 import { exportDocumentsToZip, downloadBlob } from '@/utils/export'
 import DocumentItem from '@/components/library/DocumentItem.vue'
@@ -18,6 +19,7 @@ import Select from '@/components/ui/Select.vue'
 import Heatmap from './Heatmap.vue'
 import CollectionDialog from './CollectionDialog.vue'
 import CollectionPickerDialog from './CollectionPickerDialog.vue'
+import BatchAnalysisDialog from './BatchAnalysisDialog.vue'
 
 const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
@@ -30,7 +32,7 @@ const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<string | undefined>(undefined)
 const deleteTargetName = ref('')
 const selectedDate = ref<string | null>(null)
-const statusFilter = ref<'all' | 'unread' | 'read' | 'conversation'>('all')
+const statusFilter = ref<'all' | 'unread' | 'reading' | 'read' | 'conversation'>('all')
 const siteFilter = ref<string | null>(null)
 const tagFilter = ref<string | null>(null)
 const conversationDocIds = ref<Set<string>>(new Set())
@@ -74,6 +76,14 @@ function handleBatchExport() {
   const date = new Date().toISOString().slice(0, 10)
   downloadBlob(blob, `auramind-export-${date}.zip`)
   appStore.showToast(`已导出 ${docs.length} 篇文档`, 'success')
+}
+
+// ── Batch AI analysis ──
+const showBatchAnalysis = ref(false)
+
+function openBatchAnalysis() {
+  if (documentStore.selectedIds.size === 0) return
+  showBatchAnalysis.value = true
 }
 
 // ── Batch add to collection ──
@@ -138,12 +148,14 @@ const tags = computed(() => {
     .map(([tag, count]) => ({ tag, count }))
 })
 
-const unreadCount = computed(() => documentStore.documents.filter((d) => !d.lastOpenedAt).length)
-const readCount = computed(() => documentStore.documents.filter((d) => !!d.lastOpenedAt).length)
+const unreadCount = computed(() => documentStore.documents.filter((d) => getReadStatus(d) === 'unread').length)
+const readingCount = computed(() => documentStore.documents.filter((d) => getReadStatus(d) === 'reading').length)
+const readCount = computed(() => documentStore.documents.filter((d) => getReadStatus(d) === 'read').length)
 
 const statusOptions = computed(() => [
   { value: 'all' as const, label: `全部 ${documentStore.documents.length}` },
   { value: 'unread' as const, label: `未读 ${unreadCount.value}` },
+  { value: 'reading' as const, label: `阅读中 ${readingCount.value}` },
   { value: 'read' as const, label: `已读 ${readCount.value}` },
   { value: 'conversation' as const, label: `有对话 ${conversationDocIds.value.size}` },
 ])
@@ -208,8 +220,9 @@ const displayedDocs = computed(() => {
     if (selectedDate.value && dateKey(new Date(d.capturedAt)) !== selectedDate.value) return false
     if (siteFilter.value && getSite(d) !== siteFilter.value) return false
     if (tagFilter.value && !(d.tags || []).includes(tagFilter.value)) return false
-    if (statusFilter.value === 'unread' && d.lastOpenedAt) return false
-    if (statusFilter.value === 'read' && !d.lastOpenedAt) return false
+    if (statusFilter.value === 'unread' && getReadStatus(d) !== 'unread') return false
+    if (statusFilter.value === 'reading' && getReadStatus(d) !== 'reading') return false
+    if (statusFilter.value === 'read' && getReadStatus(d) !== 'read') return false
     if (statusFilter.value === 'conversation' && !conversationDocIds.value.has(d.id)) return false
     return true
   })
@@ -623,6 +636,13 @@ function cancelDelete() {
       >
         <Download class="w-4 h-4" />导出 Markdown
       </button>
+      <button
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white bg-brand hover:bg-brand/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="documentStore.selectedIds.size === 0"
+        @click="openBatchAnalysis"
+      >
+        <Zap class="w-4 h-4" />批量分析
+      </button>
     </div>
 
     <!-- Delete Confirm -->
@@ -683,6 +703,14 @@ function cancelDelete() {
       :document-ids="[...documentStore.selectedIds]"
       @close="showBatchPicker = false"
       @create="batchPickerCreate"
+    />
+
+    <!-- Batch AI Analysis Dialog -->
+    <BatchAnalysisDialog
+      :open="showBatchAnalysis"
+      :document-count="documentStore.selectedIds.size"
+      :document-ids="[...documentStore.selectedIds]"
+      @close="showBatchAnalysis = false"
     />
   </div>
 </template>

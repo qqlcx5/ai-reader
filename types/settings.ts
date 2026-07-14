@@ -25,6 +25,9 @@ export interface AutoAnalysisSettings {
   modelId?: string
   /** PromptTemplate.id whose content becomes the auto prompt. */
   promptTemplateId?: string
+  /** When true, the queue processor won't pick up new pending jobs.
+   *  In-flight jobs finish normally. User-toggleable from the analysis panel. */
+  queuePaused?: boolean
 }
 
 export interface AppSettings {

@@ -7,7 +7,7 @@ import { useSettingsStore } from './settings.store'
 import { useDocumentStore } from './document.store'
 import { PromptBuilder } from '../services/prompt/builder'
 import type { PromptInput } from '../services/prompt/builder'
-import { buildPageContext } from '../services/prompt/context'
+import { buildPageContext, buildHighlightContext } from '../services/prompt/context'
 import { truncateContext } from '../services/prompt/truncate'
 import { estimateTokens } from '../utils/token'
 import { createProvider } from '../services/ai/factory'
@@ -544,6 +544,10 @@ export const useChatStore = defineStore('chat', () => {
           },
           settings.context,
         )
+        // Append user highlights as supplementary context.
+        if (doc.highlights?.length) {
+          context += buildHighlightContext(doc.highlights)
+        }
       }
     }
 

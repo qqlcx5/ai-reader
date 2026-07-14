@@ -4,7 +4,7 @@ import { DocumentRepository } from '../db/repositories/document.repository'
 import { ChatRepository } from '../db/repositories/chat.repository'
 import { CollectionRepository } from '../db/repositories/collection.repository'
 import { addToIndex, removeFromIndex, replaceInIndex, initSearchIndex } from '../services/search'
-import type { DocumentEntity, LibrarySortKey } from '../types/document'
+import type { DocumentEntity, LibrarySortKey, Highlight, HighlightColor } from '../types/document'
 
 export const useDocumentStore = defineStore('document', () => {
   const currentDocument = ref<DocumentEntity | null>(null)
@@ -102,6 +102,27 @@ export const useDocumentStore = defineStore('document', () => {
     if (currentDocument.value?.id === id) currentDocument.value.lastOpenedAt = now
   }
 
+  /** Update reading progress (0–1). Sets readAt automatically when reaching 1. */
+  async function updateReadProgress(id: string, progress: number) {
+    const clamped = Math.max(0, Math.min(1, progress))
+    const now = new Date().toISOString()
+    try {
+      await DocumentRepository.updateReadProgress(id, clamped, clamped >= 1 ? now : undefined)
+    } catch (err) {
+      console.error('[document.store] updateReadProgress failed for', id, err)
+      return
+    }
+    const inList = documents.value.find((d) => d.id === id)
+    if (inList) {
+      inList.readProgress = clamped
+      if (clamped >= 1) inList.readAt = now
+    }
+    if (currentDocument.value?.id === id) {
+      currentDocument.value.readProgress = clamped
+      if (clamped >= 1) currentDocument.value.readAt = now
+    }
+  }
+
   async function saveDocument(doc: DocumentEntity) {
     const saved = await DocumentRepository.save(doc)
     try {
@@ -140,6 +161,72 @@ export const useDocumentStore = defineStore('document', () => {
     documents.value = await DocumentRepository.findAll()
   }
 
+  // ── Highlight actions ──────────────────────────────────
+  async function addHighlight(docId: string, hl: Highlight): Promise<void> {
+    const doc = await DocumentRepository.findById(docId)
+    if (!doc) return
+    const highlights = [...(doc.highlights ?? []), hl]
+    await DocumentRepository.updateHighlights(docId, highlights)
+    if (currentDocument.value?.id === docId) {
+      currentDocument.value.highlights = highlights
+    }
+    const inList = documents.value.find((d) => d.id === docId)
+    if (inList) inList.highlights = highlights
+  }
+
+  async function removeHighlight(docId: string, highlightId: string): Promise<void> {
+    const doc = await DocumentRepository.findById(docId)
+    if (!doc?.highlights) return
+    const highlights = doc.highlights.filter((h) => h.id !== highlightId)
+    await DocumentRepository.updateHighlights(docId, highlights)
+    if (currentDocument.value?.id === docId) {
+      currentDocument.value.highlights = highlights
+    }
+    const inList = documents.value.find((d) => d.id === docId)
+    if (inList) inList.highlights = highlights
+  }
+
+  async function updateHighlightNote(docId: string, highlightId: string, note: string): Promise<void> {
+    const doc = await DocumentRepository.findById(docId)
+    if (!doc?.highlights) return
+    const highlights = doc.highlights.map((h) =>
+      h.id === highlightId ? { ...h, note, updatedAt: new Date().toISOString() } : h,
+    )
+    await DocumentRepository.updateHighlights(docId, highlights)
+    if (currentDocument.value?.id === docId) {
+      currentDocument.value.highlights = highlights
+    }
+    const inList = documents.value.find((d) => d.id === docId)
+    if (inList) inList.highlights = highlights
+  }
+
+  async function removeHighlights(docId: string, highlightIds: string[]): Promise<void> {
+    const doc = await DocumentRepository.findById(docId)
+    if (!doc?.highlights) return
+    const idSet = new Set(highlightIds)
+    const highlights = doc.highlights.filter((h) => !idSet.has(h.id))
+    await DocumentRepository.updateHighlights(docId, highlights)
+    if (currentDocument.value?.id === docId) {
+      currentDocument.value.highlights = highlights
+    }
+    const inList = documents.value.find((d) => d.id === docId)
+    if (inList) inList.highlights = highlights
+  }
+
+  async function updateHighlightColor(docId: string, highlightId: string, color: HighlightColor): Promise<void> {
+    const doc = await DocumentRepository.findById(docId)
+    if (!doc?.highlights) return
+    const highlights = doc.highlights.map((h) =>
+      h.id === highlightId ? { ...h, color, updatedAt: new Date().toISOString() } : h,
+    )
+    await DocumentRepository.updateHighlights(docId, highlights)
+    if (currentDocument.value?.id === docId) {
+      currentDocument.value.highlights = highlights
+    }
+    const inList = documents.value.find((d) => d.id === docId)
+    if (inList) inList.highlights = highlights
+  }
+
   // Initialize search index on first use
   initSearchIndex().catch(() => {
     // non-critical; index will be built on next add
@@ -160,11 +247,17 @@ export const useDocumentStore = defineStore('document', () => {
     saveDocument,
     deleteDocument,
     markOpened,
+    updateReadProgress,
     refreshDocuments,
     toggleSelection,
     selectAll,
     clearSelection,
     deleteSelectedDocuments,
+    addHighlight,
+    removeHighlight,
+    removeHighlights,
+    updateHighlightNote,
+    updateHighlightColor,
   }
 }, {
   persist: {

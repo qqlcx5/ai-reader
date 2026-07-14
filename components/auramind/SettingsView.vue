@@ -11,7 +11,6 @@ import CaptureSettings from '@/components/settings/CaptureSettings.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
 import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import S3Settings from '@/components/settings/S3Settings.vue'
-import AiJobQueue from '@/components/settings/AiJobQueue.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useAppStore } from '@/stores/app.store'
@@ -184,7 +183,9 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <!-- 自动 AI 分析 -->
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">自动 AI 分析</h2>
-        <AiJobQueue />
+        <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3.5 text-[12px] text-zinc-500">
+          批量分析队列已移至独立面板，点击顶部 <span class="inline-flex items-center gap-0.5 text-brand font-medium">AI 分析</span> 标签查看。
+        </div>
       </section>
 
       <!-- 本地存储 -->

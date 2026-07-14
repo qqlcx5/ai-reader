@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Gauge } from '@lucide/vue'
 import { useModelStore } from '@/stores/model.store'
 import { ChatRepository } from '@/db/repositories/chat.repository'
-import { aggregateUsage, aggregateByDay, calcMessageCost, formatTokens, formatCNY, type UsageAggregate } from '@/utils/cost'
+import { aggregateUsage, aggregateByDay, calcMessageCost, formatTokens, formatCNY, formatMs, type UsageAggregate } from '@/utils/cost'
 import type { ConversationEntity } from '@/types/chat'
 
 const modelStore = useModelStore()
@@ -60,12 +60,6 @@ onMounted(async () => {
   await modelStore.loadModels()
   allConversations.value = await ChatRepository.findAllSorted()
 })
-
-function formatMs(ms: number): string {
-  if (ms <= 0) return '—'
-  if (ms < 1000) return ms + 'ms'
-  return (ms / 1000).toFixed(1) + 's'
-}
 
 function formatRate(r: number): string {
   return (r * 100).toFixed(1) + '%'

@@ -1,5 +1,5 @@
 import { db } from '../index'
-import type { DocumentEntity } from '../../types/document'
+import type { DocumentEntity, Highlight } from '../../types/document'
 import type { IRepository } from '../repository'
 
 export const DocumentRepository: IRepository<DocumentEntity> & {
@@ -8,6 +8,8 @@ export const DocumentRepository: IRepository<DocumentEntity> & {
   findPaginated(offset: number, limit: number): Promise<DocumentEntity[]>
   touchLastOpened(id: string, iso: string): Promise<void>
   deleteMany(ids: string[]): Promise<void>
+  updateHighlights(id: string, highlights: Highlight[]): Promise<void>
+  updateReadProgress(id: string, progress: number, readAt?: string): Promise<void>
 } = {
   async findById(id: string): Promise<DocumentEntity | undefined> {
     return db.documents.get(id)
@@ -95,5 +97,21 @@ export const DocumentRepository: IRepository<DocumentEntity> & {
 
   async count(): Promise<number> {
     return db.documents.count()
+  },
+
+  /** Partial update of highlights (avoids the URL-dedup path in `save`). */
+  async updateHighlights(id: string, highlights: Highlight[]): Promise<void> {
+    await db.documents.update(id, { highlights, updatedAt: new Date().toISOString() })
+  },
+
+  /** Partial update of reading progress. Sets readAt when progress reaches 1. */
+  async updateReadProgress(id: string, progress: number, readAt?: string): Promise<void> {
+    const patch: Record<string, unknown> = { readProgress: progress }
+    if (progress >= 1 && !readAt) {
+      patch.readAt = new Date().toISOString()
+    } else if (readAt) {
+      patch.readAt = readAt
+    }
+    await db.documents.update(id, patch)
   },
 }

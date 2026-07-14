@@ -426,6 +426,14 @@ export const useFeedStore = defineStore('feed', () => {
       const fid = it.feedId
       if (unreadByFeed.value[fid] > 0) unreadByFeed.value[fid]--
     }
+    // If the item has an associated document, mark it as fully read too.
+    if (it?.documentId) {
+      try {
+        await DocumentRepository.updateReadProgress(it.documentId, 1, readAt)
+      } catch {
+        // non-critical
+      }
+    }
   }
 
   /** Collect a single feed item into the library (manual, panel-side). */

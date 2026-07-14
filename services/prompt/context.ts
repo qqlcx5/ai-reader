@@ -1,4 +1,5 @@
 import type { ContextSettings } from '../../types/settings'
+import type { Highlight } from '../../types/document'
 
 export interface PageDocument {
   title: string
@@ -43,4 +44,14 @@ export function buildPageContext(
   lines.push(doc.markdown)
 
   return lines.join('\n')
+}
+
+/** Build a supplementary context block from user highlights/annotations. */
+export function buildHighlightContext(highlights: Highlight[]): string {
+  if (!highlights.length) return ''
+  const lines = highlights.map((h) => {
+    const note = h.note ? `\n  批注: ${h.note}` : ''
+    return `> ${h.text}${note}`
+  })
+  return `\n\n--- 用户标注 ---\n${lines.join('\n')}`
 }

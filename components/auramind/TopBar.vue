@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft } from '@lucide/vue'
+import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft, Zap } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -30,6 +30,7 @@ const libraryDocCount = computed(() => documentStore.documents.length)
 const navItems = [
   { key: 'workspace', icon: PanelRight, label: '工作区' },
   { key: 'library', icon: BookOpen, label: '记忆库' },
+  { key: 'analysis', icon: Zap, label: 'AI 分析' },
   { key: 'feeds', icon: Rss, label: '订阅' },
   { key: 'usage', icon: Gauge, label: '用量' },
   { key: 'settings', icon: Settings, label: '设置' },

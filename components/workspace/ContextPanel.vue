@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
@@ -10,10 +10,11 @@ import { useAppStore } from '@/stores/app.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { nowISO } from '@/utils/date'
-import type { DocumentEntity, ExtractionMethod } from '@/types/document'
+import type { DocumentEntity, ExtractionMethod, Highlight } from '@/types/document'
 import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
 import RawPreview from '@/components/workspace/RawPreview.vue'
 import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
+import HighlightsPanel from '@/components/workspace/HighlightsPanel.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const documentStore = useDocumentStore()
@@ -25,6 +26,11 @@ const isRefreshing = ref(false)
 const copied = ref(false)
 const showDeleteConfirm = ref(false)
 const isDeleting = ref(false)
+
+// Ref to MarkdownPreview for jump-to-highlight
+const markdownPreviewRef = ref<InstanceType<typeof MarkdownPreview> | null>(null)
+
+const highlightCount = computed(() => documentStore.currentDocument?.highlights?.length ?? 0)
 
 const currentDoc = computed(() => documentStore.currentDocument)
 
@@ -220,6 +226,15 @@ async function confirmDelete() {
 function cancelDelete() {
   showDeleteConfirm.value = false
 }
+
+/** Jump to a highlight in the Markdown preview tab. */
+async function handleJumpToHighlight(hl: Highlight) {
+  // Switch to markdown tab first
+  workspaceStore.setContextTab('markdown')
+  await nextTick()
+  // Delegate to MarkdownPreview's jump method
+  markdownPreviewRef.value?.jumpToHighlight(hl)
+}
 </script>
 
 <template>
@@ -236,6 +251,16 @@ function cancelDelete() {
             class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
           >
             Markdown
+          </TabsTrigger>
+          <TabsTrigger
+            value="highlights"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            标注
+            <span
+              v-if="highlightCount"
+              class="ml-1 px-1 py-px text-[9px] leading-none bg-zinc-200 text-zinc-600 rounded-full group-data-[state=active]:bg-brand-100 group-data-[state=active]:text-brand-700"
+            >{{ highlightCount }}</span>
           </TabsTrigger>
           <TabsTrigger
             value="raw"
@@ -285,7 +310,14 @@ function cancelDelete() {
     </div>
 
     <!-- Tab Content -->
-    <MarkdownPreview v-show="contextTab === 'markdown'" />
+    <MarkdownPreview
+      v-show="contextTab === 'markdown'"
+      ref="markdownPreviewRef"
+    />
+    <HighlightsPanel
+      v-show="contextTab === 'highlights'"
+      @jump="handleJumpToHighlight"
+    />
     <RawPreview v-show="contextTab === 'raw'" />
     <MetadataPanel v-show="contextTab === 'metadata'" />
 

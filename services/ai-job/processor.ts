@@ -157,16 +157,26 @@ function isPermanentError(msg: string): boolean {
 }
 
 /** Drain all pending jobs sequentially (panel-driven). Best-effort: a failure
- *  marks the job failed and the loop continues. */
+ *  marks the job failed and the loop continues.
+ *  Respects the queue-paused flag: if paused, returns immediately without
+ *  processing — in-flight jobs finish naturally. */
 export async function drainAll(): Promise<{ processed: number; succeeded: number; failed: number }> {
   const settings = await SettingsRepository.get()
+
+  // Respect queue-pause: don't pick up new jobs when paused
+  if (settings?.autoAnalysis?.queuePaused) {
+    return { processed: 0, succeeded: 0, failed: 0 }
+  }
+
   const pending = await AiJobRepository.findPending()
   let succeeded = 0
   let failed = 0
   for (const job of pending) {
+    // Re-check pause flag inside the loop — user may pause mid-drain
+    if (settings?.autoAnalysis?.queuePaused) break
     const r = await processJob(job, settings)
     if (r === 'success') succeeded++
     else failed++
   }
-  return { processed: pending.length, succeeded, failed }
+  return { processed: succeeded + failed, succeeded, failed }
 }

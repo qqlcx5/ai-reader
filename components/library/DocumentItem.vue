@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus, Check } from '@lucide/vue'
 import type { DocumentEntity } from '@/types/document'
+import { getReadStatus } from '@/types/document'
 
 const props = defineProps<{
   document: DocumentEntity
@@ -19,7 +20,13 @@ const emit = defineEmits<{
   toggleSelect: [doc: DocumentEntity]
 }>()
 
-const unread = computed(() => !props.document.lastOpenedAt)
+const unread = computed(() => !props.document.lastOpenedAt && (props.document.readProgress == null || props.document.readProgress === 0))
+const readStatus = computed(() => getReadStatus(props.document))
+const progressPct = computed(() => {
+  const p = props.document.readProgress
+  if (p == null) return 0
+  return Math.round(p * 100)
+})
 
 const domain = computed(() => {
   if (props.document.siteName) return props.document.siteName
@@ -92,7 +99,21 @@ const excerpt = computed(() => {
 
     <div class="flex-1 min-w-0">
       <div class="text-[13px] font-medium truncate group-hover:text-brand flex items-center gap-1.5">
-        <span v-if="unread" class="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
+        <span
+          v-if="readStatus === 'unread'"
+          class="w-1.5 h-1.5 rounded-full bg-brand shrink-0"
+          title="未读"
+        />
+        <span
+          v-else-if="readStatus === 'reading'"
+          class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"
+          title="阅读中"
+        />
+        <Check
+          v-else
+          class="w-3 h-3 text-zinc-400 shrink-0"
+          title="已读"
+        />
         <span class="truncate">{{ document.title }}</span>
       </div>
       <div class="text-[11px] text-zinc-500 flex items-center gap-1.5 truncate mt-1">
@@ -107,6 +128,17 @@ const excerpt = computed(() => {
         </template>
       </div>
       <div v-if="excerpt" class="text-[11px] text-zinc-400 truncate mt-0.5">{{ excerpt }}</div>
+
+      <!-- Reading progress bar -->
+      <div
+        v-if="readStatus === 'reading'"
+        class="mt-1.5 h-[3px] rounded-full bg-zinc-200 overflow-hidden"
+      >
+        <div
+          class="h-full bg-amber-500 rounded-full transition-all"
+          :style="{ width: `${progressPct}%` }"
+        />
+      </div>
     </div>
 
     <div v-if="!selectionMode" class="hidden group-hover:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur pl-2">

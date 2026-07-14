@@ -1,7 +1,7 @@
-export const DB_VERSION = 7
+export const DB_VERSION = 10
 
 export const STORE_MAP = {
-  documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, contentHash',
+  documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',
   conversations: 'id, documentId, createdAt, updatedAt',
   models: 'id, provider, modelId, enabled, isDefault, updatedAt, lastUsedAt',
   settings: 'id, updatedAt',
@@ -14,5 +14,5 @@ export const STORE_MAP = {
   feeds: 'id, url, folder, lastFetchedAt, updatedAt',
   feedItems: 'id, feedId, guid, [feedId+publishedAt], readAt, documentId',
   // Background auto-analysis jobs (panel-drained queue). Local-only.
-  aiJobs: 'id, documentId, status, createdAt',
+  aiJobs: 'id, documentId, status, createdAt, batchId, priority',
 } as const

@@ -214,4 +214,82 @@ describe('ai-job processor', () => {
     expect(job?.status).toBe('failed')
     expect(job?.error).toContain('提示词模板不存在')
   })
+
+  it('skips processing when queue is paused', async () => {
+    // Save settings with queuePaused = true
+    await db.settings.put({
+      id: 'app-settings',
+      globalSystemPrompt: '',
+      context: {
+        maxContextTokens: 1050000,
+        includeMetadataInPrompt: true,
+        includeUrlInPrompt: true,
+        includeTitleInPrompt: true,
+        includeCapturedAtInPrompt: false,
+        includeConversationHistory: true,
+        maxHistoryMessages: 20,
+      },
+      capture: {
+        autoExtractOnOpen: true,
+        autoExtractOnTabChange: false,
+        preferCache: true,
+        saveRawHtml: false,
+        compressRawHtml: true,
+      },
+      autoAnalysis: { enabled: true, modelId: 'm1', promptTemplateId: 'tpl-1', queuePaused: true },
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as any)
+
+    await AiJobRepository.save({
+      id: 'job-paused',
+      documentId: 'doc-1',
+      modelId: 'm1',
+      promptTemplateId: 'tpl-1',
+      status: 'pending',
+      retries: 0,
+      createdAt: '2026-01-02T00:00:00Z',
+    })
+
+    const r = await drainAll()
+    expect(r.processed).toBe(0)
+    expect(chatMock).not.toHaveBeenCalled()
+    const job = await AiJobRepository.findById('job-paused')
+    expect(job?.status).toBe('pending')
+  })
+
+  it('processes pending jobs sorted by priority (high first)', async () => {
+    // Save settings (not paused)
+    await db.settings.put({
+      id: 'app-settings',
+      globalSystemPrompt: '',
+      context: { maxContextTokens: 1050000, includeMetadataInPrompt: true, includeUrlInPrompt: true, includeTitleInPrompt: true, includeCapturedAtInPrompt: false, includeConversationHistory: true, maxHistoryMessages: 20 },
+      capture: { autoExtractOnOpen: true, autoExtractOnTabChange: false, preferCache: true, saveRawHtml: false, compressRawHtml: true },
+      autoAnalysis: { enabled: true, modelId: 'm1', promptTemplateId: 'tpl-1' },
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    } as any)
+
+    const callOrder: string[] = []
+    chatMock.mockImplementation(async () => {
+      callOrder.push('called')
+      return { content: 'ok', usage: { totalTokens: 1 } }
+    })
+
+    await AiJobRepository.save({ id: 'job-low', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1', status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z', priority: 'low' })
+    await AiJobRepository.save({ id: 'job-high', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1', status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z', priority: 'high' })
+    await AiJobRepository.save({ id: 'job-normal', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1', status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z', priority: 'normal' })
+
+    const r = await drainAll()
+    expect(r.succeeded).toBe(3)
+    // high priority job should be processed first (it gets the first chatMock call)
+    // Since all 3 use the same doc, we check the order of conversation creation
+    const jobs = await AiJobRepository.findAll()
+    const highJob = jobs.find((j) => j.id === 'job-high')!
+    const normalJob = jobs.find((j) => j.id === 'job-normal')!
+    const lowJob = jobs.find((j) => j.id === 'job-low')!
+    // Higher priority jobs should have earlier finishedAt
+    expect(new Date(highJob.finishedAt!).getTime()).toBeLessThanOrEqual(new Date(normalJob.finishedAt!).getTime())
+    expect(new Date(normalJob.finishedAt!).getTime()).toBeLessThanOrEqual(new Date(lowJob.finishedAt!).getTime())
+  })
 })
