@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { watch, ref, nextTick, computed } from 'vue'
-import { PlugZap, Sparkles, ArrowDown } from '@lucide/vue'
+import { PlugZap, Sparkles, ArrowDown, X } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
@@ -176,6 +176,17 @@ function handleRegenerate(id: string) {
   chatStore.regenerate(id)
 }
 
+function handleDetachContext() {
+  // Detach the current page context from the chat dialog. The document
+  // itself stays in the library; we just clear the in-memory refs so
+  // subsequent messages are sent without it. The includeContext toggle
+  // is independent — the user can re-attach the next captured page
+  // manually via the toggle in ChatInput.
+  documentStore.setPageDocument(null)
+  documentStore.setCurrentDocument(null)
+  appStore.showToast('已卸载上下文', 'success')
+}
+
 // ── Last assistant message ID ────────────────────────────
 const lastAssistantMsgId = computed<string | null>(() => {
   const msgs = chatStore.messages
@@ -197,10 +208,18 @@ const lastAssistantMsgId = computed<string | null>(() => {
     <div class="flex justify-center">
       <span
         v-if="contextTitle"
-        class="text-[10px] border border-brand/20 bg-brand/10 text-brand px-2 py-0.5 rounded-md flex items-center gap-1"
+        class="group inline-flex items-center gap-1 text-[11px] border border-brand/30 bg-brand/10 text-brand pl-2 pr-1 py-1 rounded-md"
       >
-        <PlugZap class="w-3 h-3" />
-        已挂载：{{ contextTitle }}
+        <PlugZap class="w-3.5 h-3.5" />
+        <span class="max-w-[200px] truncate">已挂载：{{ contextTitle }}</span>
+        <button
+          class="ml-1 -mr-0.5 w-5 h-5 rounded inline-flex items-center justify-center text-white bg-brand/80 hover:bg-brand hover:scale-110 active:scale-95 transition-all shadow-sm"
+          title="卸载上下文"
+          aria-label="卸载上下文"
+          @click="handleDetachContext"
+        >
+          <X class="w-3 h-3" stroke-width="3" />
+        </button>
       </span>
       <span
         v-else

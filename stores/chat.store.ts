@@ -23,6 +23,12 @@ export const useChatStore = defineStore('chat', () => {
   const currentDocumentId = ref<string | null>(null)
   const inputText = ref('')
   const lastError = ref<string | null>(null)
+  /**
+   * Whether to include the mounted page context when sending the next message.
+   * Default true. The user can toggle this off in ChatInput to send a
+   * "naked" question without the page markdown appended as context.
+   */
+  const includeContext = ref(true)
 
   /** Per-conversation stream state. Key = conversationId. */
   interface StreamState {
@@ -87,6 +93,10 @@ export const useChatStore = defineStore('chat', () => {
     inputText.value = text
     // Clear error when user starts typing
     if (lastError.value) lastError.value = null
+  }
+
+  function setIncludeContext(value: boolean) {
+    includeContext.value = value
   }
 
   function clearError() {
@@ -515,23 +525,26 @@ export const useChatStore = defineStore('chat', () => {
     settings: AppSettings,
     streamState: StreamState,
   ): Promise<void> {
-    // Build page context from current document
+    // Build page context from current document (skipped when the user
+    // has toggled "include context" off in the chat dialog).
     const documentStore = useDocumentStore()
-    const doc = documentStore.pageDocument || documentStore.currentDocument
     let context: string | undefined
-    if (doc?.markdown) {
-      context = buildPageContext(
-        {
-          title: doc.title,
-          url: doc.url,
-          markdown: doc.markdown,
-          wordCount: doc.wordCount,
-          tokenCount: doc.tokenCount,
-          siteName: doc.siteName,
-          capturedAt: doc.capturedAt,
-        },
-        settings.context,
-      )
+    if (includeContext.value) {
+      const doc = documentStore.pageDocument || documentStore.currentDocument
+      if (doc?.markdown) {
+        context = buildPageContext(
+          {
+            title: doc.title,
+            url: doc.url,
+            markdown: doc.markdown,
+            wordCount: doc.wordCount,
+            tokenCount: doc.tokenCount,
+            siteName: doc.siteName,
+            capturedAt: doc.capturedAt,
+          },
+          settings.context,
+        )
+      }
     }
 
     // Truncate context before building the prompt (was previously done
@@ -813,10 +826,12 @@ export const useChatStore = defineStore('chat', () => {
     isStreaming,
     isSending,
     lastError,
+    includeContext,
     // computed
     canSend,
     // actions
     setInputText,
+    setIncludeContext,
     clearError,
     sendMessage,
     stopGeneration,

@@ -16,6 +16,11 @@ vi.mock('@lucide/vue', () => ({
     template: '<span class="mock-refresh-cw" />',
     props: ['class', 'size'],
   },
+  Trash2: {
+    name: 'Trash2',
+    template: '<span class="mock-trash2" />',
+    props: ['class', 'size'],
+  },
 }))
 
 // Mock capture service
@@ -50,6 +55,13 @@ vi.mock('@/components/workspace/MetadataPanel.vue', () => ({
   },
 }))
 
+vi.mock('@/components/common/ConfirmModal.vue', () => ({
+  default: {
+    name: 'ConfirmModal',
+    template: '<div class="confirm-modal-stub" />',
+  },
+}))
+
 function createMockDocumentStore(doc: any) {
   return reactive({
     currentDocument: doc,
@@ -80,6 +92,12 @@ function createMockAppStore() {
   })
 }
 
+function createMockChatStore() {
+  return reactive({
+    resetState: vi.fn(),
+  })
+}
+
 vi.mock('@/stores/document.store', () => ({
   useDocumentStore: vi.fn(),
 }))
@@ -92,13 +110,19 @@ vi.mock('@/stores/app.store', () => ({
   useAppStore: vi.fn(),
 }))
 
+vi.mock('@/stores/chat.store', () => ({
+  useChatStore: vi.fn(),
+}))
+
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
+import { useChatStore } from '@/stores/chat.store'
 
 const mockDocStore = vi.mocked(useDocumentStore)
 const mockWspStore = vi.mocked(useWorkspaceStore)
 const mockAppStore = vi.mocked(useAppStore)
+const mockChatStore = vi.mocked(useChatStore)
 
 describe('ContextPanel', () => {
   beforeEach(() => {
@@ -110,6 +134,7 @@ describe('ContextPanel', () => {
     }) as any)
     mockWspStore.mockReturnValue(createMockWorkspaceStore() as any)
     mockAppStore.mockReturnValue(createMockAppStore() as any)
+    mockChatStore.mockReturnValue(createMockChatStore() as any)
   })
 
   afterEach(() => {
@@ -177,5 +202,42 @@ describe('ContextPanel', () => {
     const wrapper = mount(ContextPanel)
     const refreshBtn = wrapper.find('[title="刷新"]')
     expect(refreshBtn.exists()).toBe(true)
+  })
+
+  it('shows a delete button next to copy/refresh', () => {
+    const wrapper = mount(ContextPanel)
+    const deleteBtn = wrapper.find('[title="从记忆库删除"]')
+    expect(deleteBtn.exists()).toBe(true)
+  })
+
+  it('clicking delete opens a confirm modal and deletes on confirm', async () => {
+    const doc = {
+      id: 'doc-1',
+      title: 'Test Page',
+      markdown: '# Hi',
+    }
+    const docStore = createMockDocumentStore(doc) as any
+    docStore.deleteDocument = vi.fn().mockResolvedValue(undefined)
+    docStore.refreshDocuments = vi.fn().mockResolvedValue(undefined)
+    mockDocStore.mockReturnValue(docStore)
+
+    const wrapper = mount(ContextPanel)
+
+    // No modal initially
+    expect(wrapper.find('.confirm-modal-stub').exists()).toBe(false)
+
+    // Click delete -> modal appears
+    await wrapper.find('[title="从记忆库删除"]').trigger('click')
+    expect(wrapper.find('.confirm-modal-stub').exists()).toBe(true)
+
+    // Click confirm in modal -> deleteDocument + refresh + reset + setSource
+    await wrapper.findComponent({ name: 'ConfirmModal' }).vm.$emit('confirm')
+
+    // Wait for the async confirmDelete to settle
+    await new Promise((r) => setTimeout(r, 0))
+    await wrapper.vm.$nextTick()
+
+    expect(docStore.deleteDocument).toHaveBeenCalledWith('doc-1')
+    expect(docStore.refreshDocuments).toHaveBeenCalled()
   })
 })

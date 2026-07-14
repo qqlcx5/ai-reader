@@ -10,6 +10,7 @@ import ModelSelect from '@/components/workspace/ModelSelect.vue'
 import UButton from '@/components/ui/UButton.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
 
+
 const chatStore = useChatStore()
 const modelStore = useModelStore()
 const documentStore = useDocumentStore()
@@ -89,10 +90,18 @@ const contextDoc = computed(() =>
   documentStore.pageDocument || documentStore.currentDocument,
 )
 
+const hasContext = computed(() => !!contextDoc.value?.markdown)
+
 const contextLabel = computed(() => {
   if (contextDoc.value) return '当前网页'
   return '无上下文'
 })
+
+// includeContext is owned by the chat store (default true). When the user
+// toggles it off, the next message is sent without the page markdown.
+function toggleIncludeContext() {
+  chatStore.setIncludeContext(!chatStore.includeContext)
+}
 
 // ── Model selection (single / multi) ─────────────────────
 const multiModelIds = ref<string[]>([...modelStore.selectedModelIds])
@@ -366,10 +375,24 @@ function handleStop() {
           </UButton>
         </div>
 
-        <UButton variant="ghost" size="sm" class="text-[11px] text-zinc-400">
+        <div
+          class="flex items-center gap-1.5 text-[11px] px-1.5 py-0.5 rounded border transition-colors"
+          :class="hasContext
+            ? (chatStore.includeContext
+              ? 'bg-brand/10 border-brand/30 text-brand cursor-pointer'
+              : 'bg-zinc-50 border-zinc-200 text-zinc-400 cursor-pointer hover:text-zinc-600 hover:border-zinc-300')
+            : 'bg-zinc-50 border-zinc-200 text-zinc-300 cursor-not-allowed'"
+          :title="hasContext
+            ? (chatStore.includeContext ? '点击取消挂载上下文（默认已挂载）' : '点击挂载上下文')
+            : '暂无上下文可挂载'"
+          role="button"
+          :aria-pressed="hasContext && chatStore.includeContext"
+          :aria-disabled="!hasContext"
+          @click="hasContext && toggleIncludeContext()"
+        >
           <Paperclip class="w-3 h-3" />
-          {{ contextLabel }}
-        </UButton>
+          <span>{{ contextLabel }}</span>
+        </div>
       </div>
 
       <div class="relative">

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
-import { Copy, Check, RefreshCw } from '@lucide/vue'
+import { Copy, Check, RefreshCw, Trash2 } from '@lucide/vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
@@ -14,6 +14,7 @@ import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
 import RawPreview from '@/components/workspace/RawPreview.vue'
 import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
@@ -22,6 +23,10 @@ const chatStore = useChatStore()
 
 const isRefreshing = ref(false)
 const copied = ref(false)
+const showDeleteConfirm = ref(false)
+const isDeleting = ref(false)
+
+const currentDoc = computed(() => documentStore.currentDocument)
 
 const contextTab = computed({
   get: () => workspaceStore.currentContextTab,
@@ -175,6 +180,46 @@ async function handleCopy() {
     appStore.showToast('复制失败', 'error')
   }
 }
+
+function requestDelete() {
+  if (!currentDoc.value) {
+    appStore.showToast('没有可删除的文档', 'error')
+    return
+  }
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  const doc = currentDoc.value
+  if (!doc) {
+    showDeleteConfirm.value = false
+    return
+  }
+  const docId = doc.id
+  const docTitle = doc.title || '未命名文档'
+  isDeleting.value = true
+  try {
+    await documentStore.deleteDocument(docId)
+    // Clear chat in-memory state so the user doesn't see a stale
+    // conversation list pointing at a now-deleted document.
+    chatStore.resetState()
+    // Refresh the library list so the removed doc disappears.
+    await documentStore.refreshDocuments()
+    // Fall back to "current page" capture mode — the deleted document
+    // is gone, so we shouldn't keep pointing at a library source.
+    workspaceStore.setDocumentSource('current-page')
+    showDeleteConfirm.value = false
+    appStore.showToast(`已从记忆库删除：${docTitle}`, 'success')
+  } catch (err: any) {
+    appStore.showToast(err.message || '删除失败', 'error')
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+}
 </script>
 
 <template>
@@ -227,6 +272,15 @@ async function handleCopy() {
             :class="{ 'animate-spin': isRefreshing }"
           />
         </button>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+          :disabled="isDeleting || !currentDoc"
+          title="从记忆库删除"
+          aria-label="从记忆库删除"
+          @click="requestDelete"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
 
@@ -234,5 +288,16 @@ async function handleCopy() {
     <MarkdownPreview v-show="contextTab === 'markdown'" />
     <RawPreview v-show="contextTab === 'raw'" />
     <MetadataPanel v-show="contextTab === 'metadata'" />
+
+    <!-- Delete confirm -->
+    <ConfirmModal
+      v-if="showDeleteConfirm && currentDoc"
+      title="删除文档"
+      :desc="`确定从记忆库删除「${currentDoc.title || '未命名文档'}」吗？关联的对话记录也会被删除。此操作不可撤销。`"
+      confirm-text="删除"
+      danger
+      @cancel="cancelDelete"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

@@ -168,6 +168,20 @@ describe('stores/chat.store', () => {
     expect(store.inputText).toBe('Hello AI')
   })
 
+  // 2b. setIncludeContext (toggle for "include page context when sending")
+  it('should default includeContext to true', () => {
+    const store = useChatStore()
+    expect(store.includeContext).toBe(true)
+  })
+
+  it('setIncludeContext should update the includeContext flag', () => {
+    const store = useChatStore()
+    store.setIncludeContext(false)
+    expect(store.includeContext).toBe(false)
+    store.setIncludeContext(true)
+    expect(store.includeContext).toBe(true)
+  })
+
   // 3. sendMessage appends messages to list
   it('sendMessage should append user and assistant messages', async () => {
     await seedModel()

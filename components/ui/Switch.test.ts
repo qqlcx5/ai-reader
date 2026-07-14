@@ -27,4 +27,10 @@ describe('Switch', () => {
     const off = mount(Switch, { props: { modelValue: false } })
     expect(off.find('button').attributes('data-state')).toBe('unchecked')
   })
+
+  it('does not emit update:modelValue when disabled', async () => {
+    const wrapper = mount(Switch, { props: { modelValue: false, disabled: true } })
+    await wrapper.find('button').trigger('click')
+    expect(wrapper.emitted('update:modelValue')).toBeFalsy()
+  })
 })
