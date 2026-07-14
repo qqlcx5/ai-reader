@@ -406,6 +406,10 @@ onUnmounted(() => {
             <span class="text-amber-500 font-medium">{{ feedStore.autoPending }}</span> 待入库
             <span class="text-zinc-300 mx-0.5">·</span>
             <span class="text-emerald-500 font-medium">{{ feedStore.autoCollected }}</span> 已入库
+            <template v-if="feedStore.autoFailed > 0">
+              <span class="text-zinc-300 mx-0.5">·</span>
+              <span class="text-red-500 font-medium">{{ feedStore.autoFailed }}</span> 收集失败
+            </template>
           </div>
         </div>
 

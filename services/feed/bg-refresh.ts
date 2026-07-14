@@ -184,8 +184,17 @@ export async function collectFeedItems(feedId: string): Promise<CollectResult> {
   const all = await FeedItemRepository.findByFeed(feedId)
   const uncollected = all.filter((i) => !i.documentId)
   if (!uncollected.length) return { total: 0, collected: 0, failed: 0, items: [] }
+  // User-initiated retry: clear previous failure markers so failed items get
+  // a fresh shot. Without this, collectBatch would skip items whose collectError
+  // is set (they'd stay stuck forever).
+  await FeedItemRepository.clearAllCollectErrors(feedId).catch(() => {})
+  // Re-load items after clearing errors so the in-memory array reflects the
+  // cleared state (collectBatch filters on i.collectError).
+  const refreshed = await FeedItemRepository.findByFeed(feedId)
+  const toCollect = refreshed.filter((i) => !i.documentId)
+  if (!toCollect.length) return { total: 0, collected: 0, failed: 0, items: [] }
   const minWords = (feed as any).autoCollectMinWords as number | undefined
-  const result = await collectBatch(uncollected, 'auto', minWords ?? DEFAULT_MIN_WORDS)
+  const result = await collectBatch(toCollect, 'auto', minWords ?? DEFAULT_MIN_WORDS)
   // Notify panel to reload its item list
   try {
     ;(browser as any)?.runtime?.sendMessage?.({
@@ -227,8 +236,12 @@ export async function collectBatch(
   origin: 'manual' | 'auto',
   minWords: number = DEFAULT_MIN_WORDS,
 ): Promise<CollectResult> {
+  // Skip items that already have a failure marker. They were given a fair
+  // shot (3 internal retries); the next auto-run shouldn't waste a worker
+  // slot on them. The panel "collect" button clears the marker first so
+  // a user-initiated retry actually retries.
   const toCollect = items
-    .filter((i) => !i.documentId)
+    .filter((i) => !i.documentId && !i.collectError)
     .slice(0, MAX_COLLECT_PER_RUN)
 
   if (!toCollect.length) return { total: 0, collected: 0, failed: 0, items: [] }
@@ -300,6 +313,8 @@ async function collectOneItem(
 
       const saved = await DocumentRepository.save(entity)
       await FeedItemRepository.setDocument(item.id, saved.id, now)
+      // Success — clear any previous failure marker
+      await FeedItemRepository.clearCollectError(item.id).catch(() => {})
       try {
         addToIndex(saved)
       } catch {
@@ -325,6 +340,14 @@ async function collectOneItem(
         console.warn(`[bg] collect exhausted retries:`, item.link, e)
       }
     }
+  }
+  // All retries exhausted — persist the failure so the next auto-collect run
+  // skips this item and the user can see *why* it failed. Manual retries
+  // (panel "collect" button) clear this flag first.
+  try {
+    await FeedItemRepository.setCollectError(item.id, lastError, new Date().toISOString())
+  } catch {
+    // best-effort
   }
   return { ...base, ok: false, reason: lastError }
 }

@@ -92,7 +92,7 @@ export const useFeedStore = defineStore('feed', () => {
   // ---- Global collect stats (for status panel) ----
 
   /** Per-feed item counts: total / collected / pending. */
-  const feedItemStats = ref<Record<string, { total: number; collected: number; pending: number }>>({})
+  const feedItemStats = ref<Record<string, { total: number; collected: number; pending: number; failed: number }>>({})
 
   /** Whether any feed is currently collecting. */
   const anyCollecting = computed(() =>
@@ -122,6 +122,11 @@ export const useFeedStore = defineStore('feed', () => {
   /** Collected items from autoCollect feeds only. */
   const autoCollected = computed(() =>
     autoCollectFeeds.value.reduce((s, f) => s + (feedItemStats.value[f.id]?.collected ?? 0), 0),
+  )
+
+  /** Items that failed collection from autoCollect feeds (collectError set). */
+  const autoFailed = computed(() =>
+    autoCollectFeeds.value.reduce((s, f) => s + (feedItemStats.value[f.id]?.failed ?? 0), 0),
   )
 
   // AI analysis summary (across all items in view)
@@ -202,11 +207,12 @@ export const useFeedStore = defineStore('feed', () => {
 
   /** Load item stats (total / collected / pending) for all feeds. */
   async function loadFeedItemStats() {
-    const stats: Record<string, { total: number; collected: number; pending: number }> = {}
+    const stats: Record<string, { total: number; collected: number; pending: number; failed: number }> = {}
     for (const f of feeds.value) {
       const all = await FeedItemRepository.findByFeed(f.id)
       const collected = all.filter((i) => i.documentId).length
-      stats[f.id] = { total: all.length, collected, pending: all.length - collected }
+      const failed = all.filter((i) => i.collectError).length
+      stats[f.id] = { total: all.length, collected, pending: all.length - collected, failed }
     }
     feedItemStats.value = stats
   }
@@ -239,8 +245,9 @@ export const useFeedStore = defineStore('feed', () => {
           const f = res.failed ?? 0
           totalCollected += c
           totalFailed += f
+          // c > 0 → done; f > 0 → error; both 0 → idle (nothing to collect)
           setCollectStatus(feed.id, {
-            phase: c > 0 ? 'done' : 'idle',
+            phase: c > 0 ? 'done' : f > 0 ? 'error' : 'idle',
             collected: c,
             failed: f,
             finishedAt: new Date().toISOString(),
@@ -252,15 +259,24 @@ export const useFeedStore = defineStore('feed', () => {
             feedTitle: feed.title,
           } as CollectItemDetail)))
           }
+          // Auto-clear 'done' and 'error' after 8s so the badge doesn't persist
           setTimeout(() => {
             const s = collectStatus[feed.id]
-            if (s?.phase === 'done') clearCollectStatus(feed.id)
-          }, 5000)
+            if (s?.phase === 'done' || s?.phase === 'error') clearCollectStatus(feed.id)
+          }, 8000)
         } else {
           setCollectStatus(feed.id, { phase: 'error', finishedAt: new Date().toISOString() })
+          setTimeout(() => {
+            const s = collectStatus[feed.id]
+            if (s?.phase === 'error') clearCollectStatus(feed.id)
+          }, 8000)
         }
       } catch {
         setCollectStatus(feed.id, { phase: 'error', finishedAt: new Date().toISOString() })
+        setTimeout(() => {
+          const s = collectStatus[feed.id]
+          if (s?.phase === 'error') clearCollectStatus(feed.id)
+        }, 8000)
       }
     }
 
@@ -489,7 +505,7 @@ export const useFeedStore = defineStore('feed', () => {
         const total = res.total ?? 0
         const feedTitle = feed.title
         setCollectStatus(id, {
-          phase: collected > 0 ? 'done' : 'idle',
+          phase: collected > 0 ? 'done' : (total > 0 && failed > 0) ? 'error' : 'idle',
           total,
           collected,
           failed,
@@ -516,19 +532,27 @@ export const useFeedStore = defineStore('feed', () => {
         } else {
           toast.info('没有待收集的条目', { category: 'rss' })
         }
-        // Auto-clear "done" status after 5s
+        // Auto-clear "done" and "error" status after 8s
         setTimeout(() => {
           const s = collectStatus[id]
-          if (s?.phase === 'done') clearCollectStatus(id)
-        }, 5000)
+          if (s?.phase === 'done' || s?.phase === 'error') clearCollectStatus(id)
+        }, 8000)
       } else {
         setCollectStatus(id, { phase: 'error', finishedAt: new Date().toISOString() })
         toast.error(`收集失败：${res?.error || '未知错误'}`, { category: 'rss' })
+        setTimeout(() => {
+          const s = collectStatus[id]
+          if (s?.phase === 'error') clearCollectStatus(id)
+        }, 8000)
       }
     } catch (e: any) {
       toast.dismiss(toastId)
       setCollectStatus(id, { phase: 'error', finishedAt: new Date().toISOString() })
       toast.error(`收集请求失败：${e?.message || e}`, { category: 'rss' })
+      setTimeout(() => {
+        const s = collectStatus[id]
+        if (s?.phase === 'error') clearCollectStatus(id)
+      }, 8000)
     }
   }
 
@@ -554,7 +578,7 @@ export const useFeedStore = defineStore('feed', () => {
       await loadUnread()
       const failed = itemResults?.filter((r: any) => !r.ok).length ?? 0
       setCollectStatus(feedId, {
-        phase: collected > 0 ? 'done' : 'idle',
+        phase: collected > 0 ? 'done' : failed > 0 ? 'error' : 'idle',
         collected,
         failed,
         finishedAt: new Date().toISOString(),
@@ -574,10 +598,11 @@ export const useFeedStore = defineStore('feed', () => {
           finishedAt: new Date().toISOString(),
         }
       }
+      // Auto-clear after 8s
       setTimeout(() => {
         const s = collectStatus[feedId]
-        if (s?.phase === 'done') clearCollectStatus(feedId)
-      }, 5000)
+        if (s?.phase === 'done' || s?.phase === 'error') clearCollectStatus(feedId)
+      }, 8000)
       await loadFeedItemStats()
       void loadAiJobs()
     }
@@ -605,6 +630,7 @@ export const useFeedStore = defineStore('feed', () => {
     autoCollectFeeds,
     autoPending,
     autoCollected,
+    autoFailed,
     aiJobMap,
     aiConvMap,
     aiSummary,

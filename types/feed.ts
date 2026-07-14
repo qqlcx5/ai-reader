@@ -50,4 +50,10 @@ export interface FeedItemEntity {
   /** Set once the item has been collected into the library as a DocumentEntity. */
   documentId?: string
   collectedAt?: string
+  /** Set when the most recent collect attempt failed and exhausted all retries.
+   *  Items with this flag are skipped by the periodic alarm-driven collect, but
+   *  the user can clear it (e.g. by clicking the panel "collect" button) to
+   *  give the item another shot. */
+  collectError?: string
+  collectErrorAt?: string
 }

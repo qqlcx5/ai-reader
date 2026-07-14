@@ -42,6 +42,25 @@ export const FeedItemRepository = {
     await db.feedItems.update(id, { documentId: undefined, collectedAt: undefined })
   },
 
+  async setCollectError(id: string, reason: string, at: string): Promise<void> {
+    await db.feedItems.update(id, { collectError: reason, collectErrorAt: at })
+  },
+
+  async clearCollectError(id: string): Promise<void> {
+    await db.feedItems.update(id, { collectError: undefined, collectErrorAt: undefined })
+  },
+
+  async clearAllCollectErrors(feedId: string): Promise<void> {
+    const rows = await db.feedItems.where('feedId').equals(feedId).toArray()
+    const failed = rows.filter((r) => r.collectError)
+    if (!failed.length) return
+    await db.feedItems.bulkPut(failed.map((r) => ({
+      ...r,
+      collectError: undefined,
+      collectErrorAt: undefined,
+    })))
+  },
+
   async unreadCount(feedId?: string): Promise<number> {
     const col = feedId ? db.feedItems.where('feedId').equals(feedId) : db.feedItems.toCollection()
     const rows = await col.toArray()
