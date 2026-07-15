@@ -5,13 +5,8 @@ import type { PromptTemplate } from '../types/prompt-template'
 
 const INITIAL_TEMPLATES: Omit<PromptTemplate, 'id' | 'createdAt'>[] = [
   {
-    title: '深度分析',
-    content: `请对以上内容进行深度分析。要求：
-1. 识别核心论点和逻辑链
-2. 指出隐含假设和未明说的前提
-3. 分析论证中的薄弱环节或逻辑跳跃
-4. 指出作者可能遗漏的角度或反驳点
-5. 用 2-3 句话给出你的整体评价`,
+    title: '专家圆桌分析',
+    content: `找出这个星球上对该问题最懂的那些人，化身他们请用“专家圆桌”的方式呈现部分分析。`,
     category: '模板',
     isBuiltin: false,
     sortOrder: 8,

@@ -49,6 +49,14 @@ const appStore = useAppStore()
 const showExportMenu = ref(false)
 const showBatchExport = ref(false)
 
+// ── Horizontal wheel scroll for conversation list ──
+const convScrollRef = ref<HTMLElement | null>(null)
+function onConvWheel(e: WheelEvent) {
+  const el = convScrollRef.value
+  if (!el) return
+  el.scrollLeft += e.deltaY
+}
+
 /** Export a single conversation as Markdown file. */
 async function handleExportMarkdown(conv: ConversationEntity) {
   const doc = conv.documentId ? await DocumentRepository.findById(conv.documentId) : undefined
@@ -169,7 +177,11 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
     </div>
 
     <!-- Center: Scrollable conversation list -->
-    <div class="overflow-y-auto flex-1 min-w-0 flex gap-0.5 py-1.5 ">
+    <div
+      ref="convScrollRef"
+      class="overflow-y-auto flex-1 min-w-0 flex gap-0.5 py-1.5"
+      @wheel.prevent="onConvWheel"
+    >
       <div
         v-for="conv in chatStore.conversations"
         :key="conv.id"
