@@ -122,8 +122,8 @@ watch(safeContent, async () => {
     // Restore reading position if available
     const docId = selectedItem.value?.documentId
     const doc = docId ? documentStore.documents.find((d) => d.id === docId) : null
-    const progress = doc?.readProgress
-    if (progress && progress > 0 && progress < 1) {
+    const progress = doc?.readProgress ?? 0
+    if (progress > 0 && progress < 1) {
       const maxScroll = readerScrollRef.value.scrollHeight - readerScrollRef.value.clientHeight
       readerScrollRef.value.scrollTop = maxScroll * progress
       lastReportedProgress = progress

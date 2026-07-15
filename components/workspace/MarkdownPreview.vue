@@ -422,14 +422,14 @@ defineExpose({ jumpToHighlight })
 onMounted(() => {
   document.addEventListener('selectionchange', handleSelectionClear)
   document.addEventListener('click', closeMarkPopover, { capture: true })
-  const doc = documentStore.currentDocument
-  if (doc?.readProgress && doc.readProgress > 0 && doc.readProgress < 1 && scrollRef.value) {
+  const progress = documentStore.currentDocument?.readProgress
+  if (progress != null && progress > 0 && progress < 1 && scrollRef.value) {
     nextTick(() => {
       const el = scrollRef.value
       if (!el) return
       const maxScroll = el.scrollHeight - el.clientHeight
-      el.scrollTop = maxScroll * doc.readProgress
-      lastReportedProgress = doc.readProgress
+      el.scrollTop = maxScroll * progress
+      lastReportedProgress = progress
     })
   }
 })
