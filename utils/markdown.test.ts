@@ -41,6 +41,23 @@ describe('renderMarkdown', () => {
     const html = renderMarkdown('# Hello World')
     expect(html).toMatch(/id="hello-world"/i)
   })
+
+  it('renders bold when ** is followed by CJK/ASCII quotes', () => {
+    // marked v18 has a bug where ** immediately followed by a punctuation char
+    // (like CJK quotes \u201c \u201d or ASCII quotes) after a non-punct char
+    // fails to parse as bold. We fix it with a preprocess hook.
+    const cases = [
+      '用**\u201c先建森林\u201d的方法**',
+      '用**"先建森林"的方法**',
+      '将用**\u201c先建森林，再种树木\u201d的方法**，并结合**费曼技巧和二八定律**',
+      '用**先建森林**的方法',
+      'a**bold**b',
+    ]
+    for (const md of cases) {
+      const html = renderMarkdown(md)
+      expect(html).toContain('<strong>')
+    }
+  })
 })
 
 describe('enhanceCodeBlocks', () => {

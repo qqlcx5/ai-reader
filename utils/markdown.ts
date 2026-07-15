@@ -29,6 +29,20 @@ function configure(): void {
   // Guard: some tests mock `marked` without a `.use`. Real marked has it.
   if (typeof marked.use === 'function') {
     marked.use(markedFootnote(), gfmHeadingId())
+
+    // Fix: marked v18 emStrong guard fails when ** immediately follows a
+    // non-punct char and is itself immediately followed by a punctuation char
+    // (e.g. CJK quotes \u201c \u201d, ASCII quotes). Inserting a zero-width
+    // space between ** and the quote makes emStrongLDelim match the
+    // non-punct path (s[2]) instead of the punct path (s[1]), avoiding the
+    // guard condition that would otherwise skip em/strong parsing entirely.
+    marked.use({
+      hooks: {
+        preprocess(src: string): string {
+          return src.replace(/\*\*(["\u201c\u201d\u2018\u2019'])/gu, '**\u200b$1')
+        },
+      },
+    })
   }
 }
 
