@@ -12,8 +12,8 @@ import {
   exportConversationAsJson,
   exportConversationsToZip,
   exportConversationsAsJson,
-  downloadBlob,
 } from '@/utils/conversation-export'
+import { downloadBlob } from '@/utils/export'
 import type { ConversationEntity } from '@/types/chat'
 import type { DocumentEntity } from '@/types/document'
 
@@ -173,25 +173,25 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
       <div
         v-for="conv in chatStore.conversations"
         :key="conv.id"
-        class="group relative flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] transition-all w-full border max-w-[160px]"
+        class="group relative flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] transition-all w-full border max-w-[130px]"
         :class="conv.id === chatStore.currentConversationId
           ? 'bg-brand/10 border-brand/30 text-brand'
           : 'bg-zinc-50 border-zinc-200 text-zinc-600 hover:bg-zinc-100'"
         @click="handleSwitchConversation(conv.id)"
       >
-        <MessageSquare class="w-3 h-3 shrink-0" />
+        <!-- <MessageSquare class="w-3 h-3 shrink-0" /> -->
         <span class="truncate flex-1 min-w-0">{{ conv.title || '新对话' }}</span>
         <span class="text-[10px] opacity-50 shrink-0 tabular-nums">{{ conv.messages.length }}</span>
         <span class="text-[10px] opacity-40 shrink-0 tabular-nums min-w-[20px] text-right">{{ formatTime(conv.updatedAt || conv.createdAt) }}</span>
 
         <!-- Export button (appears on hover) -->
-        <button
-          class="hidden group-hover:flex w-3 h-3 rounded-full bg-zinc-500 text-white items-center justify-center hover:bg-brand transition-colors"
+        <div
+          class="hidden group-hover:flex w-3 h-3 rounded-full bg-zinc-400 text-white items-center justify-center hover:bg-brand transition-colors"
           title="导出"
           @click.stop="handleExportConversation(conv, 'md')"
         >
-          <Download class="w-1.8 h-1.8" />
-        </button>
+          <Download class="size-2" />
+        </div>
 
         <!-- Delete button (only show when multiple conversations) -->
         <div

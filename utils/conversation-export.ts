@@ -433,12 +433,6 @@ export function exportConversationsAsJson(
 // ── Download helpers ───────────────────────────────────────
 
 /**
- * Trigger a browser download for a Blob with the given filename.
- * (Re-exported from export.ts for convenience.)
- */
-export { downloadBlob } from './export'
-
-/**
  * Copy text to clipboard with a fallback for non-secure contexts.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {

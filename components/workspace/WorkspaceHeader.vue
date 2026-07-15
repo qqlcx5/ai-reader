@@ -14,8 +14,8 @@ import { DocumentRepository } from '@/db/repositories/document.repository'
 import {
   exportConversationAsMarkdown,
   exportConversationAsJson,
-  downloadBlob,
 } from '@/utils/conversation-export'
+import { downloadBlob } from '@/utils/export'
 
 const documentStore = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
