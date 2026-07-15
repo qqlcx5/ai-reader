@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import markedFootnote from 'marked-footnote'
 import { gfmHeadingId } from 'marked-gfm-heading-id'
+import markedKatex from 'marked-katex-extension'
 
 // Single shared markdown pipeline for MarkdownPreview, ChatMessage, and future
 // reader views. Everything renders through here so styling + sanitization +
@@ -11,9 +12,11 @@ import { gfmHeadingId } from 'marked-gfm-heading-id'
 // task-list checkboxes are on by default; footnotes + heading anchors are
 // registered below.
 
+// KaTeX outputs inline MathML + spans with specific classes/attributes.
+// We allow these through DOMPurify so rendered formulas display correctly.
 const SANITIZE_OPTS = {
-  ADD_TAGS: ['img'],
-  ADD_ATTR: ['src', 'alt', 'title', 'width', 'height', 'loading', 'srcset', 'sizes', 'id', 'controls'],
+  ADD_TAGS: ['img', 'math', 'mrow', 'mi', 'mo', 'mn', 'msup', 'msub', 'mfrac', 'msqrt', 'mroot', 'mtext', 'mspace', 'mtable', 'mtr', 'mtd', 'semantics', 'annotation', 'menclose', 'munderover', 'munder', 'mover'],
+  ADD_ATTR: ['src', 'alt', 'title', 'width', 'height', 'loading', 'srcset', 'sizes', 'id', 'controls', 'class', 'style', 'aria-hidden', 'role', 'xmlns', 'encoding', 'mathvariant'],
 }
 
 /** Sanitize raw HTML (e.g. RSS feed bodies) with the same policy as markdown. */
@@ -29,6 +32,14 @@ function configure(): void {
   // Guard: some tests mock `marked` without a `.use`. Real marked has it.
   if (typeof marked.use === 'function') {
     marked.use(markedFootnote(), gfmHeadingId())
+
+    // KaTeX math rendering: $...$ for inline, $$...$$ for block.
+    marked.use(
+      markedKatex({
+        throwOnError: false,
+        output: 'htmlAndMathml',
+      }),
+    )
 
     // Fix: marked v18 emStrong guard fails when ** immediately follows a
     // non-punct char and is itself immediately followed by a punctuation char

@@ -58,6 +58,23 @@ describe('renderMarkdown', () => {
       expect(html).toContain('<strong>')
     }
   })
+
+  it('renders inline math with $...$', () => {
+    const html = renderMarkdown('The formula $E=mc^2$ is famous.')
+    expect(html).toContain('katex')
+    expect(html).toContain('E=mc')
+  })
+
+  it('renders block math with $$...$$', () => {
+    const html = renderMarkdown('Here is a equation:\n\n$$\\int_0^1 x^2 dx = \\frac{1}{3}$$\n\nDone.')
+    expect(html).toContain('katex-display')
+    expect(html).toContain('application/x-tex')
+  })
+
+  it('does not treat single $ as math (requires matching pair)', () => {
+    const html = renderMarkdown('Price is $5 only')
+    expect(html).not.toContain('katex')
+  })
 })
 
 describe('enhanceCodeBlocks', () => {
