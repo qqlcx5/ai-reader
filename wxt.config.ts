@@ -32,7 +32,7 @@ export default defineConfig({
     chromiumProfile: resolve('.wxt/chrome-data'),
     // chromiumArgs: ['--user-data-dir=./.wxt/chrome-data'],
     keepProfileChanges: true,
-    startUrls: ['https://www.bestblogs.dev/article/3ff37d3c'],
+    startUrls: ['https://www.bestblogs.dev/article/6bbe303e'],
     // 保持配置文件变更时重启浏览器
     openDevtools: true,
     openConsole: true
