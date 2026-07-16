@@ -8,15 +8,18 @@ import ModelEditorDialog from './ModelEditorDialog.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ContextSettings from '@/components/settings/ContextSettings.vue'
 import CaptureSettings from '@/components/settings/CaptureSettings.vue'
+import AiJobQueue from '@/components/settings/AiJobQueue.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
 import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import S3Settings from '@/components/settings/S3Settings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
+import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import { useAppStore } from '@/stores/app.store'
 
 const modelStore = useModelStore()
 const settingsStore = useSettingsStore()
+const promptStore = usePromptTemplateStore()
 const appStore = useAppStore()
 
 
@@ -33,8 +36,11 @@ const globalSystemPrompt = computed({
 })
 
 onMounted(async () => {
-  await modelStore.loadModels()
-  await settingsStore.loadSettings()
+  await Promise.all([
+    modelStore.loadModels(),
+    settingsStore.loadSettings(),
+    promptStore.initTemplates(),
+  ])
 })
 
 function openAddDialog() {
@@ -166,6 +172,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 
         <ContextSettings />
         <CaptureSettings />
+      </section>
+
+      <!-- 自动 AI 分析 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">自动 AI 分析</h2>
+        <AiJobQueue />
       </section>
 
       <!-- WebDAV 同步 -->
