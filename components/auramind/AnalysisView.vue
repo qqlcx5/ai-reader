@@ -6,6 +6,7 @@ import {
   Activity, Timer, CheckSquare, Square,
   ArrowUp, ArrowDown, MoreVertical,
 } from '@lucide/vue'
+import PipelineVisualization from '@/components/auramind/PipelineVisualization.vue'
 import { useAiJobStore } from '@/stores/ai-job.store'
 import { useAppStore } from '@/stores/app.store'
 import { useModelStore } from '@/stores/model.store'
@@ -437,6 +438,9 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
     </div>
 
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+      <!-- Pipeline Visualization -->
+      <PipelineVisualization :show-stats="true" />
+
       <!-- Stats Dashboard -->
       <div class="grid grid-cols-4 gap-2.5">
         <div class="bg-white rounded-xl border border-zinc-200 shadow-sm p-3">

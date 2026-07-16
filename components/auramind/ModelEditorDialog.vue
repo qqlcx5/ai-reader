@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, watch, computed } from 'vue'
-import { X } from '@lucide/vue'
+import { X, ChevronDown, Search, RefreshCw, Check } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
@@ -9,6 +9,7 @@ import Slider from '@/components/ui/Slider.vue'
 import Switch from '@/components/ui/Switch.vue'
 import type { ModelConfig, ThinkingConfig } from '@/types/model'
 import { useModelStore } from '@/stores/model.store'
+import { toast } from '@/utils/toast'
 
 const props = defineProps<{
   open: boolean
@@ -62,6 +63,70 @@ const maxRetries = ref(2)
 const errors = ref<Record<string, string>>({})
 const submitting = ref(false)
 
+// ── Fetch models from API ────────────────────────────────
+const fetchingModels = ref(false)
+const fetchedModels = ref<{ id: string; ownedBy?: string }[]>([])
+const showModelPicker = ref(false)
+const modelSearch = ref('')
+
+const filteredModels = computed(() => {
+  const q = modelSearch.value.trim().toLowerCase()
+  if (!q) return fetchedModels.value
+  return fetchedModels.value.filter((m) => m.id.toLowerCase().includes(q))
+})
+
+async function fetchModels() {
+  const base = baseUrl.value.trim().replace(/\/+$/, '')
+  if (!base) {
+    toast('请先填写 Base URL', 'error')
+    return
+  }
+  if (!apiKey.value.trim()) {
+    toast('请先填写 API Key', 'error')
+    return
+  }
+  fetchingModels.value = true
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 10_000)
+    const res = await fetch(`${base}/models`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey.value.trim()}`,
+      },
+      signal: controller.signal,
+    })
+    clearTimeout(timer)
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      toast(`获取失败: HTTP ${res.status} ${text.slice(0, 100)}`, 'error')
+      return
+    }
+    const data = await res.json()
+    const list: { id: string; ownedBy?: string }[] = (data.data || data.models || []).map((m: any) => ({
+      id: m.id || m.name,
+      ownedBy: m.owned_by || m.ownedBy,
+    })).filter((m: { id: string }) => m.id)
+    if (!list.length) {
+      toast('未获取到模型列表', 'info')
+      return
+    }
+    fetchedModels.value = list
+    showModelPicker.value = true
+    modelSearch.value = ''
+    toast(`获取到 ${list.length} 个模型`, 'success')
+  } catch (e: any) {
+    toast(`获取失败: ${e?.message ?? String(e)}`, 'error')
+  } finally {
+    fetchingModels.value = false
+  }
+}
+
+function selectModel(id: string) {
+  modelId.value = id
+  showModelPicker.value = false
+}
+
 const showBaseUrl = computed(() => provider.value === 'openai-compatible' || provider.value === 'ollama')
 
 function resetForm() {
@@ -84,6 +149,9 @@ function resetForm() {
   outputPricePer1M.value = undefined
   maxRetries.value = 2
   errors.value = {}
+  fetchedModels.value = []
+  showModelPicker.value = false
+  modelSearch.value = ''
 }
 
 function populateFromModel(model: ModelConfig) {
@@ -277,7 +345,47 @@ watch(() => props.open, (val) => {
 
         <!-- Model ID -->
         <div>
-          <label class="text-[11px] text-zinc-500 font-medium">模型 ID <span class="text-red-400">*</span></label>
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] text-zinc-500 font-medium">模型 ID <span class="text-red-400">*</span></label>
+            <button
+              v-if="showBaseUrl"
+              class="flex items-center gap-1 text-[10px] text-brand hover:text-brand/80 transition-colors disabled:opacity-40"
+              :disabled="fetchingModels"
+              @click="fetchModels"
+            >
+              <RefreshCw class="w-2.5 h-2.5" :class="{ 'animate-spin': fetchingModels }" />
+              {{ fetchingModels ? '获取中...' : '从 API 获取' }}
+            </button>
+          </div>
+
+          <!-- Model picker dropdown -->
+          <div v-if="showModelPicker" class="mt-1 border border-zinc-200 rounded-lg bg-white shadow-sm max-h-48 overflow-hidden flex flex-col">
+            <div class="p-1.5 border-b border-zinc-100 flex items-center gap-1.5">
+              <Search class="w-3 h-3 text-zinc-400 shrink-0" />
+              <input
+                v-model="modelSearch"
+                class="flex-1 text-[11px] outline-none bg-transparent"
+                placeholder="搜索模型..."
+                autofocus
+              >
+              <button class="text-[10px] text-zinc-400 hover:text-zinc-600" @click="showModelPicker = false">✕</button>
+            </div>
+            <div class="overflow-y-auto flex-1">
+              <button
+                v-for="m in filteredModels"
+                :key="m.id"
+                class="w-full px-2.5 py-1.5 text-left text-[11px] hover:bg-brand/5 flex items-center justify-between gap-2"
+                :class="{ 'bg-brand/10 text-brand': modelId === m.id }"
+                @click="selectModel(m.id)"
+              >
+                <span class="font-mono truncate">{{ m.id }}</span>
+                <span v-if="modelId === m.id" class="shrink-0"><Check class="w-3 h-3" /></span>
+                <span v-else-if="m.ownedBy" class="text-[9px] text-zinc-400 shrink-0">{{ m.ownedBy }}</span>
+              </button>
+              <p v-if="!filteredModels.length" class="px-2.5 py-2 text-[10px] text-zinc-400 text-center">无匹配模型</p>
+            </div>
+          </div>
+
           <UInput v-model="modelId" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 gpt-4o" />
           <p v-if="errors.modelId" class="text-[10px] text-red-400 mt-0.5">{{ errors.modelId }}</p>
         </div>
