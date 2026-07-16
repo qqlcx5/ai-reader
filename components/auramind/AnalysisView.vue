@@ -7,6 +7,7 @@ import {
   ArrowUp, ArrowDown, MoreVertical,
 } from '@lucide/vue'
 import PipelineVisualization from '@/components/auramind/PipelineVisualization.vue'
+import AnalysisConfigCenter from '@/components/auramind/AnalysisConfigCenter.vue'
 import { useAiJobStore } from '@/stores/ai-job.store'
 import { useAppStore } from '@/stores/app.store'
 import { useModelStore } from '@/stores/model.store'
@@ -440,6 +441,9 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-4">
       <!-- Pipeline Visualization -->
       <PipelineVisualization :show-stats="true" />
+
+      <!-- Analysis Config Center -->
+      <AnalysisConfigCenter />
 
       <!-- Stats Dashboard -->
       <div class="grid grid-cols-4 gap-2.5">
