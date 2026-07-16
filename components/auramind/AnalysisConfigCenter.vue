@@ -47,13 +47,12 @@ function toggleSection(id: string) {
   expandedSections.value = s
 }
 
-// ── Auto Analysis Rules ──
-const autoRules = ref<AutoAnalysisSettings>({
-  enabled: false,
-  modelId: '',
-  promptTemplateId: '',
-  queuePaused: false,
-})
+// ── Auto Analysis Rules (directly bound to store, no local copy) ──
+const autoCfg = computed(() => settingsStore.settings.autoAnalysis)
+
+function updateAutoCfg(patch: Partial<AutoAnalysisSettings>) {
+  settingsStore.updateAutoAnalysis(patch)
+}
 
 // ── Rule conditions (advanced) ──
 interface RuleCondition {
@@ -81,8 +80,8 @@ function addRule() {
     name: `规则 ${analysisRules.value.length + 1}`,
     enabled: true,
     conditions: [{ id: `c_${crypto.randomUUID()}`, field: 'wordCount', operator: 'gt', value: '500' }],
-    modelId: autoRules.value.modelId || modelStore.defaultModel?.id || '',
-    promptTemplateId: autoRules.value.promptTemplateId || '',
+    modelId: autoCfg.value.modelId || modelStore.defaultModel?.id || '',
+    promptTemplateId: autoCfg.value.promptTemplateId || '',
     priority: 'normal',
   })
 }
@@ -235,14 +234,17 @@ const templateOptions = computed(() => [
   ...promptStore.templates.map((t) => ({ value: t.id, label: t.title })),
 ])
 
-// ── Save handler ──
+// ── Save handler (for manual save button; auto-save happens on each field change) ──
 const saving = ref(false)
 
-async function saveAutoRules() {
+async function saveAllConfigs() {
   saving.value = true
   try {
-    await settingsStore.updateAutoAnalysis({ ...autoRules.value })
-    appStore.showToast('自动分析规则已保存', 'success')
+    // autoAnalysis is already persisted via updateAutoAnalysis on each change
+    // This button serves as a confirmation + refreshes stats
+    await aiJobStore.refreshStats()
+    await aiJobStore.refreshPauseState()
+    appStore.showToast('配置已保存', 'success')
   } catch (e) {
     appStore.showToast('保存失败', 'error')
   } finally {
@@ -252,8 +254,20 @@ async function saveAutoRules() {
 
 async function toggleQueuePause() {
   await aiJobStore.toggleQueuePause()
-  autoRules.value.queuePaused = aiJobStore.queuePaused
 }
+
+// ── Validation: warn when auto-analysis is on but no model configured ──
+const autoCfgWarnings = computed<string[]>(() => {
+  const warns: string[] = []
+  if (!autoCfg.value.enabled) return warns
+  if (!autoCfg.value.modelId && !modelStore.defaultModel) {
+    warns.push('未配置默认模型，自动分析将无法执行')
+  }
+  if (!autoCfg.value.promptTemplateId) {
+    warns.push('未选择提示词模板，将仅使用系统提示词（可能效果有限）')
+  }
+  return warns
+})
 
 // ── Lifecycle ──
 onMounted(async () => {
@@ -263,11 +277,7 @@ onMounted(async () => {
     settingsStore.loadSettings(),
     aiJobStore.loadJobs(),
   ])
-  // Sync autoRules from settings
-  const s = settingsStore.settings
-  if (s?.autoAnalysis) {
-    autoRules.value = { ...s.autoAnalysis }
-  }
+  // autoCfg is a computed from store — no manual sync needed
 })
 </script>
 
@@ -288,7 +298,7 @@ onMounted(async () => {
         class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1"
         :class="saving ? 'text-zinc-400 bg-zinc-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'"
         :disabled="saving"
-        @click="saveAutoRules"
+        @click="saveAllConfigs"
       >
         <Save v-if="!saving" class="w-3 h-3" />
         <Loader2 v-else class="w-3 h-3 animate-spin" />
@@ -328,32 +338,43 @@ onMounted(async () => {
               <span class="text-[12px] font-medium text-zinc-700">自动分析开关</span>
             </div>
             <Switch
-              :model-value="autoRules.enabled"
-              @update:model-value="(v: boolean) => { autoRules.enabled = v; saveAutoRules() }"
+              :model-value="autoCfg.enabled"
+              @update:model-value="(v: boolean) => updateAutoCfg({ enabled: v })"
             />
           </div>
           <div v-if="expandedSections.has('auto-enable')" class="px-3 pb-3 space-y-2.5 border-t border-zinc-100 pt-2.5">
             <p class="text-[10px] text-zinc-400 leading-relaxed">
               开启后，每篇新捕获的网页将自动入队 AI 分析。可在下方指定默认模型和提示词模板。
             </p>
+
+            <!-- Warnings -->
+            <div
+              v-for="w in autoCfgWarnings"
+              :key="w"
+              class="flex items-start gap-1.5 p-2 rounded-md bg-amber-50 border border-amber-200 text-[10px] text-amber-700"
+            >
+              <AlertCircle class="w-3 h-3 mt-px shrink-0" />
+              <span>{{ w }}</span>
+            </div>
+
             <!-- Default model -->
             <div>
               <label class="text-[10px] text-zinc-500 font-medium mb-1 block">默认模型</label>
               <Select
-                :model-value="autoRules.modelId ?? ''"
+                :model-value="autoCfg.modelId ?? ''"
                 :options="modelOptions"
                 placeholder="选择默认模型（留空则使用全局默认）"
-                @update:model-value="(v: string) => autoRules.modelId = v"
+                @update:model-value="(v: string) => updateAutoCfg({ modelId: v || undefined })"
               />
             </div>
             <!-- Default template -->
             <div>
               <label class="text-[10px] text-zinc-500 font-medium mb-1 block">默认提示词模板</label>
               <Select
-                :model-value="autoRules.promptTemplateId ?? ''"
+                :model-value="autoCfg.promptTemplateId ?? ''"
                 :options="templateOptions"
                 placeholder="选择模板（留空则仅使用系统提示词）"
-                @update:model-value="(v: string) => autoRules.promptTemplateId = v"
+                @update:model-value="(v: string) => updateAutoCfg({ promptTemplateId: v || undefined })"
               />
             </div>
             <!-- Queue pause -->
@@ -364,11 +385,48 @@ onMounted(async () => {
                 <span class="text-[10px] text-zinc-400">（暂停后不处理新任务）</span>
               </div>
               <Switch
-                :model-value="autoRules.queuePaused ?? false"
+                :model-value="autoCfg.queuePaused ?? false"
                 @update:model-value="() => toggleQueuePause()"
               />
             </div>
           </div>
+        </div>
+
+        <!-- Queue status bar -->
+        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200">
+          <div class="flex items-center gap-1.5">
+            <div class="w-1.5 h-1.5 rounded-full" :class="aiJobStore.queuePaused ? 'bg-amber-400' : aiJobStore.stats.pending > 0 ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400'" />
+            <span class="text-[10px] text-zinc-500 font-medium">队列</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] tabular-nums">
+            <span class="text-zinc-400">待处理</span>
+            <span class="font-semibold text-zinc-700">{{ aiJobStore.stats.pending }}</span>
+            <span class="text-zinc-300">·</span>
+            <span class="text-zinc-400">处理中</span>
+            <span class="font-semibold text-blue-500">{{ aiJobStore.stats.processing }}</span>
+            <span class="text-zinc-300">·</span>
+            <span class="text-zinc-400">成功</span>
+            <span class="font-semibold text-emerald-500">{{ aiJobStore.stats.success }}</span>
+            <span class="text-zinc-300">·</span>
+            <span class="text-zinc-400">失败</span>
+            <span class="font-semibold text-red-500">{{ aiJobStore.stats.failed }}</span>
+          </div>
+          <div class="flex-1" />
+          <button
+            v-if="aiJobStore.stats.pending > 0 && !aiJobStore.draining"
+            class="px-2 py-0.5 rounded text-[9px] font-medium text-white bg-blue-500 hover:bg-blue-600 transition-colors flex items-center gap-0.5"
+            @click="aiJobStore.drain()"
+          >
+            <Play class="w-2.5 h-2.5" /> 开始
+          </button>
+          <Loader2 v-if="aiJobStore.draining" class="w-3 h-3 animate-spin text-blue-500" />
+          <button
+            v-if="aiJobStore.stats.failed > 0"
+            class="px-2 py-0.5 rounded text-[9px] font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-0.5"
+            @click="aiJobStore.retryAllFailed()"
+          >
+            <RefreshCw class="w-2.5 h-2.5" /> 重试
+          </button>
         </div>
 
         <!-- Advanced rules -->
