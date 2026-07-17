@@ -2,15 +2,13 @@
 import dayjs from 'dayjs'
 import { computed, ref } from 'vue'
 import { Plus, MoreHorizontal, Download, FileJson, FileText, Pencil, Trash2 } from '@lucide/vue'
-import {
-  DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal,
-  DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
-} from 'reka-ui'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useAppStore } from '@/stores/app.store'
 import { formatRelative } from '@/utils/date'
 import UButton from '@/components/ui/UButton.vue'
+import UDropdownMenu from '@/components/ui/UDropdownMenu.vue'
+import type { DropdownMenuAction } from '@/components/ui/UDropdownMenu.vue'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import {
@@ -57,6 +55,17 @@ async function handleRenameConversation(conv: ConversationEntity) {
 
 // ── Export ────────────────────────────────────────────────
 const appStore = useAppStore()
+
+const conversationMenu: DropdownMenuAction[] = [
+  { key: 'rename', label: '重命名', icon: Pencil },
+  { key: 'markdown', label: '导出 Markdown', icon: Download },
+  { key: 'json', label: '导出 JSON', icon: FileJson },
+  { key: 'delete', label: '删除会话', icon: Trash2, danger: true, separatorBefore: true },
+]
+const batchExportMenu: DropdownMenuAction[] = [
+  { key: 'markdown', label: '导出 Markdown (ZIP)', icon: FileText },
+  { key: 'json', label: '导出 JSON', icon: FileJson },
+]
 
 // ── Horizontal wheel scroll for conversation list ──
 const convScrollRef = ref<HTMLElement | null>(null)
@@ -174,8 +183,16 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
         <span class="text-[10px] opacity-50 shrink-0 tabular-nums">{{ conv.messages.length }}</span>
         <span class="text-[10px] opacity-40 shrink-0 tabular-nums min-w-[20px] text-right">{{ formatTime(conv.updatedAt || conv.createdAt) }}</span>
 
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger as-child>
+        <UDropdownMenu
+          :items="conversationMenu"
+          @select="(item) => {
+            if (item.key === 'rename') handleRenameConversation(conv)
+            else if (item.key === 'markdown') handleExportConversation(conv, 'md')
+            else if (item.key === 'json') handleExportConversation(conv, 'json')
+            else if (item.key === 'delete') handleDeleteConversation(conv.id)
+          }"
+        >
+          <template #trigger>
             <button
               class="invisible group-hover:visible flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-black/5 transition-colors"
               title="更多操作"
@@ -183,30 +200,8 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
             >
               <MoreHorizontal class="w-4 h-4" />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuContent
-              align="end"
-              :side-offset="4"
-              class="z-50 min-w-[140px] rounded-lg border border-zinc-200 bg-white p-1 shadow-lg outline-none"
-              @click.stop
-            >
-              <DropdownMenuItem class="menu-item" @select="handleRenameConversation(conv)">
-                <Pencil class="w-3.5 h-3.5" /> 重命名
-              </DropdownMenuItem>
-              <DropdownMenuItem class="menu-item" @select="handleExportConversation(conv, 'md')">
-                <Download class="w-3.5 h-3.5" /> 导出 Markdown
-              </DropdownMenuItem>
-              <DropdownMenuItem class="menu-item" @select="handleExportConversation(conv, 'json')">
-                <FileJson class="w-3.5 h-3.5" /> 导出 JSON
-              </DropdownMenuItem>
-              <DropdownMenuSeparator class="my-1 h-px bg-zinc-100" />
-              <DropdownMenuItem class="menu-item text-red-500 hover:bg-red-50" @select="handleDeleteConversation(conv.id)">
-                <Trash2 class="w-3.5 h-3.5" /> 删除会话
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
+          </template>
+        </UDropdownMenu>
       </div>
 
       <!-- Empty state -->
@@ -220,30 +215,20 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
 
     <!-- Right: Export + New buttons -->
     <div class="flex items-center gap-0.5 px-1.5 py-2 shrink-0">
-      <DropdownMenuRoot v-if="hasConversations">
-        <DropdownMenuTrigger as-child>
+      <UDropdownMenu
+        v-if="hasConversations"
+        :items="batchExportMenu"
+        @select="(item) => item.key === 'markdown' ? handleBatchExportMarkdown() : handleBatchExportJson()"
+      >
+        <template #trigger>
           <button
             class="p-1 rounded-md text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
             title="批量导出"
           >
             <Download class="w-3 h-3" />
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent
-            align="end"
-            :side-offset="4"
-            class="z-50 min-w-[150px] rounded-lg border border-zinc-200 bg-white p-1 shadow-lg outline-none"
-          >
-            <DropdownMenuItem class="menu-item" @select="handleBatchExportMarkdown">
-              <FileText class="w-3.5 h-3.5" /> 导出 Markdown (ZIP)
-            </DropdownMenuItem>
-            <DropdownMenuItem class="menu-item" @select="handleBatchExportJson">
-              <FileJson class="w-3.5 h-3.5" /> 导出 JSON
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
+        </template>
+      </UDropdownMenu>
       <UButton
         variant="ghost"
         size="sm"
@@ -257,16 +242,3 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
   </div>
 </template>
 
-<style scoped>
-.menu-item {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.65rem;
-  text-align: left;
-  font-size: 11px;
-  color: rgb(82 82 91);
-}
-.menu-item:hover { background: rgb(250 250 250); }
-</style>
