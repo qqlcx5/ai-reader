@@ -27,8 +27,14 @@ const PRICING_TABLE: PricingEntry[] = [
   { match: /gemini.*pro/i, input: 14, output: 84 },
 
   // ── OpenAI GPT ───────────────────────────────────────────────────
-  // gpt-5.4-mini: $0.75 / $4.5
-  { match: /gpt.*5\.4.*mini/i, input: 5.25, output: 31.5 },
+  // gpt-5.6-luna: ¥4.5 / ¥36
+  { match: /gpt[-_. ]?5\.6[-_. ]?luna/i, input: 4.5, output: 36 },
+  // gpt-5.6-terra: ¥11.25 / ¥90
+  { match: /gpt[-_. ]?5\.6[-_. ]?terra/i, input: 11.25, output: 90 },
+  // gpt-5.6-sol: ¥22.5 / ¥180
+  { match: /gpt[-_. ]?5\.6[-_. ]?sol/i, input: 22.5, output: 180 },
+  // gpt-5.4-mini: ¥11.25 / ¥67.5
+  { match: /gpt.*5\.4.*mini/i, input: 11.25, output: 67.5 },
   // gpt-5.5: $5 / $30
   { match: /gpt.*5\.5/i, input: 35, output: 210 },
   // gpt-5.2: $1.75 / $14
