@@ -22,6 +22,7 @@ import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import Toaster from '@/components/Toaster.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
+import PageQuickActions from '@/components/common/PageQuickActions.vue'
 
 const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
@@ -196,6 +197,12 @@ onUnmounted(() => {
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 
+    <PageQuickActions
+      v-if="!windowMode"
+      :capturing="workspaceStore.isExtracting"
+      @capture="triggerAutoExtract(appStore.activeTab?.id ?? 0)"
+      @select="(key) => appStore.setCurrentView(key as any, { resetHistory: true })"
+    />
     <Toaster />
   </div>
 </template>
