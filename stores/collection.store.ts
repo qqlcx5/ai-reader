@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { CollectionRepository } from '../db/repositories/collection.repository'
@@ -42,7 +43,7 @@ export const useCollectionStore = defineStore('collection', () => {
   }
 
   async function createCollection(name: string, description?: string): Promise<CollectionEntity> {
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
     const collection: CollectionEntity = {
       id: uuid(),
       name: name.trim() || '未命名合集',
@@ -61,7 +62,7 @@ export const useCollectionStore = defineStore('collection', () => {
     await CollectionRepository.save({
       ...current,
       name: name.trim() || current.name,
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().toISOString(),
     })
     await loadCollections()
   }

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 import type { ModelConfig } from '../../types/model'
 import type { IRepository } from '../repository'
@@ -32,15 +33,15 @@ export const ModelRepository: IRepository<ModelConfig> & {
       const all = await db.models.toArray()
       for (const m of all) {
         if (m.isDefault && m.id !== id) {
-          await db.models.update(m.id, { isDefault: false, updatedAt: new Date().toISOString() })
+          await db.models.update(m.id, { isDefault: false, updatedAt: dayjs().toISOString() })
         }
       }
-      await db.models.update(id, { isDefault: true, updatedAt: new Date().toISOString() })
+      await db.models.update(id, { isDefault: true, updatedAt: dayjs().toISOString() })
     })
   },
 
   async updateLastUsedAt(id: string): Promise<void> {
-    await db.models.update(id, { lastUsedAt: new Date().toISOString() })
+    await db.models.update(id, { lastUsedAt: dayjs().toISOString() })
   },
 
   async save(model: ModelConfig): Promise<ModelConfig> {

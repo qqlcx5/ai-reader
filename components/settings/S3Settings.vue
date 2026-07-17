@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted } from 'vue'
 import { Cloud, Plug, RefreshCw, UploadCloud, DownloadCloud, RotateCcw, ChevronDown, ChevronRight, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Trash2, GitMerge } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
@@ -101,7 +102,7 @@ async function onForceDownload() {
 function fmt(iso: string) {
   if (!iso) return '从未'
   try {
-    return new Date(iso).toLocaleString()
+    return dayjs(iso).format('YYYY/M/D HH:mm:ss')
   } catch {
     return iso
   }
@@ -140,7 +141,7 @@ function typeLabel(type: string): string {
 function fmtVersion(iso: string): string {
   if (!iso) return '无'
   try {
-    return new Date(iso).toLocaleString()
+    return dayjs(iso).format('YYYY/M/D HH:mm:ss')
   } catch {
     return iso
   }
@@ -574,7 +575,7 @@ async function onRestore() {
               :class="selectedBackup === b.name ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 text-zinc-700'"
               @click="selectedBackup = b.name"
             >
-              <span>{{ b.ts ? new Date(b.ts).toLocaleString() : b.name }}</span>
+              <span>{{ b.ts ? dayjs(b.ts).format('YYYY/M/D HH:mm:ss') : b.name }}</span>
               <span class="text-[10px] opacity-50">{{ selectedBackup === b.name ? '✓' : '' }}</span>
             </li>
           </ul>

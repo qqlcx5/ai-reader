@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { AiJobRepository } from '../db/repositories/ai-job.repository'
@@ -58,7 +59,7 @@ export const useAiJobStore = defineStore('ai-job', () => {
         const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER
         const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER
         if (sa !== sb) return sa - sb
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        return dayjs(a.createdAt).valueOf() - dayjs(b.createdAt).valueOf()
       }),
   )
 

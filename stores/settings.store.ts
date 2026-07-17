@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
@@ -35,8 +36,8 @@ function createDefaultSettings(): AppSettings {
     context: { ...defaultContextSettings },
     capture: { ...defaultCaptureSettings },
     autoAnalysis: { ...defaultAutoAnalysisSettings },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: dayjs().toISOString(),
+    updatedAt: dayjs().toISOString(),
   }
 }
 
@@ -70,25 +71,25 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function updateGlobalSystemPrompt(prompt: string) {
     settings.value.globalSystemPrompt = prompt
-    settings.value.updatedAt = new Date().toISOString()
+    settings.value.updatedAt = dayjs().toISOString()
     await persist()
   }
 
   async function updateContextSettings(partial: Partial<ContextSettings>) {
     settings.value.context = { ...settings.value.context, ...partial }
-    settings.value.updatedAt = new Date().toISOString()
+    settings.value.updatedAt = dayjs().toISOString()
     await persist()
   }
 
   async function updateCaptureSettings(partial: Partial<CaptureSettings>) {
     settings.value.capture = { ...settings.value.capture, ...partial }
-    settings.value.updatedAt = new Date().toISOString()
+    settings.value.updatedAt = dayjs().toISOString()
     await persist()
   }
 
   async function updateAutoAnalysis(partial: Partial<AutoAnalysisSettings>) {
     settings.value.autoAnalysis = { ...settings.value.autoAnalysis, ...partial }
-    settings.value.updatedAt = new Date().toISOString()
+    settings.value.updatedAt = dayjs().toISOString()
     await persist()
   }
 

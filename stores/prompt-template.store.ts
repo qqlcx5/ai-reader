@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { PromptTemplateRepository } from '../db/repositories/prompt-template.repository'
@@ -73,7 +74,7 @@ export const usePromptTemplateStore = defineStore('promptTemplate', () => {
     templates.value = all
 
     if (all.length === 0) {
-      const now = new Date().toISOString()
+      const now = dayjs().toISOString()
       const initials: PromptTemplate[] = INITIAL_TEMPLATES.map((t) => ({
         ...t,
         id: `tpl_${crypto.randomUUID()}`,
@@ -93,7 +94,7 @@ export const usePromptTemplateStore = defineStore('promptTemplate', () => {
     content: string,
     category: string,
   ): Promise<PromptTemplate> {
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
     const maxSort = templates.value.reduce(
       (max, t) => Math.max(max, t.sortOrder),
       0,

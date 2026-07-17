@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 import type { FeedItemEntity } from '../../types/feed'
 
@@ -10,8 +11,8 @@ export const FeedItemRepository = {
     // [feedId+publishedAt] index lets us order newest-first efficiently.
     const items = await db.feedItems.where('feedId').equals(feedId).toArray()
     return items.sort((a, b) => {
-      const ta = new Date(a.publishedAt ?? a.fetchedAt).getTime()
-      const tb = new Date(b.publishedAt ?? b.fetchedAt).getTime()
+      const ta = dayjs(a.publishedAt ?? a.fetchedAt).valueOf()
+      const tb = dayjs(b.publishedAt ?? b.fetchedAt).valueOf()
       return tb - ta
     })
   },

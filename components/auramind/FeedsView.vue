@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database, Bot, RotateCcw, MessageSquare, BookOpen } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
@@ -55,10 +56,10 @@ const STALE_MS = 30 * 60 * 1000
 function isStale(): boolean {
   if (!feedStore.feeds.length) return false
   const latest = feedStore.feeds.reduce((max, f) => {
-    const t = f.lastFetchedAt ? new Date(f.lastFetchedAt).getTime() : 0
+    const t = f.lastFetchedAt ? dayjs(f.lastFetchedAt).valueOf() : 0
     return Math.max(max, t)
   }, 0)
-  return Date.now() - latest > STALE_MS
+  return dayjs().valueOf() - latest > STALE_MS
 }
 
 const selectedItem = computed(
@@ -143,7 +144,7 @@ onMounted(async () => {
 function displayDate(iso?: string): string {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return dayjs(iso).format('MMM D')
   } catch {
     return ''
   }

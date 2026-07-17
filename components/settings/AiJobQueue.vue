@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { computed, onMounted } from 'vue'
 import { Zap, RefreshCw, Trash2, RotateCcw } from '@lucide/vue'
 import Switch from '@/components/ui/Switch.vue'
@@ -53,7 +54,7 @@ const statusClass: Record<string, string> = {
 function fmtTime(iso?: string) {
   if (!iso) return ''
   try {
-    return new Date(iso).toLocaleString()
+    return dayjs(iso).format('YYYY/M/D HH:mm:ss')
   } catch {
     return iso
   }

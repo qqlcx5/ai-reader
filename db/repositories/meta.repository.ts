@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 
 /** Key-value meta store: device-local data (WebDAV config, sync state). Not synced. */
@@ -8,7 +9,7 @@ export const MetaRepository = {
   },
 
   async set<T>(id: string, value: T): Promise<void> {
-    await db.kvMeta.put({ id, value, updatedAt: new Date().toISOString() })
+    await db.kvMeta.put({ id, value, updatedAt: dayjs().toISOString() })
   },
 
   async remove(id: string): Promise<void> {

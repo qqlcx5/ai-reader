@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   Globe, FileSearch, FileText, Sparkles, Database, CheckCircle2,
@@ -135,7 +136,7 @@ const activeJobs = computed(() =>
 const recentJobs = computed(() =>
   aiJobStore.jobs
     .filter((j) => j.status === 'success' || j.status === 'failed')
-    .sort((a, b) => new Date(b.finishedAt ?? b.createdAt).getTime() - new Date(a.finishedAt ?? a.createdAt).getTime())
+    .sort((a, b) => dayjs(b.finishedAt ?? b.createdAt).valueOf() - dayjs(a.finishedAt ?? a.createdAt).valueOf())
     .slice(0, 5)
 )
 
@@ -167,7 +168,7 @@ function updateStageStates() {
     // Simulate pipeline progression based on processing job presence
     // In a real system, each stage would emit events
     const job = processing[0]
-    const elapsed = Date.now() - new Date(job.createdAt).getTime()
+    const elapsed = dayjs().diff(dayjs(job.createdAt))
     const estimatedTotal = 30000 // 30s estimated total
     const overallProgress = Math.min(95, (elapsed / estimatedTotal) * 100)
 
@@ -344,15 +345,12 @@ function connectorClass(state: 'done' | 'active' | 'idle'): string {
 const timelineJobs = computed(() => recentJobs.value.slice(0, 4))
 
 function formatTime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60_000) return '刚刚'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}分钟前`
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  return `${hh}:${mi}`
+  const date = dayjs(iso)
+  if (!date.isValid()) return ''
+  const minutes = dayjs().diff(date, 'minute')
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  return date.format('HH:mm')
 }
 
 function jobStatusConfig(status: AiJobStatus) {
@@ -598,7 +596,7 @@ const expanded = ref(false)
               </div>
             </div>
             <div v-if="job.status === 'success'" class="text-[9px] text-emerald-500 font-medium tabular-nums">
-              {{ formatMs(new Date(job.finishedAt!).getTime() - new Date(job.createdAt).getTime()) }}
+              {{ formatMs(dayjs(job.finishedAt!).valueOf() - dayjs(job.createdAt).valueOf()) }}
             </div>
           </div>
         </div>

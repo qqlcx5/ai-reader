@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs, { type Dayjs } from 'dayjs'
 import { computed, ref, onMounted } from 'vue'
 import { useDocumentStore } from '@/stores/document.store'
 
@@ -38,12 +39,7 @@ const WEEKDAY_ROWS = [
   { label: '日', show: false },
 ]
 
-function pad(n: number) {
-  return String(n).padStart(2, '0')
-}
-function dateKey(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+const dateKey = (date: dayjs.ConfigType) => dayjs(date).format('YYYY-MM-DD')
 function levelFor(count: number) {
   if (count <= 0) return 0
   if (count <= 2) return 1
@@ -56,21 +52,19 @@ const countMap = computed(() => {
   const m = new Map<string, number>()
   for (const doc of documentStore.documents) {
     if (!doc.capturedAt) continue
-    const key = dateKey(new Date(doc.capturedAt))
+    const key = dateKey(doc.capturedAt)
     m.set(key, (m.get(key) || 0) + 1)
   }
   return m
 })
 
-const today = new Date()
-today.setHours(0, 0, 0, 0)
-const todayDow = (today.getDay() + 6) % 7 // Mon=0 … Sun=6
-const startDate = new Date(today)
-startDate.setDate(today.getDate() - todayDow - (WEEKS - 1) * 7)
+const today = dayjs().startOf('day')
+const todayDow = (today.day() + 6) % 7 // Mon=0 … Sun=6
+const startDate = today.subtract(todayDow + (WEEKS - 1) * 7, 'day')
 
 interface Cell {
   key: string
-  date: Date
+  date: Dayjs
   count: number
   level: number
   future: boolean
@@ -81,9 +75,8 @@ const cells = computed<Cell[]>(() => {
   const out: Cell[] = []
   for (let c = 0; c < WEEKS; c++) {
     for (let r = 0; r < 7; r++) {
-      const d = new Date(startDate)
-      d.setDate(startDate.getDate() + c * 7 + r)
-      const future = d.getTime() > today.getTime()
+      const d = startDate.add(c * 7 + r, 'day')
+      const future = d.isAfter(today)
       const count = future ? 0 : cm.get(dateKey(d)) || 0
       out.push({ key: dateKey(d), date: d, count, level: levelFor(count), future })
     }
@@ -95,9 +88,8 @@ const monthLabels = computed(() => {
   const labels: { label: string; col: number }[] = []
   let prev = -1
   for (let c = 0; c < WEEKS; c++) {
-    const d = new Date(startDate)
-    d.setDate(startDate.getDate() + c * 7)
-    const m = d.getMonth()
+    const d = startDate.add(c * 7, 'day')
+    const m = d.month()
     if (m !== prev) {
       labels.push({ label: MONTH_LABELS[m], col: c })
       prev = m
@@ -114,7 +106,7 @@ const tooltip = ref<{ x: number; y: number; text: string } | null>(null)
 function onCellEnter(e: MouseEvent, cell: Cell) {
   const target = e.currentTarget as HTMLElement
   const rect = target.getBoundingClientRect()
-  const dateLabel = `${cell.date.getMonth() + 1}月${cell.date.getDate()}日`
+  const dateLabel = cell.date.format('M月D日')
   tooltip.value = {
     x: rect.left + rect.width / 2,
     y: rect.top,

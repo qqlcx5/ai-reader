@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   Zap, Loader2, CheckCircle2, XCircle, Clock, RefreshCw, Trash2,
@@ -294,22 +295,17 @@ const showDragDropList = computed(() => {
 
 // ── Format helpers ──
 function formatTime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
-  if (diff < 60_000) return '刚刚'
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  return `${mm}-${dd} ${hh}:${mi}`
+  const date = dayjs(iso)
+  if (!date.isValid()) return iso
+  const minutes = dayjs().diff(date, 'minute')
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  return date.format('MM-DD HH:mm')
 }
 
 function jobDuration(job: AiJobEntity): string {
   if (!job.finishedAt || !job.createdAt) return '—'
-  const ms = new Date(job.finishedAt).getTime() - new Date(job.createdAt).getTime()
+  const ms = dayjs(job.finishedAt).valueOf() - dayjs(job.createdAt).valueOf()
   if (ms <= 0) return '—'
   return formatMs(ms)
 }

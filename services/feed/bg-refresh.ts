@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 /**
  * Background-side feed refresh — runs entirely in the service worker via
  * offscreen document for DOM operations. Does NOT depend on the side panel
@@ -100,7 +101,7 @@ export async function refreshOneFeed(feed: FeedEntity): Promise<BgRefreshResult>
       etag: feed.etag,
       lastModified: feed.lastModified,
     })
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
 
     if (fetched.notModified) {
       await FeedRepository.save({ ...feed, lastFetchedAt: now, lastError: undefined })
@@ -166,7 +167,7 @@ export async function refreshOneFeed(feed: FeedEntity): Promise<BgRefreshResult>
     errors.push(msg)
     await FeedRepository.save({
       ...feed,
-      lastFetchedAt: new Date().toISOString(),
+      lastFetchedAt: dayjs().toISOString(),
       lastError: msg,
     })
   }
@@ -290,7 +291,7 @@ async function collectOneItem(
         throw new Error(`正文过短（${data.wordCount} 词 < ${minWords}）`)
       }
 
-      const now = new Date().toISOString()
+      const now = dayjs().toISOString()
       const entity: DocumentEntity = {
         id: data.contentHash,
         url: data.url || item.link,
@@ -345,7 +346,7 @@ async function collectOneItem(
   // skips this item and the user can see *why* it failed. Manual retries
   // (panel "collect" button) clear this flag first.
   try {
-    await FeedItemRepository.setCollectError(item.id, lastError, new Date().toISOString())
+    await FeedItemRepository.setCollectError(item.id, lastError, dayjs().toISOString())
   } catch {
     // best-effort
   }

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, onMounted, computed } from 'vue'
 import { HardDrive, Download, Upload, Database, FileText, MessageCircle, Cpu, RefreshCw, Trash2, AlertTriangle } from '@lucide/vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
@@ -60,11 +61,7 @@ function formatBytes(bytes: number): string {
 }
 
 function getBackupFilename(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `auramind-backup-${y}-${m}-${d}.json`
+  return `auramind-backup-${dayjs().format('YYYY-MM-DD')}.json`
 }
 
 async function doExport() {
@@ -91,7 +88,7 @@ async function doExport() {
 
     const backup = {
       version: 1,
-      exportedAt: new Date().toISOString(),
+      exportedAt: dayjs().toISOString(),
       data: {
         documents: strippedDocuments,
         conversations,

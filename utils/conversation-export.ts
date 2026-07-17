@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 /**
  * Conversation export utilities.
  *
@@ -24,14 +25,8 @@ function safeFilename(name: string): string {
 }
 
 function formatTimestamp(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const yyyy = d.getFullYear()
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`
+  const date = dayjs(iso)
+  return date.isValid() ? date.format('YYYY-MM-DD HH:mm') : iso
 }
 
 /**
@@ -302,21 +297,21 @@ export function exportConversationsToZip(
 
   if (filter.fromMs != null) {
     filtered = filtered.filter((c) => {
-      const t = Date.parse(c.createdAt)
+      const t = dayjs(c.createdAt).valueOf()
       return !Number.isNaN(t) && t >= filter.fromMs!
     })
   }
 
   if (filter.toMs != null) {
     filtered = filtered.filter((c) => {
-      const t = Date.parse(c.createdAt)
+      const t = dayjs(c.createdAt).valueOf()
       return !Number.isNaN(t) && t <= filter.toMs!
     })
   }
 
   // Sort by createdAt ascending
   filtered = [...filtered].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    (a, b) => dayjs(a.createdAt).valueOf() - dayjs(b.createdAt).valueOf(),
   )
 
   const files: Record<string, Uint8Array> = {}
@@ -352,7 +347,7 @@ export function exportConversationsToZip(
   // Add an index file (only when there are conversations)
   if (filtered.length > 0) {
     const indexLines: string[] = ['# 对话导出索引', '']
-    indexLines.push(`> 导出时间: ${formatTimestamp(new Date().toISOString())}`)
+    indexLines.push(`> 导出时间: ${formatTimestamp(dayjs().toISOString())}`)
     indexLines.push(`> 对话数量: ${filtered.length}`)
     indexLines.push('')
 
@@ -387,20 +382,20 @@ export function exportConversationsAsJson(
 
   if (filter.fromMs != null) {
     filtered = filtered.filter((c) => {
-      const t = Date.parse(c.createdAt)
+      const t = dayjs(c.createdAt).valueOf()
       return !Number.isNaN(t) && t >= filter.fromMs!
     })
   }
 
   if (filter.toMs != null) {
     filtered = filtered.filter((c) => {
-      const t = Date.parse(c.createdAt)
+      const t = dayjs(c.createdAt).valueOf()
       return !Number.isNaN(t) && t <= filter.toMs!
     })
   }
 
   const payload = {
-    exportedAt: new Date().toISOString(),
+    exportedAt: dayjs().toISOString(),
     count: filtered.length,
     conversations: filtered.map((conv) => {
       const doc = documents.get(conv.documentId)

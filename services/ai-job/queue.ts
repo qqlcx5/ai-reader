@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
@@ -40,7 +41,7 @@ export async function enqueueForDocument(
     promptTemplateId,
     status: 'pending',
     retries: 0,
-    createdAt: new Date().toISOString(),
+    createdAt: dayjs().toISOString(),
   })
 }
 
@@ -75,7 +76,7 @@ export async function enqueueBatch(
 
   let enqueued = 0
   let skipped = 0
-  const now = new Date().toISOString()
+  const now = dayjs().toISOString()
 
   for (const documentId of documentIds) {
     const doc = await DocumentRepository.findById(documentId)

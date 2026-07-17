@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { extractPage, extractFromHtml } from '@/utils/content/extract'
 import type { ExtractedPageData } from '@/utils/content/extract'
 import { DocumentRepository } from '@/db/repositories/document.repository'
@@ -43,7 +44,7 @@ export async function collectFeedItem(
     throw new Error(`正文过短（${data.wordCount} 词），疑似未完整抓取`)
   }
 
-  const now = new Date().toISOString()
+  const now = dayjs().toISOString()
   const entity: DocumentEntity = {
     id: data.contentHash,
     url: data.url || item.link,

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, watch, computed } from 'vue'
 import { X, ChevronDown, Search, RefreshCw, Check } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
@@ -78,11 +79,11 @@ const filteredModels = computed(() => {
 async function fetchModels() {
   const base = baseUrl.value.trim().replace(/\/+$/, '')
   if (!base) {
-    toast('请先填写 Base URL', 'error')
+    toast.error('请先填写 Base URL')
     return
   }
   if (!apiKey.value.trim()) {
-    toast('请先填写 API Key', 'error')
+    toast.error('请先填写 API Key')
     return
   }
   fetchingModels.value = true
@@ -99,7 +100,7 @@ async function fetchModels() {
     clearTimeout(timer)
     if (!res.ok) {
       const text = await res.text().catch(() => '')
-      toast(`获取失败: HTTP ${res.status} ${text.slice(0, 100)}`, 'error')
+      toast.error(`获取失败: HTTP ${res.status} ${text.slice(0, 100)}`)
       return
     }
     const data = await res.json()
@@ -108,15 +109,15 @@ async function fetchModels() {
       ownedBy: m.owned_by || m.ownedBy,
     })).filter((m: { id: string }) => m.id)
     if (!list.length) {
-      toast('未获取到模型列表', 'info')
+      toast.info('未获取到模型列表')
       return
     }
     fetchedModels.value = list
     showModelPicker.value = true
     modelSearch.value = ''
-    toast(`获取到 ${list.length} 个模型`, 'success')
+    toast.success(`获取到 ${list.length} 个模型`)
   } catch (e: any) {
-    toast(`获取失败: ${e?.message ?? String(e)}`, 'error')
+    toast.error(`获取失败: ${e?.message ?? String(e)}`)
   } finally {
     fetchingModels.value = false
   }
@@ -234,7 +235,7 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
 
     if (isEdit.value && props.modelId) {
       const existing = modelStore.models.find(m => m.id === props.modelId)

@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, watch } from 'vue'
 import {
   Zap, Clock, Tag, Brain, Settings2, Plus, Trash2, Edit3,
@@ -853,12 +854,10 @@ onMounted(async () => {
           <div class="flex items-end gap-1 h-16">
             <div
               v-for="(val, i) in Array.from({ length: 14 }, (_, i) => {
-                const d = new Date()
-                d.setDate(d.getDate() - (13 - i))
-                const dayJobs = aiJobStore.jobs.filter(j => {
-                  const jd = new Date(j.createdAt)
-                  return jd.toDateString() === d.toDateString() && j.status === 'success'
-                }).length
+                const date = dayjs().subtract(13 - i, 'day')
+                const dayJobs = aiJobStore.jobs.filter(j =>
+                  dayjs(j.createdAt).isSame(date, 'day') && j.status === 'success'
+                ).length
                 return Math.min(100, dayJobs * 15)
               })"
               :key="i"

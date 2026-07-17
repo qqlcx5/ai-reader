@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '@/db'
 import { MetaRepository } from '@/db/repositories/meta.repository'
 import { refreshAfterDataChange } from '@/services/sync/refresh'
@@ -108,18 +109,14 @@ function stripRawFields(doc: any): any {
   return rest
 }
 
-function utcStamp(d = new Date()): string {
-  const p = (n: number, w = 2) => String(n).padStart(w, '0')
-  return (
-    `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}` +
-    `T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}${p(d.getUTCMilliseconds(), 3)}Z`
-  )
+function utcStamp(date?: dayjs.ConfigType): string {
+  return dayjs(date).toISOString().replace(/[-:.]/g, '')
 }
 
 function stampToDate(stamp: string): number {
   const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(\d{3})Z$/.exec(stamp)
   if (!m) return NaN
-  return Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${m[7]}Z`)
+  return dayjs(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}.${m[7]}Z`).valueOf()
 }
 
 function rand4(): string {
@@ -207,7 +204,7 @@ async function applyDatasetAndResetBase(data: SyncedDataset): Promise<void> {
   }
   await MetaRepository.set(SYNC_STATE_ID, {
     id: 'sync-state',
-    lastSyncAt: new Date().toISOString(),
+    lastSyncAt: dayjs().toISOString(),
     base: baseFromDataset(data),
   } satisfies SyncState)
 }
@@ -233,12 +230,12 @@ export async function forceUpload(transport: RemoteTransport): Promise<void> {
   // These are two independent formats — do not cross-use sync files with export/import.
   await transport.putText(
     DATA_FILE,
-    JSON.stringify({ version: SYNC_VERSION, syncedAt: new Date().toISOString(), data } satisfies RemoteSnapshot),
+    JSON.stringify({ version: SYNC_VERSION, syncedAt: dayjs().toISOString(), data } satisfies RemoteSnapshot),
   )
 
   await MetaRepository.set(SYNC_STATE_ID, {
     id: 'sync-state',
-    lastSyncAt: new Date().toISOString(),
+    lastSyncAt: dayjs().toISOString(),
     base: baseFromDataset(data),
   } satisfies SyncState)
 }
@@ -465,7 +462,7 @@ export async function runSync(transport: RemoteTransport, maxBackups = 10, resol
   const newData = { ...c.mergedDataset, documents: c.mergedDataset.documents.map(stripRawFields) }
   const newJson = JSON.stringify({
     version: SYNC_VERSION,
-    syncedAt: new Date().toISOString(),
+    syncedAt: dayjs().toISOString(),
     data: newData,
   } satisfies RemoteSnapshot)
 
@@ -492,7 +489,7 @@ export async function runSync(transport: RemoteTransport, maxBackups = 10, resol
   // 4. Update device-local sync state.
   await MetaRepository.set(SYNC_STATE_ID, {
     id: 'sync-state',
-    lastSyncAt: new Date().toISOString(),
+    lastSyncAt: dayjs().toISOString(),
     base: c.newBase,
   } satisfies SyncState)
 

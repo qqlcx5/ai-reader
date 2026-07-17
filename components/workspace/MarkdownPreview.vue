@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
@@ -366,7 +367,7 @@ async function createHighlight(color: HighlightColor) {
 
   const { selectedText, startOffset } = selectionToolbar.value
   const docId = documentStore.currentDocument.id
-  const now = new Date().toISOString()
+  const now = dayjs().toISOString()
 
   const hl: Highlight = {
     id: crypto.randomUUID(),

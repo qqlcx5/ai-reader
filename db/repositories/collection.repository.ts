@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 import type { CollectionEntity, CollectionItemEntity } from '../../types/collection'
 
@@ -44,7 +45,7 @@ export const CollectionRepository = {
         collectionId,
         documentId,
         order: count,
-        addedAt: new Date().toISOString(),
+        addedAt: dayjs().toISOString(),
       }
       await db.collectionItems.put(item)
     })

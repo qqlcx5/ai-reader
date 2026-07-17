@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 import type { AiJobEntity, AiJobStatus, AiJobFilter, AiJobStats, AiJobPriority } from '../../types/ai-job'
 import { PRIORITY_WEIGHT } from '../../types/ai-job'
@@ -25,7 +26,7 @@ export const AiJobRepository = {
       const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER
       const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER
       if (sa !== sb) return sa - sb
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      return dayjs(a.createdAt).valueOf() - dayjs(b.createdAt).valueOf()
     })
   },
 
@@ -57,7 +58,7 @@ export const AiJobRepository = {
       )
     }
 
-    return jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return jobs.sort((a, b) => dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf())
   },
 
   async save(job: AiJobEntity): Promise<AiJobEntity> {
@@ -96,7 +97,7 @@ export const AiJobRepository = {
     let durationCount = 0
     for (const job of finishedJobs) {
       if (job.finishedAt && job.createdAt) {
-        const dur = new Date(job.finishedAt).getTime() - new Date(job.createdAt).getTime()
+        const dur = dayjs(job.finishedAt).valueOf() - dayjs(job.createdAt).valueOf()
         if (dur > 0 && dur < 7_200_000) { // sanity: < 2h
           totalDuration += dur
           durationCount++

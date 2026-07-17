@@ -1,9 +1,11 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { MessageSquare, Plus, Trash2, Download, FileJson, FileText, X } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useAppStore } from '@/stores/app.store'
+import { formatRelative } from '@/utils/date'
 import UButton from '@/components/ui/UButton.vue'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import { DocumentRepository } from '@/db/repositories/document.repository'
@@ -95,7 +97,7 @@ async function handleBatchExportMarkdown() {
   if (doc) docs.set(docId, doc)
 
   const blob = exportConversationsToZip(allConvs, docs)
-  const date = new Date().toISOString().slice(0, 10)
+  const date = dayjs().toISOString().slice(0, 10)
   downloadBlob(blob, `conversations-${date}.zip`)
   showBatchExport.value = false
   appStore.showToast(`已导出 ${allConvs.length} 个对话`, 'success')
@@ -118,7 +120,7 @@ async function handleBatchExportJson() {
 
   const json = exportConversationsAsJson(allConvs, docs)
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
-  const date = new Date().toISOString().slice(0, 10)
+  const date = dayjs().toISOString().slice(0, 10)
   downloadBlob(blob, `conversations-${date}.json`)
   showBatchExport.value = false
   appStore.showToast(`已导出 ${allConvs.length} 个对话`, 'success')
@@ -133,24 +135,7 @@ async function handleExportConversation(conv: ConversationEntity, format: 'md' |
   }
 }
 
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-
-  if (diffMins < 1) return '刚刚'
-  if (diffMins < 60) return `${diffMins} 分钟前`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours} 小时前`
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} 天前`
-
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+const formatTime = (iso: string) => formatRelative(iso).replace(/(分钟|小时|天)前$/, ' $1前')
 
 const hasConversations = computed(() => chatStore.conversations.length > 0)
 

@@ -52,21 +52,6 @@ describe('stores/app.store', () => {
     expect(store.currentView).toBe('settings')
   })
 
-  it('should show and clear toast', () => {
-    const store = useAppStore()
-    store.showToast('test message', 'error')
-    expect(store.toastMessage).toBe('test message')
-    expect(store.toastType).toBe('error')
-    store.clearToast()
-    expect(store.toastMessage).toBe('')
-  })
-
-  it('should default toast type to info', () => {
-    const store = useAppStore()
-    store.showToast('info message')
-    expect(store.toastType).toBe('info')
-  })
-
   it('should set activeTab', () => {
     const store = useAppStore()
     const tab = { id: 1, url: 'https://example.com', title: 'Example' }

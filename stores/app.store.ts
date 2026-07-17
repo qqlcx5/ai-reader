@@ -8,8 +8,6 @@ export type AppView = 'workspace' | 'library' | 'analysis' | 'settings' | 'usage
 export const useAppStore = defineStore('app', () => {
   const currentView = ref<AppView>('workspace')
   const isLoading = ref(false)
-  const toastMessage = ref('')
-  const toastType = ref<'success' | 'error' | 'info'>('info')
   const activeTab = ref<TabInfo | null>(null)
   const showPageChangeHint = ref(false)
 
@@ -39,18 +37,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-    // 镜像状态保留，以便外部读 store.toastMessage 仍可工作
-    toastMessage.value = message
-    toastType.value = type
-    // 真正显示由 vue-sonner 接管
-    if (type === 'success') toastService.success(message)
-    else if (type === 'error') toastService.error(message)
-    else toastService.info(message)
-  }
-
-  function clearToast() {
-    toastMessage.value = ''
-    toastService.clear()
+    toastService[type](message)
   }
 
   function setActiveTab(tab: TabInfo) {
@@ -64,8 +51,6 @@ export const useAppStore = defineStore('app', () => {
   return {
     currentView,
     isLoading,
-    toastMessage,
-    toastType,
     activeTab,
     showPageChangeHint,
     viewHistory,
@@ -73,7 +58,6 @@ export const useAppStore = defineStore('app', () => {
     setCurrentView,
     goBack,
     showToast,
-    clearToast,
     setActiveTab,
     setLoading,
   }

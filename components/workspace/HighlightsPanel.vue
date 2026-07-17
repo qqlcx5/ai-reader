@@ -1,6 +1,8 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useDocumentStore } from '@/stores/document.store'
+import { formatLocal, formatRelative } from '@/utils/date'
 import { useChatStore } from '@/stores/chat.store'
 import { useAppStore } from '@/stores/app.store'
 import { HighlightColors } from '@/components/workspace/highlight-colors'
@@ -110,14 +112,14 @@ function exportHighlights(format: ExportFormat) {
   let mime = ''
 
   if (format === 'markdown') {
-    content = `# 标注导出\n\n**文档**: ${documentStore.currentDocument?.title ?? '未命名'}\n**来源**: ${documentStore.currentDocument?.url ?? ''}\n**导出时间**: ${new Date().toLocaleString('zh-CN')}\n**标注数量**: ${hls.length}\n\n---\n\n`
+    content = `# 标注导出\n\n**文档**: ${documentStore.currentDocument?.title ?? '未命名'}\n**来源**: ${documentStore.currentDocument?.url ?? ''}\n**导出时间**: ${formatLocal()}\n**标注数量**: ${hls.length}\n\n---\n\n`
     for (const hl of hls) {
       const colorLabel = HighlightColors.find((c) => c.color === (hl.color ?? 'yellow'))?.label ?? '黄色'
       content += `## ${colorLabel}\n\n> ${hl.text}\n\n`
       if (hl.note) content += `**批注**: ${hl.note}\n\n`
       content += `---\n\n`
     }
-    filename = `highlights-${Date.now()}.md`
+    filename = `highlights-${dayjs().valueOf()}.md`
     mime = 'text/markdown'
   } else if (format === 'json') {
     content = JSON.stringify(
@@ -126,14 +128,14 @@ function exportHighlights(format: ExportFormat) {
           title: documentStore.currentDocument?.title,
           url: documentStore.currentDocument?.url,
         },
-        exportedAt: new Date().toISOString(),
+        exportedAt: dayjs().toISOString(),
         count: hls.length,
         highlights: hls,
       },
       null,
       2,
     )
-    filename = `highlights-${Date.now()}.json`
+    filename = `highlights-${dayjs().valueOf()}.json`
     mime = 'application/json'
   } else if (format === 'clipboard') {
     content = hls.map((h) => {
@@ -188,19 +190,7 @@ onUnmounted(() => {
 })
 
 // ── Date formatting ───────────────────────────────────
-function formatTime(iso: string): string {
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHr = Math.floor(diffMin / 60)
-  const diffDay = Math.floor(diffHr / 24)
-  if (diffMin < 1) return '刚刚'
-  if (diffMin < 60) return `${diffMin} 分钟前`
-  if (diffHr < 24) return `${diffHr} 小时前`
-  if (diffDay < 7) return `${diffDay} 天前`
-  return d.toLocaleDateString('zh-CN')
-}
+const formatTime = (iso: string) => formatRelative(iso).replace(/(分钟|小时|天)前$/, ' $1前')
 </script>
 
 <template>

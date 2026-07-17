@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
 import { ChatRepository } from '@/db/repositories/chat.repository'
@@ -32,7 +33,7 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
   if (!model) {
     await AiJobRepository.setStatus(job.id, 'failed', {
       error: '模型不存在',
-      finishedAt: new Date().toISOString(),
+      finishedAt: dayjs().toISOString(),
     })
     return 'failed'
   }
@@ -91,7 +92,7 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
         messages: out.messages,
       })
 
-      const now = new Date().toISOString()
+      const now = dayjs().toISOString()
       const conversation: ConversationEntity = {
         id: uuid(),
         documentId: doc.id,
@@ -138,7 +139,7 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
   const retryLabel = maxRetries > 0 ? `（已重试 ${maxRetries} 次）` : ''
   await AiJobRepository.setStatus(job.id, 'failed', {
     error: `${lastError}${retryLabel}`,
-    finishedAt: new Date().toISOString(),
+    finishedAt: dayjs().toISOString(),
   })
   return 'failed'
 }

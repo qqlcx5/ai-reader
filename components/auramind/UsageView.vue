@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted } from 'vue'
 import { Gauge } from '@lucide/vue'
 import { useModelStore } from '@/stores/model.store'
@@ -10,16 +11,10 @@ const modelStore = useModelStore()
 const allConversations = ref<ConversationEntity[]>([])
 const range = ref<'today' | 'week' | 'month' | 'all'>('all')
 
-const DAY = 86_400_000
 const fromMs = computed<number | undefined>(() => {
-  const now = Date.now()
-  if (range.value === 'today') {
-    const d = new Date(now)
-    d.setHours(0, 0, 0, 0)
-    return d.getTime()
-  }
-  if (range.value === 'week') return now - 7 * DAY
-  if (range.value === 'month') return now - 30 * DAY
+  if (range.value === 'today') return dayjs().startOf('day').valueOf()
+  if (range.value === 'week') return dayjs().subtract(7, 'day').valueOf()
+  if (range.value === 'month') return dayjs().subtract(30, 'day').valueOf()
   return undefined
 })
 
@@ -83,7 +78,7 @@ function messagesForModel(modelId: string): ModelMessage[] {
     for (const msg of conv.messages) {
       if (msg.role !== 'assistant' || msg.modelId !== modelId) continue
       if (f != null && msg.createdAt) {
-        const t = Date.parse(msg.createdAt)
+        const t = dayjs(msg.createdAt).valueOf()
         if (!Number.isNaN(t) && t < f) continue
       }
       const model = modelStore.models.find((m) => m.modelId === modelId)
@@ -102,13 +97,8 @@ function messagesForModel(modelId: string): ModelMessage[] {
 
 function formatTime(iso: string): string {
   if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const mm = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mi = String(d.getMinutes()).padStart(2, '0')
-  return `${mm}-${dd} ${hh}:${mi}`
+  const date = dayjs(iso)
+  return date.isValid() ? date.format('MM-DD HH:mm') : iso
 }
 
 function exportCsv() {
@@ -118,7 +108,7 @@ function exportCsv() {
     for (const msg of conv.messages) {
       if (msg.role !== 'assistant') continue
       if (f != null && msg.createdAt) {
-        const t = Date.parse(msg.createdAt)
+        const t = dayjs(msg.createdAt).valueOf()
         if (!Number.isNaN(t) && t < f) continue
       }
       const model = modelStore.models.find((m) => m.modelId === msg.modelId)
@@ -139,7 +129,7 @@ function exportCsv() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `usage-${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `usage-${dayjs().toISOString().slice(0, 10)}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }

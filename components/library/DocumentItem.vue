@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
+import { formatRelative } from '@/utils/date'
 import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus, Check } from '@lucide/vue'
 import type { DocumentEntity } from '@/types/document'
 import { getReadStatus } from '@/types/document'
@@ -46,24 +47,7 @@ const favicon = computed(() => {
   }
 })
 
-const displayTime = computed(() => {
-  const date = new Date(props.document.capturedAt)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-
-  if (diffMins < 1) return '刚刚'
-  if (diffMins < 60) return `${diffMins} 分钟前`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours} 小时前`
-  const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} 天前`
-
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-})
+const displayTime = computed(() => formatRelative(props.document.capturedAt).replace(/(分钟|小时|天)前$/, ' $1前'))
 
 const excerpt = computed(() => {
   const text = props.document.excerpt || props.document.markdown || ''

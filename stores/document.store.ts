@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { DocumentRepository } from '../db/repositories/document.repository'
@@ -90,7 +91,7 @@ export const useDocumentStore = defineStore('document', () => {
 
   /** Mark a document as opened now (drives "recently viewed" sort + unread dot). */
   async function markOpened(id: string) {
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
     try {
       await DocumentRepository.touchLastOpened(id, now)
     } catch (err) {
@@ -105,7 +106,7 @@ export const useDocumentStore = defineStore('document', () => {
   /** Update reading progress (0–1). Sets readAt automatically when reaching 1. */
   async function updateReadProgress(id: string, progress: number) {
     const clamped = Math.max(0, Math.min(1, progress))
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
     try {
       await DocumentRepository.updateReadProgress(id, clamped, clamped >= 1 ? now : undefined)
     } catch (err) {
@@ -190,7 +191,7 @@ export const useDocumentStore = defineStore('document', () => {
     const doc = await DocumentRepository.findById(docId)
     if (!doc?.highlights) return
     const highlights = doc.highlights.map((h) =>
-      h.id === highlightId ? { ...h, note, updatedAt: new Date().toISOString() } : h,
+      h.id === highlightId ? { ...h, note, updatedAt: dayjs().toISOString() } : h,
     )
     await DocumentRepository.updateHighlights(docId, highlights)
     if (currentDocument.value?.id === docId) {
@@ -217,7 +218,7 @@ export const useDocumentStore = defineStore('document', () => {
     const doc = await DocumentRepository.findById(docId)
     if (!doc?.highlights) return
     const highlights = doc.highlights.map((h) =>
-      h.id === highlightId ? { ...h, color, updatedAt: new Date().toISOString() } : h,
+      h.id === highlightId ? { ...h, color, updatedAt: dayjs().toISOString() } : h,
     )
     await DocumentRepository.updateHighlights(docId, highlights)
     if (currentDocument.value?.id === docId) {

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { db } from '../index'
 import type { AppSettings, ContextSettings, CaptureSettings } from '../../types/settings'
 import type { IRepository } from '../repository'
@@ -70,8 +71,8 @@ export const SettingsRepository: IRepository<AppSettings> & {
         modelId: existing.autoAnalysis?.modelId,
         promptTemplateId: existing.autoAnalysis?.promptTemplateId,
       },
-      createdAt: existing.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: existing.createdAt || dayjs().toISOString(),
+      updatedAt: dayjs().toISOString(),
     }
 
     await db.settings.put(merged)

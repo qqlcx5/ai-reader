@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw } from 'vue'
 import { ModelRepository } from '../db/repositories/model.repository'
@@ -72,7 +73,7 @@ export const useModelStore = defineStore('model', () => {
     const source = models.value.find(model => model.id === id)
     if (!source) return null
 
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
     const duplicatedModel: ModelConfig = {
       ...toRaw(source),
       id: generateUUID(),
@@ -128,7 +129,7 @@ export const useModelStore = defineStore('model', () => {
     await ModelRepository.save({
       ...toRaw(model),
       enabled,
-      updatedAt: new Date().toISOString(),
+      updatedAt: dayjs().toISOString(),
     } as ModelConfig)
     await loadModels()
 

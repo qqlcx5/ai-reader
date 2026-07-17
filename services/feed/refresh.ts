@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { FeedRepository } from '@/db/repositories/feed.repository'
 import { FeedItemRepository } from '@/db/repositories/feed-item.repository'
 import { fetchFeed } from './fetch'
@@ -20,7 +21,7 @@ export interface RefreshResult {
 export async function refreshFeed(feed: FeedEntity): Promise<RefreshResult> {
   try {
     const fetched = await fetchFeed(feed.url, { etag: feed.etag, lastModified: feed.lastModified })
-    const now = new Date().toISOString()
+    const now = dayjs().toISOString()
 
     if (fetched.notModified) {
       await FeedRepository.save({ ...feed, lastFetchedAt: now, lastError: undefined })
@@ -69,7 +70,7 @@ export async function refreshFeed(feed: FeedEntity): Promise<RefreshResult> {
     return { feedId: feed.id, newItems: fresh.length }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    await FeedRepository.save({ ...feed, lastFetchedAt: new Date().toISOString(), lastError: msg })
+    await FeedRepository.save({ ...feed, lastFetchedAt: dayjs().toISOString(), lastError: msg })
     return { feedId: feed.id, newItems: 0, error: msg }
   }
 }
@@ -89,7 +90,7 @@ export async function addSubscription(url: string, folder?: string): Promise<Fee
   const existing = await FeedRepository.findByUrl(normalized)
   if (existing) return existing
 
-  const now = new Date().toISOString()
+  const now = dayjs().toISOString()
   const feed: FeedEntity = {
     id: uuid(),
     url: normalized,

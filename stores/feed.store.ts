@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, computed, reactive } from 'vue'
 import { FeedRepository } from '../db/repositories/feed.repository'
@@ -250,7 +251,7 @@ export const useFeedStore = defineStore('feed', () => {
             phase: c > 0 ? 'done' : f > 0 ? 'error' : 'idle',
             collected: c,
             failed: f,
-            finishedAt: new Date().toISOString(),
+            finishedAt: dayjs().toISOString(),
           })
           if (res.items?.length) {
             allItemResults.push(...res.items.map((r: any) => ({
@@ -265,14 +266,14 @@ export const useFeedStore = defineStore('feed', () => {
             if (s?.phase === 'done' || s?.phase === 'error') clearCollectStatus(feed.id)
           }, 8000)
         } else {
-          setCollectStatus(feed.id, { phase: 'error', finishedAt: new Date().toISOString() })
+          setCollectStatus(feed.id, { phase: 'error', finishedAt: dayjs().toISOString() })
           setTimeout(() => {
             const s = collectStatus[feed.id]
             if (s?.phase === 'error') clearCollectStatus(feed.id)
           }, 8000)
         }
       } catch {
-        setCollectStatus(feed.id, { phase: 'error', finishedAt: new Date().toISOString() })
+        setCollectStatus(feed.id, { phase: 'error', finishedAt: dayjs().toISOString() })
         setTimeout(() => {
           const s = collectStatus[feed.id]
           if (s?.phase === 'error') clearCollectStatus(feed.id)
@@ -292,7 +293,7 @@ export const useFeedStore = defineStore('feed', () => {
         collected: totalCollected,
         failed: totalFailed,
         items: allItemResults,
-        finishedAt: new Date().toISOString(),
+        finishedAt: dayjs().toISOString(),
       }
     }
 
@@ -413,12 +414,12 @@ export const useFeedStore = defineStore('feed', () => {
   async function moveFolder(id: string, folder: string | undefined) {
     const feed = feeds.value.find((f) => f.id === id)
     if (!feed) return
-    await FeedRepository.save({ ...feed, folder, updatedAt: new Date().toISOString() })
+    await FeedRepository.save({ ...feed, folder, updatedAt: dayjs().toISOString() })
     await loadFeeds()
   }
 
   async function markRead(itemId: string) {
-    const readAt = new Date().toISOString()
+    const readAt = dayjs().toISOString()
     await FeedItemRepository.markRead(itemId, readAt)
     const it = items.value.find((i) => i.id === itemId)
     if (it && !it.readAt) {
@@ -446,7 +447,7 @@ export const useFeedStore = defineStore('feed', () => {
       items.value[idx] = {
         ...items.value[idx],
         documentId: entity.id,
-        collectedAt: new Date().toISOString(),
+        collectedAt: dayjs().toISOString(),
       }
     }
   }
@@ -483,7 +484,7 @@ export const useFeedStore = defineStore('feed', () => {
   async function setAutoCollect(id: string, value: boolean) {
     const feed = feeds.value.find((f) => f.id === id)
     if (!feed || feed.autoCollect === value) return
-    await FeedRepository.save({ ...feed, autoCollect: value, updatedAt: new Date().toISOString() })
+    await FeedRepository.save({ ...feed, autoCollect: value, updatedAt: dayjs().toISOString() })
     await loadFeeds()
 
     if (!value) {
@@ -517,7 +518,7 @@ export const useFeedStore = defineStore('feed', () => {
           total,
           collected,
           failed,
-          finishedAt: new Date().toISOString(),
+          finishedAt: dayjs().toISOString(),
         })
         // Store item-level details for the status panel
         lastCollectDetails.value = {
@@ -529,7 +530,7 @@ export const useFeedStore = defineStore('feed', () => {
             feedId: id,
             feedTitle,
           } as CollectItemDetail)),
-          finishedAt: new Date().toISOString(),
+          finishedAt: dayjs().toISOString(),
         }
         if (collected > 0 && failed > 0) {
           toast.warning(`已收集 ${collected} 篇，${failed} 篇失败`, { category: 'rss' })
@@ -546,7 +547,7 @@ export const useFeedStore = defineStore('feed', () => {
           if (s?.phase === 'done' || s?.phase === 'error') clearCollectStatus(id)
         }, 8000)
       } else {
-        setCollectStatus(id, { phase: 'error', finishedAt: new Date().toISOString() })
+        setCollectStatus(id, { phase: 'error', finishedAt: dayjs().toISOString() })
         toast.error(`收集失败：${res?.error || '未知错误'}`, { category: 'rss' })
         setTimeout(() => {
           const s = collectStatus[id]
@@ -555,7 +556,7 @@ export const useFeedStore = defineStore('feed', () => {
       }
     } catch (e: any) {
       toast.dismiss(toastId)
-      setCollectStatus(id, { phase: 'error', finishedAt: new Date().toISOString() })
+      setCollectStatus(id, { phase: 'error', finishedAt: dayjs().toISOString() })
       toast.error(`收集请求失败：${e?.message || e}`, { category: 'rss' })
       setTimeout(() => {
         const s = collectStatus[id]
@@ -589,7 +590,7 @@ export const useFeedStore = defineStore('feed', () => {
         phase: collected > 0 ? 'done' : failed > 0 ? 'error' : 'idle',
         collected,
         failed,
-        finishedAt: new Date().toISOString(),
+        finishedAt: dayjs().toISOString(),
       })
       // Store details for status panel
       if (itemResults?.length) {
@@ -603,7 +604,7 @@ export const useFeedStore = defineStore('feed', () => {
             feedId,
             feedTitle: feed?.title ?? feedId,
           } as CollectItemDetail)),
-          finishedAt: new Date().toISOString(),
+          finishedAt: dayjs().toISOString(),
         }
       }
       // Auto-clear after 8s

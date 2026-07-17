@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
 import { ref, computed, toRaw, watch } from 'vue'
 import type { ConversationEntity, ChatMessage } from '../types/chat'
@@ -168,7 +169,7 @@ export const useChatStore = defineStore('chat', () => {
       role: 'user',
       content,
       status: 'success',
-      createdAt: new Date().toISOString(),
+      createdAt: dayjs().toISOString(),
     }
     messages.value.push(userMsg)
 
@@ -197,7 +198,7 @@ export const useChatStore = defineStore('chat', () => {
         if (!msg.content) {
           msg.content = '(stopped)'
         }
-        msg.updatedAt = new Date().toISOString()
+        msg.updatedAt = dayjs().toISOString()
       }
     }
   }
@@ -248,7 +249,7 @@ export const useChatStore = defineStore('chat', () => {
       modelId: model.modelId,
       modelConfigId: model.id,
       status: 'streaming',
-      createdAt: new Date().toISOString(),
+      createdAt: dayjs().toISOString(),
     }
     messages.value.push(assistantMsg)
 
@@ -286,7 +287,7 @@ export const useChatStore = defineStore('chat', () => {
     currentDocumentId.value = documentId
     const all = await ChatRepository.findByDocumentId(documentId)
     conversations.value = all.sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) => dayjs(b.updatedAt).valueOf() - dayjs(a.updatedAt).valueOf(),
     )
 
     if (all.length > 0) {
@@ -310,8 +311,8 @@ export const useChatStore = defineStore('chat', () => {
       documentId,
       title: title || '新对话',
       messages: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: dayjs().toISOString(),
+      updatedAt: dayjs().toISOString(),
     }
 
     try {
@@ -401,7 +402,7 @@ export const useChatStore = defineStore('chat', () => {
     const conv = await ChatRepository.findById(currentConversationId.value)
     if (conv) {
       conv.title = title
-      conv.updatedAt = new Date().toISOString()
+      conv.updatedAt = dayjs().toISOString()
       await ChatRepository.save(conv)
 
       // Update in conversations list
@@ -430,7 +431,7 @@ export const useChatStore = defineStore('chat', () => {
       modelId: model.modelId,
       modelConfigId: model.id,
       status: 'streaming',
-      createdAt: new Date().toISOString(),
+      createdAt: dayjs().toISOString(),
     }
     messages.value.push(assistantMsg)
 
@@ -471,7 +472,7 @@ export const useChatStore = defineStore('chat', () => {
       modelId: m.modelId,
       modelConfigId: m.id,
       status: 'streaming' as const,
-      createdAt: new Date().toISOString(),
+      createdAt: dayjs().toISOString(),
     }))
 
     // Push all at once so UI renders them together
@@ -501,7 +502,7 @@ export const useChatStore = defineStore('chat', () => {
           if (msg && msg.status === 'streaming') {
             msg.status = 'failed'
             msg.error = err?.message || String(err)
-            msg.updatedAt = new Date().toISOString()
+            msg.updatedAt = dayjs().toISOString()
           }
         },
       ),
@@ -616,7 +617,7 @@ export const useChatStore = defineStore('chat', () => {
           const msg = capturedMessages.find((m) => m.id === assistantId)
           if (msg) {
             msg.status = 'success'
-            msg.updatedAt = new Date().toISOString()
+            msg.updatedAt = dayjs().toISOString()
             msg.durationMs = Math.round(performance.now() - startedAt)
             if (firstTokenAt != null) {
               msg.firstTokenMs = Math.round(firstTokenAt - startedAt)
@@ -649,7 +650,7 @@ export const useChatStore = defineStore('chat', () => {
             }
             msg.status = 'failed'
             msg.error = error.message || String(error)
-            msg.updatedAt = new Date().toISOString()
+            msg.updatedAt = dayjs().toISOString()
             msg.durationMs = Math.round(performance.now() - startedAt)
           }
         },
@@ -760,7 +761,7 @@ export const useChatStore = defineStore('chat', () => {
 
     const clonedMsgs = cloneMessages(messages.value)
     conv.messages = clonedMsgs
-    conv.updatedAt = new Date().toISOString()
+    conv.updatedAt = dayjs().toISOString()
 
     try {
       await ChatRepository.save(conv)
@@ -804,7 +805,7 @@ export const useChatStore = defineStore('chat', () => {
 
     const clonedMsgs = cloneMessages(msgs)
     conv.messages = clonedMsgs
-    conv.updatedAt = new Date().toISOString()
+    conv.updatedAt = dayjs().toISOString()
 
     try {
       await ChatRepository.save(conv)

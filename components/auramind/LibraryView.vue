@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ListChecks, Trash2, FolderPlus, Download, Zap } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
@@ -73,7 +74,7 @@ function handleBatchExport() {
   const docs = ids.map((id) => byId.get(id)).filter((d): d is DocumentEntity => !!d)
   if (!docs.length) return
   const blob = exportDocumentsToZip(docs)
-  const date = new Date().toISOString().slice(0, 10)
+  const date = dayjs().toISOString().slice(0, 10)
   downloadBlob(blob, `auramind-export-${date}.zip`)
   appStore.showToast(`已导出 ${docs.length} 篇文档`, 'success')
 }
@@ -105,12 +106,7 @@ function batchPickerCreate() {
 const pendingBatchDocIds = ref<string[] | null>(null)
 const pendingPickerDocId = ref<string | null>(null)
 
-function pad(n: number) {
-  return String(n).padStart(2, '0')
-}
-function dateKey(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+const dateKey = (date: dayjs.ConfigType) => dayjs(date).format('YYYY-MM-DD')
 function formatDateLabel(key: string) {
   const [, m, d] = key.split('-')
   return `${Number(m)}月${Number(d)}日`
@@ -168,7 +164,7 @@ const sortOptions: { value: LibrarySortKey; label: string }[] = [
 ]
 
 function ts(s?: string): number {
-  return s ? new Date(s).getTime() : 0
+  return s ? dayjs(s).valueOf() : 0
 }
 
 function sortDocs(docs: DocumentEntity[]): DocumentEntity[] {
@@ -217,7 +213,7 @@ const displayedDocs = computed(() => {
   }
 
   docs = docs.filter((d) => {
-    if (selectedDate.value && dateKey(new Date(d.capturedAt)) !== selectedDate.value) return false
+    if (selectedDate.value && dateKey(d.capturedAt) !== selectedDate.value) return false
     if (siteFilter.value && getSite(d) !== siteFilter.value) return false
     if (tagFilter.value && !(d.tags || []).includes(tagFilter.value)) return false
     if (statusFilter.value === 'unread' && getReadStatus(d) !== 'unread') return false

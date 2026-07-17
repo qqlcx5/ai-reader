@@ -1,3 +1,4 @@
+import dayjs from 'dayjs'
 import type { ModelConfig } from '@/types/model'
 import type { ConversationEntity } from '@/types/chat'
 import { resolvePricing } from '@/data/model-pricing'
@@ -132,7 +133,7 @@ export function aggregateUsage(
     for (const msg of conv.messages) {
       if (msg.role !== 'assistant') continue
       if (fromMs != null && msg.createdAt) {
-        const t = Date.parse(msg.createdAt)
+        const t = dayjs(msg.createdAt).valueOf()
         if (!Number.isNaN(t) && t < fromMs) continue
       }
       totalMessages++
@@ -238,11 +239,10 @@ export function aggregateByDay(
   for (const conv of conversations) {
     for (const msg of conv.messages) {
       if (msg.role !== 'assistant' || !msg.createdAt) continue
-      const t = Date.parse(msg.createdAt)
+      const t = dayjs(msg.createdAt).valueOf()
       if (Number.isNaN(t)) continue
       if (fromMs != null && t < fromMs) continue
-      const d = new Date(t)
-      const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+      const date = dayjs(t).toISOString().slice(0, 10)
       let entry = map.get(date)
       if (!entry) {
         entry = { date, tokens: 0, cost: 0, messages: 0 }
