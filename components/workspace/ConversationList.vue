@@ -1,7 +1,11 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { MessageSquare, Plus, Trash2, Download, FileJson, FileText, X } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { Plus, MoreHorizontal, Download, FileJson, FileText, Pencil, Trash2 } from '@lucide/vue'
+import {
+  DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal,
+  DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from 'reka-ui'
 import { useChatStore } from '@/stores/chat.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useAppStore } from '@/stores/app.store'
@@ -46,10 +50,13 @@ async function handleDeleteConversation(id: string) {
   await chatStore.deleteConversation(id)
 }
 
+async function handleRenameConversation(conv: ConversationEntity) {
+  const title = window.prompt('重命名会话', conv.title || '新对话')?.trim()
+  if (title) await chatStore.updateConversationTitle(title, conv.id)
+}
+
 // ── Export ────────────────────────────────────────────────
 const appStore = useAppStore()
-const showExportMenu = ref(false)
-const showBatchExport = ref(false)
 
 // ── Horizontal wheel scroll for conversation list ──
 const convScrollRef = ref<HTMLElement | null>(null)
@@ -66,7 +73,6 @@ async function handleExportMarkdown(conv: ConversationEntity) {
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
   const name = (conv.title || 'conversation') + '.md'
   downloadBlob(blob, name)
-  showExportMenu.value = false
   appStore.showToast('已导出 Markdown', 'success')
 }
 
@@ -77,7 +83,6 @@ async function handleExportJson(conv: ConversationEntity) {
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
   const name = (conv.title || 'conversation') + '.json'
   downloadBlob(blob, name)
-  showExportMenu.value = false
   appStore.showToast('已导出 JSON', 'success')
 }
 
@@ -99,7 +104,6 @@ async function handleBatchExportMarkdown() {
   const blob = exportConversationsToZip(allConvs, docs)
   const date = dayjs().toISOString().slice(0, 10)
   downloadBlob(blob, `conversations-${date}.zip`)
-  showBatchExport.value = false
   appStore.showToast(`已导出 ${allConvs.length} 个对话`, 'success')
 }
 
@@ -122,7 +126,6 @@ async function handleBatchExportJson() {
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
   const date = dayjs().toISOString().slice(0, 10)
   downloadBlob(blob, `conversations-${date}.json`)
-  showBatchExport.value = false
   appStore.showToast(`已导出 ${allConvs.length} 个对话`, 'success')
 }
 
@@ -139,16 +142,6 @@ const formatTime = (iso: string) => formatRelative(iso).replace(/(分钟|小时|
 
 const hasConversations = computed(() => chatStore.conversations.length > 0)
 
-// Close batch export menu when clicking outside
-function handleClickOutside(e: MouseEvent) {
-  const target = e.target as HTMLElement
-  if (!target.closest('.relative')) {
-    showBatchExport.value = false
-  }
-}
-
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 </script>
 
 <template>
@@ -181,23 +174,39 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
         <span class="text-[10px] opacity-50 shrink-0 tabular-nums">{{ conv.messages.length }}</span>
         <span class="text-[10px] opacity-40 shrink-0 tabular-nums min-w-[20px] text-right">{{ formatTime(conv.updatedAt || conv.createdAt) }}</span>
 
-        <!-- Export button (appears on hover) -->
-        <div
-          class="hidden group-hover:flex w-3 h-3 rounded-full bg-zinc-400 text-white items-center justify-center hover:bg-brand transition-colors"
-          title="导出"
-          @click.stop="handleExportConversation(conv, 'md')"
-        >
-          <Download class="size-2" />
-        </div>
-
-        <!-- Delete button (only show when multiple conversations) -->
-        <div
-          v-if="chatStore.conversations.length > 1"
-          class="hidden group-hover:flex absolute -top-1 -right-1 z-1 w-3 h-3 rounded-full bg-red-500 text-white items-center justify-center"
-          @click.stop="handleDeleteConversation(conv.id)"
-        >
-          <Trash2 class="w-1.8 h-1.8" />
-        </div>
+        <DropdownMenuRoot>
+          <DropdownMenuTrigger as-child>
+            <button
+              class="invisible group-hover:visible flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-black/5 transition-colors"
+              title="更多操作"
+              @click.stop
+            >
+              <MoreHorizontal class="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuContent
+              align="end"
+              :side-offset="4"
+              class="z-50 min-w-[140px] rounded-lg border border-zinc-200 bg-white p-1 shadow-lg outline-none"
+              @click.stop
+            >
+              <DropdownMenuItem class="menu-item" @select="handleRenameConversation(conv)">
+                <Pencil class="w-3.5 h-3.5" /> 重命名
+              </DropdownMenuItem>
+              <DropdownMenuItem class="menu-item" @select="handleExportConversation(conv, 'md')">
+                <Download class="w-3.5 h-3.5" /> 导出 Markdown
+              </DropdownMenuItem>
+              <DropdownMenuItem class="menu-item" @select="handleExportConversation(conv, 'json')">
+                <FileJson class="w-3.5 h-3.5" /> 导出 JSON
+              </DropdownMenuItem>
+              <DropdownMenuSeparator class="my-1 h-px bg-zinc-100" />
+              <DropdownMenuItem class="menu-item text-red-500 hover:bg-red-50" @select="handleDeleteConversation(conv.id)">
+                <Trash2 class="w-3.5 h-3.5" /> 删除会话
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuPortal>
+        </DropdownMenuRoot>
       </div>
 
       <!-- Empty state -->
@@ -211,33 +220,30 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 
     <!-- Right: Export + New buttons -->
     <div class="flex items-center gap-0.5 px-1.5 py-2 shrink-0">
-      <!-- Batch export dropdown -->
-      <div v-if="hasConversations" class="relative">
-        <div
-          class="p-1 rounded-md text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
-          title="批量导出"
-          @click="showBatchExport = !showBatchExport"
-        >
-          <Download class="w-3 h-3" />
-        </div>
-        <div
-          v-if="showBatchExport"
-          class="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-20 py-0.5 min-w-[140px]"
-        >
-          <div
-            class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
-            @click="handleBatchExportMarkdown"
+      <DropdownMenuRoot v-if="hasConversations">
+        <DropdownMenuTrigger as-child>
+          <button
+            class="p-1 rounded-md text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+            title="批量导出"
           >
-            <FileText class="w-3 h-3" /> 导出 Markdown (ZIP)
-          </div>
-          <div
-            class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
-            @click="handleBatchExportJson"
+            <Download class="w-3 h-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent
+            align="end"
+            :side-offset="4"
+            class="z-50 min-w-[150px] rounded-lg border border-zinc-200 bg-white p-1 shadow-lg outline-none"
           >
-            <FileJson class="w-3 h-3" /> 导出 JSON
-          </div>
-        </div>
-      </div>
+            <DropdownMenuItem class="menu-item" @select="handleBatchExportMarkdown">
+              <FileText class="w-3.5 h-3.5" /> 导出 Markdown (ZIP)
+            </DropdownMenuItem>
+            <DropdownMenuItem class="menu-item" @select="handleBatchExportJson">
+              <FileJson class="w-3.5 h-3.5" /> 导出 JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenuRoot>
       <UButton
         variant="ghost"
         size="sm"
@@ -250,3 +256,17 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
     </div>
   </div>
 </template>
+
+<style scoped>
+.menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+  font-size: 11px;
+  color: rgb(82 82 91);
+}
+.menu-item:hover { background: rgb(250 250 250); }
+</style>

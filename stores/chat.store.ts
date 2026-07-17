@@ -437,9 +437,9 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function updateConversationTitle(title: string): Promise<void> {
-    if (!currentConversationId.value) return
-    const conv = await ChatRepository.findById(currentConversationId.value)
+  async function updateConversationTitle(title: string, conversationId = currentConversationId.value): Promise<void> {
+    if (!conversationId) return
+    const conv = await ChatRepository.findById(conversationId)
     if (conv) {
       conv.title = title
       conv.updatedAt = dayjs().toISOString()
@@ -892,6 +892,7 @@ export const useChatStore = defineStore('chat', () => {
     createConversation,
     branchConversationAt,
     switchConversation,
+    updateConversationTitle,
     deleteConversation,
     resetState,
   }
