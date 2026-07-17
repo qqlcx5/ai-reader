@@ -107,7 +107,7 @@ export const DocumentRepository: IRepository<DocumentEntity> & {
 
   /** Partial update of reading progress. Sets readAt when progress reaches 1. */
   async updateReadProgress(id: string, progress: number, readAt?: string): Promise<void> {
-    const patch: Record<string, unknown> = { readProgress: progress }
+    const patch: Partial<DocumentEntity> = { readProgress: progress }
     if (progress >= 1 && !readAt) {
       patch.readAt = dayjs().toISOString()
     } else if (readAt) {

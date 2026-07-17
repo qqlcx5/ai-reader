@@ -20,6 +20,7 @@ import { toast } from '@/utils/toast'
 import type { FeedEntity } from '@/types/feed'
 
 const feedStore = useFeedStore()
+const documentStore = useDocumentStore()
 
 const newUrl = ref('')
 const newFolder = ref('')
@@ -248,7 +249,6 @@ async function onUncollect() {
 /** Jump to workspace to view this article's document & conversations. */
 async function goToLibrary(documentId: string) {
   const appStore = useAppStore()
-  const documentStore = useDocumentStore()
   const chatStore = useChatStore()
   const workspaceStore = useWorkspaceStore()
   await documentStore.loadDocument(documentId)

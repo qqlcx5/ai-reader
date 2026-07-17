@@ -16,10 +16,7 @@ export const useDocumentStore = defineStore('document', () => {
   // Library list sort preference (persisted).
   const librarySortKey = ref<LibrarySortKey>('viewed')
 
-  // Persisted document ID so the current document can be restored after
-  // window reopen (e.g. sidepanel → popped-out window). The full DocumentEntity
-  // is not persisted due to localStorage size limits; the ID is used to
-  // re-hydrate from IndexedDB via the afterRestore hook.
+  // Persist only the ID; App.vue re-hydrates the full document from IndexedDB.
   const currentDocumentId = ref<string | null>(null)
 
   // ── Multi-select state ──
@@ -263,13 +260,5 @@ export const useDocumentStore = defineStore('document', () => {
 }, {
   persist: {
     pick: ['librarySortKey', 'currentDocumentId'],
-    afterRestore: async (ctx) => {
-      const store = ctx.store as ReturnType<typeof useDocumentStore>
-      if (store.currentDocumentId) {
-        // Re-hydrate the full document from IndexedDB. Silently ignore
-        // failures — the ID exists but the document may have been deleted.
-        await store.loadDocument(store.currentDocumentId).catch(() => {})
-      }
-    },
   },
 })

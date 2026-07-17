@@ -126,6 +126,9 @@ let removeListener: (() => void) | null = null
 onMounted(async () => {
   await settingsStore.loadSettings()
   await modelStore.loadModels()
+  if (documentStore.currentDocumentId) {
+    await documentStore.loadDocument(documentStore.currentDocumentId).catch(() => {})
+  }
 
   // Initialize prompt templates (writes builtins on first run)
   await promptTemplateStore.initTemplates()

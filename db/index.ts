@@ -17,7 +17,7 @@ export class AuraMindDB extends Dexie {
   promptTemplates!: Table<PromptTemplate, string>
   collections!: Table<CollectionEntity, string>
   collectionItems!: Table<CollectionItemEntity, string>
-  kvMeta!: Table<{ id: string; value: unknown }, string>
+  kvMeta!: Table<{ id: string; value: unknown; updatedAt?: string }, string>
   feeds!: Table<FeedEntity, string>
   feedItems!: Table<FeedItemEntity, string>
   aiJobs!: Table<AiJobEntity, string>
