@@ -71,10 +71,7 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
           },
           settings?.context,
         )
-        const maxContext = model.contextWindow
-          ? Math.min(model.contextWindow, settings?.context.maxContextTokens ?? 1_050_000)
-          : settings?.context.maxContextTokens ?? 1_050_000
-        context = truncateContext(pageCtx, maxContext)
+        context = truncateContext(pageCtx, settings?.context.maxContextTokens ?? 1_050_000)
       }
 
       const system = model.systemPrompt || settings?.globalSystemPrompt

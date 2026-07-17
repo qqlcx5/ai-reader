@@ -49,6 +49,24 @@ describe('OllamaProvider', () => {
       expect(callUrl).toBe('http://localhost:11434/api/chat')
     })
 
+    it('should send maxTokens as num_predict without overriding context size', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ message: { content: 'ok' } }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      await OllamaProvider.chat({
+        model: mockModelConfig({ contextWindow: 4096, maxTokens: 1024 }),
+        messages: [{ role: 'user', content: 'Hi' }],
+      })
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+      expect(body.options).toBeUndefined()
+      expect(body.num_ctx).toBeUndefined()
+      expect(body.num_predict).toBe(1024)
+    })
+
     it('should include system prompt in messages array', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,

@@ -597,11 +597,8 @@ export const useChatStore = defineStore('chat', () => {
 
     // Truncate context before building the prompt (was previously done
     // post-build by checking m.role === 'system', but context is now user-role).
-    const maxContext = model.contextWindow
-      ? Math.min(model.contextWindow, settings.context.maxContextTokens)
-      : settings.context.maxContextTokens
     if (context) {
-      context = truncateContext(context, maxContext)
+      context = truncateContext(context, settings.context.maxContextTokens)
     }
 
     // Build prompt using the captured messages array (streamState.messages)

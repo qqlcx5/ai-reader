@@ -8,6 +8,9 @@ import { useModelStore } from '@/stores/model.store'
 vi.mock('@lucide/vue', () => ({
   X: { name: 'X', template: '<span class="mock-x" />', props: ['class', 'size'] },
   ChevronDown: { name: 'ChevronDown', template: '<span class="mock-chevron" />', props: ['class', 'size'] },
+  RefreshCw: { name: 'RefreshCw', template: '<span class="mock-refresh" />', props: ['class', 'size'] },
+  Search: { name: 'Search', template: '<span class="mock-search" />', props: ['class', 'size'] },
+  Check: { name: 'Check', template: '<span class="mock-check" />', props: ['class', 'size'] },
 }))
 
 // Stub reka-ui components
@@ -33,6 +36,12 @@ vi.mock('reka-ui', () => {
     SliderThumb: stub('SliderThumb'),
     SwitchRoot: stub('SwitchRoot'),
     SwitchThumb: stub('SwitchThumb'),
+    DialogRoot: { name: 'DialogRoot', props: ['open'], template: '<div v-if="open" class="stub-DialogRoot"><slot /></div>' },
+    DialogPortal: stub('DialogPortal'),
+    DialogOverlay: stub('DialogOverlay'),
+    DialogContent: stub('DialogContent'),
+    DialogTitle: stub('DialogTitle'),
+    DialogDescription: stub('DialogDescription'),
   }
 })
 
@@ -82,7 +91,7 @@ describe('ModelEditorDialog — form validation', () => {
       props: { open: false },
     })
 
-    expect(wrapper.find('.mock-x').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('添加模型节点')
   })
 
   it('emits close when clicking overlay', async () => {
@@ -90,7 +99,7 @@ describe('ModelEditorDialog — form validation', () => {
       props: { open: true },
     })
 
-    await wrapper.find('.absolute.inset-0').trigger('click')
+    await wrapper.find('.stub-DialogOverlay').trigger('click')
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 

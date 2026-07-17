@@ -656,13 +656,13 @@ onUnmounted(() => {
               <span v-if="feedStore.unreadOf(f.id)" class="text-[10px] font-semibold text-brand shrink-0">{{ feedStore.unreadOf(f.id) }}</span>
               <DropdownMenuRoot>
                 <DropdownMenuTrigger as-child>
-                  <button
+                  <div
                     class="p-0.5 rounded shrink-0 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
                     title="更多操作"
                     @click.stop
                   >
                     <Ellipsis class="w-3.5 h-3.5" />
-                  </button>
+                  </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuContent

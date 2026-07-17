@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import { ref, watch, computed } from 'vue'
 import { X, ChevronDown, Search, RefreshCw, Check } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
+import UDialog from '@/components/ui/UDialog.vue'
 import UInput from '@/components/ui/UInput.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
 import Select from '@/components/ui/Select.vue'
@@ -314,28 +315,29 @@ watch(() => props.open, (val) => {
 </script>
 
 <template>
-  <div
-    v-if="open"
-    class="absolute inset-0 z-50 bg-black/20 backdrop-blur-sm flex items-end"
-    @click.self="onClose"
-  >
-    <div class="w-full bg-white rounded-t-2xl border-t border-zinc-200 shadow-2xl p-4 animate-[slideUp_.2s_ease-out] max-h-[85vh] flex flex-col">
-      <div class="flex items-center justify-between mb-4 shrink-0">
+  <UDialog :open="open" @close="onClose">
+    <template #header>
+      <div class="flex items-center justify-between shrink-0 pb-0 p-4">
         <div>
-          <h3 class="text-[15px] font-semibold">{{ isEdit ? '编辑模型' : '添加模型节点' }}</h3>
-          <p class="text-[11px] text-zinc-400 mt-0.5">支持 OpenAI Compatible / Anthropic / Ollama</p>
+          <div class="text-[15px] font-semibold">{{ isEdit ? '编辑模型' : '添加模型节点' }}</div>
+          <div class="text-[11px] text-zinc-400 mt-0.5">支持 OpenAI Compatible / Anthropic / Ollama</div>
         </div>
         <UButton variant="ghost" @click="onClose">
           <X class="w-4 h-4" />
         </UButton>
       </div>
+    </template>
 
-      <div class="space-y-3 text-[13px] overflow-y-auto flex-1">
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 text-[13px]">
+      <div class="space-y-5">
+        <section>
+          <h4 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">基础配置</h4>
+          <div class="space-y-3">
         <!-- Name -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">模型名称 <span class="text-red-400">*</span></label>
           <UInput v-model="name" class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3" placeholder="例如 DeepSeek Chat" />
-          <p v-if="errors.name" class="text-[10px] text-red-400 mt-0.5">{{ errors.name }}</p>
+          <div v-if="errors.name" class="text-[10px] text-red-400 mt-0.5">{{ errors.name }}</div>
         </div>
 
         <!-- Provider -->
@@ -398,6 +400,11 @@ watch(() => props.open, (val) => {
           <p v-if="errors.baseUrl" class="text-[10px] text-red-400 mt-0.5">{{ errors.baseUrl }}</p>
         </div>
 
+        </div>
+        </section>
+        <section>
+          <h4 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Token 与生成</h4>
+          <div class="space-y-3">
         <!-- API Key -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">API Key</label>
@@ -412,10 +419,11 @@ watch(() => props.open, (val) => {
               :model-value="contextWindow != null ? String(contextWindow) : ''"
               type="number"
               class="mt-1 w-full h-9 rounded-lg border border-zinc-200 px-3 font-mono text-[12px]"
-              placeholder="可选，如 128000"
+              placeholder="统一由全局上下文设置控制"
               @update:model-value="contextWindow = $event === '' ? undefined : Number($event)"
             />
             <p v-if="errors.contextWindow" class="text-[10px] text-red-400 mt-0.5">{{ errors.contextWindow }}</p>
+            <p class="text-[10px] text-zinc-400 mt-0.5">不参与请求限制；上下文长度统一由全局设置控制</p>
           </div>
           <div>
             <label class="text-[11px] text-zinc-500 font-medium">最大输出 Token</label>
@@ -427,9 +435,14 @@ watch(() => props.open, (val) => {
               @update:model-value="maxTokens = $event === '' ? undefined : Number($event)"
             />
             <p v-if="errors.maxTokens" class="text-[10px] text-red-400 mt-0.5">{{ errors.maxTokens }}</p>
+            <p class="text-[10px] text-zinc-400 mt-0.5">发送请求时限制模型的最大输出长度</p>
           </div>
         </div>
 
+        </div>
+        </section>
+        <section>
+          <h4 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">计费</h4>
         <!-- Pricing (per 1M tokens, CNY) -->
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -454,6 +467,10 @@ watch(() => props.open, (val) => {
           </div>
         </div>
 
+        </section>
+        <section>
+          <h4 class="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">高级设置</h4>
+          <div class="space-y-3">
         <!-- Max Retries -->
         <div>
           <label class="text-[11px] text-zinc-500 font-medium">失败重试次数</label>
@@ -523,23 +540,18 @@ watch(() => props.open, (val) => {
           <span class="text-[11px] text-zinc-500 font-medium">设为默认</span>
           <Switch v-model="isDefault" />
         </div>
+          </div>
+        </section>
       </div>
+    </div>
 
-      <div class="flex gap-2 mt-5 shrink-0">
-        <UButton variant="secondary" size="lg" class="flex-1" @click="onClose">
-          取消
-        </UButton>
+    <template #footer>
+      <div class="flex gap-2 mt-5 px-4 pb-4 shrink-0">
+        <UButton variant="secondary" size="lg" class="flex-1" @click="onClose">取消</UButton>
         <UButton variant="primary" size="lg" class="flex-1" :disabled="submitting" @click="handleSubmit">
           {{ submitting ? '保存中...' : (isEdit ? '保存修改' : '添加模型') }}
         </UButton>
       </div>
-    </div>
-  </div>
+    </template>
+  </UDialog>
 </template>
-
-<style>
-@keyframes slideUp {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
-}
-</style>

@@ -27,8 +27,8 @@ function buildOllamaMessages(input: ChatInput): OllamaMessage[] {
 
 function buildOllamaParams(model: ModelConfig): Record<string, unknown> {
   const params: Record<string, unknown> = {}
-  if (model.contextWindow != null) params.num_ctx = model.contextWindow
   if (model.temperature != null) params.temperature = model.temperature
+  if (model.maxTokens != null) params.num_predict = model.maxTokens
   return params
 }
 

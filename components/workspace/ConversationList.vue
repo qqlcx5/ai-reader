@@ -193,13 +193,13 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
           }"
         >
           <template #trigger>
-            <button
-              class="invisible group-hover:visible flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-black/5 transition-colors"
+            <div
+              class="invisible group-hover:visible flex items-center justify-center w-3 h-3 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-black/5 transition-colors"
               title="更多操作"
               @click.stop
             >
               <MoreHorizontal class="w-4 h-4" />
-            </button>
+            </div>
           </template>
         </UDropdownMenu>
       </div>
@@ -241,4 +241,3 @@ const hasConversations = computed(() => chatStore.conversations.length > 0)
     </div>
   </div>
 </template>
-
