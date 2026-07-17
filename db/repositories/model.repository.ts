@@ -13,7 +13,10 @@ export const ModelRepository: IRepository<ModelConfig> & {
   },
 
   async findAll(): Promise<ModelConfig[]> {
-    return db.models.orderBy('updatedAt').reverse().toArray()
+    const models = await db.models.toArray()
+    return models.sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+    )
   },
 
   async findEnabled(): Promise<ModelConfig[]> {

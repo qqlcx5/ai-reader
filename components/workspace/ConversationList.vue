@@ -228,29 +228,29 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
     <div class="flex items-center gap-0.5 px-1.5 py-2 shrink-0">
       <!-- Batch export dropdown -->
       <div v-if="hasConversations" class="relative">
-        <button
+        <div
           class="p-1 rounded-md text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
           title="批量导出"
           @click="showBatchExport = !showBatchExport"
         >
-          <Download class="w-3.5 h-3.5" />
-        </button>
+          <Download class="w-3 h-3" />
+        </div>
         <div
           v-if="showBatchExport"
           class="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-20 py-0.5 min-w-[140px]"
         >
-          <button
+          <div
             class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
             @click="handleBatchExportMarkdown"
           >
             <FileText class="w-3 h-3" /> 导出 Markdown (ZIP)
-          </button>
-          <button
+          </div>
+          <div
             class="w-full px-2.5 py-1.5 text-left text-[11px] text-zinc-600 hover:bg-zinc-50 flex items-center gap-1.5"
             @click="handleBatchExportJson"
           >
             <FileJson class="w-3 h-3" /> 导出 JSON
-          </button>
+          </div>
         </div>
       </div>
       <UButton

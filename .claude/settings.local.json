@@ -15,7 +15,9 @@
       "Bash(pnpm build *)",
       "Bash(pnpm compile *)",
       "mcp__zread__search_doc",
-      "mcp__codegraph__codegraph_explore"
+      "mcp__codegraph__codegraph_explore",
+      "Skill(claude-api)",
+      "Skill(dataviz)"
     ]
   },
   "outputStyle": "Proactive"
