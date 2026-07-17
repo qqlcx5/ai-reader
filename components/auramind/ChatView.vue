@@ -34,7 +34,7 @@ function modelNameFor(modelId?: string, modelConfigId?: string): string | undefi
     if (m) return m.name
   }
   const m = modelStore.models.find((mod) => mod.modelId === modelId)
-  return m?.name
+  return m?.name ?? modelId
 }
 
 // ── Token usage + cost label ────────────────────────────
@@ -46,7 +46,8 @@ function metaFor(msg: ChatMessageType): string | undefined {
   const total = prompt + completion
   if (total === 0) return undefined
   const parts: string[] = [`Tokens: ${total} ↑${prompt} ↓${completion}`]
-  const model = modelStore.models.find((m) => m.modelId === msg.modelId)
+  const model = modelStore.models.find((m) => m.id === msg.modelConfigId)
+    ?? modelStore.models.find((m) => m.modelId === msg.modelId)
   if (model) {
     const cost = calcMessageCost(u, model)
     if (cost != null && cost > 0) parts.push(`花费:${formatCNY(cost)}`)

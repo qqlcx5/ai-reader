@@ -302,6 +302,24 @@ describe('stores/chat.store', () => {
     expect(store.messages[0].content).toBe('Question 1')
   })
 
+  it('regenerate should use the original assistant model', async () => {
+    const original = await seedModel({ id: 'original', name: 'Original', modelId: 'original-model' })
+    await useModelStore().addModel(makeModel({ id: 'current', name: 'Current', modelId: 'current-model' }))
+    const modelStore = useModelStore()
+    modelStore.selectModel('current')
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+    store.messages.push(
+      { id: 'u1', role: 'user', content: 'Question', status: 'success', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a1', role: 'assistant', content: 'Answer', modelId: original.modelId, modelConfigId: original.id, status: 'success', createdAt: '2026-01-01T00:00:01.000Z' },
+    )
+    setupStreamSuccess('Again')
+    await store.regenerate('a1')
+
+    expect(store.messages[1].modelConfigId).toBe(original.id)
+    expect(mockStreamChat.mock.calls.at(-1)?.[0].model.id).toBe(original.id)
+  })
+
   // 11. Streaming state
   it('should set streaming/sending states during sendMessage lifecycle', async () => {
     await seedModel()

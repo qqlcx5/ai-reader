@@ -206,22 +206,24 @@ export const useChatStore = defineStore('chat', () => {
   async function regenerate(targetAssistantId?: string): Promise<void> {
     const modelStore = useModelStore()
     const settingsStore = useSettingsStore()
-    const model = modelStore.currentModel
-    if (!model) return
-
+    let model: ModelConfig | null = modelStore.currentModel
     let userMsg: ChatMessage | undefined
 
     if (targetAssistantId) {
       // Regenerate a specific assistant message: find its corresponding user message
       const asstIdx = messages.value.findIndex((m) => m.id === targetAssistantId)
       if (asstIdx === -1) return
+      const original = messages.value[asstIdx]
+      model = modelStore.models.find((candidate) => candidate.id === original.modelConfigId)
+        ?? modelStore.models.find((candidate) => candidate.modelId === original.modelId)
+        ?? model
 
       // Walk backwards to find the preceding user message
       for (let i = asstIdx - 1; i >= 0; i--) {
         if (messages.value[i].role === 'user') {
           userMsg = messages.value[i]
-          // Truncate all messages from this user onward
-          messages.value.splice(i)
+          // Keep the prompt and replace this assistant response.
+          messages.value.splice(i + 1)
           break
         }
       }
@@ -239,7 +241,15 @@ export const useChatStore = defineStore('chat', () => {
       }
 
       userMsg = messages.value[lastUserIdx]
+      const original = messages.value[lastUserIdx + 1]
+      if (original?.role === 'assistant') {
+        model = modelStore.models.find((candidate) => candidate.id === original.modelConfigId)
+          ?? modelStore.models.find((candidate) => candidate.modelId === original.modelId)
+          ?? model
+      }
     }
+
+    if (!model) return
 
     // Create a fresh assistant message for re-generation
     const assistantMsg: ChatMessage = {
