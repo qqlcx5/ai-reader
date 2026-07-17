@@ -332,6 +332,36 @@ export const useChatStore = defineStore('chat', () => {
     return conv
   }
 
+  async function branchConversationAt(messageId: string): Promise<ConversationEntity> {
+    const sourceId = currentConversationId.value
+    if (!sourceId) throw new Error('No active conversation to branch.')
+
+    await persistConversation()
+    const index = messages.value.findIndex((message) => message.id === messageId)
+    if (index === -1) throw new Error('Message not found.')
+
+    const source = conversations.value.find((conversation) => conversation.id === sourceId)
+      ?? await ChatRepository.findById(sourceId)
+    if (!source) throw new Error('Conversation not found.')
+
+    const now = dayjs().toISOString()
+    const branch: ConversationEntity = {
+      id: crypto.randomUUID(),
+      documentId: source.documentId,
+      title: `${source.title || '新对话'} 分支`,
+      messages: cloneMessages(messages.value.slice(0, index + 1)),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await ChatRepository.save(branch)
+    conversations.value.unshift(branch)
+    messages.value = [...branch.messages]
+    currentConversationId.value = branch.id
+    currentDocumentId.value = branch.documentId
+    return branch
+  }
+
   async function switchConversation(conversationId: string): Promise<void> {
     // Persist current before switching
     await persistConversation()
@@ -850,6 +880,7 @@ export const useChatStore = defineStore('chat', () => {
     loadConversation,
     loadConversations,
     createConversation,
+    branchConversationAt,
     switchConversation,
     deleteConversation,
     resetState,

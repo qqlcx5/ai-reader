@@ -23,6 +23,14 @@ describe('ChatMessage', () => {
     expect(bubble.text()).toBe('你好世界')
   })
 
+  it('emits branch from the message action', async () => {
+    const wrapper = mount(ChatMessage, {
+      props: { message: makeMsg() },
+    })
+    await wrapper.find('button[title="从此处分支"]').trigger('click')
+    expect(wrapper.emitted('branch')).toEqual([['msg-1']])
+  })
+
   it('renders AI message bubble with AuraMind header', () => {
     const wrapper = mount(ChatMessage, {
       props: { message: makeMsg({ role: 'assistant', content: 'AI reply' }) },

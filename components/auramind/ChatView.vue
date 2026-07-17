@@ -182,6 +182,15 @@ function handleRegenerate(id: string) {
   chatStore.regenerate(id)
 }
 
+async function handleBranch(id: string) {
+  try {
+    await chatStore.branchConversationAt(id)
+    appStore.showToast('已创建分支会话', 'success')
+  } catch {
+    appStore.showToast('创建分支失败', 'error')
+  }
+}
+
 function handleDetachContext() {
   // Detach the current page context from the chat dialog. The document
   // itself stays in the library; we just clear the in-memory refs so
@@ -260,6 +269,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         @copy="handleCopy"
         @delete="handleDeleteMessage"
         @edit="handleEdit"
+        @branch="handleBranch"
       />
 
       <!-- Single assistant: normal flow -->
@@ -272,6 +282,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         @regenerate="handleRegenerate"
         @copy="handleCopy"
         @delete="handleDeleteMessage"
+        @branch="handleBranch"
       />
 
       <!-- Multi-assistant: side-by-side card layout -->
@@ -290,6 +301,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
           @regenerate="handleRegenerate"
           @copy="handleCopy"
           @delete="handleDeleteMessage"
+          @branch="handleBranch"
         />
       </div>
     </template>

@@ -452,6 +452,28 @@ describe('stores/chat.store', () => {
     expect(store.currentDocumentId).toBe('doc-empty')
   })
 
+  it('branchConversationAt should copy through the selected message into a new active conversation', async () => {
+    const source = makeConv('source', 'doc-branch')
+    source.title = 'Original'
+    source.messages = [
+      { id: 'u1', role: 'user', content: 'First', status: 'success', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a1', role: 'assistant', content: 'Reply', status: 'success', createdAt: '2026-01-01T00:01:00.000Z' },
+      { id: 'u2', role: 'user', content: 'Later', status: 'success', createdAt: '2026-01-01T00:02:00.000Z' },
+    ]
+    chatDb.set(source.id, source)
+
+    const store = useChatStore()
+    await store.loadConversations('doc-branch')
+    const branch = await store.branchConversationAt('a1')
+
+    expect(branch.id).not.toBe(source.id)
+    expect(branch.title).toBe('Original 分支')
+    expect(branch.messages.map((message) => message.id)).toEqual(['u1', 'a1'])
+    expect(store.currentConversationId).toBe(branch.id)
+    expect(store.messages.map((message) => message.id)).toEqual(['u1', 'a1'])
+    expect(chatDb.get(source.id)?.messages).toHaveLength(3)
+  })
+
   // 13e. switchConversation switches active conversation
   it('switchConversation should switch active conversation and load messages', async () => {
     const conv1 = makeConv('c1', 'doc-1')

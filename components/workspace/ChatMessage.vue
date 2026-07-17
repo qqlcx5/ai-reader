@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
-import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard } from '@lucide/vue'
+import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard, GitBranch } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
 import { formatMessageForCopy, copyToClipboard } from '@/utils/conversation-export'
 import type { ChatMessage } from '@/types/chat'
@@ -21,6 +21,7 @@ const emit = defineEmits<{
   (e: 'copy', content: string): void
   (e: 'delete', id: string): void
   (e: 'edit', id: string, content: string): void
+  (e: 'branch', id: string): void
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
@@ -139,6 +140,13 @@ onUnmounted(() => {
         <Copy v-else class="w-3 h-3" />
       </button>
       <button
+        class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+        title="从此处分支"
+        @click.stop="emit('branch', message.id)"
+      >
+        <GitBranch class="w-3 h-3" />
+      </button>
+      <button
         class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
         title="删除"
         @click.stop="emit('delete', message.id)"
@@ -189,6 +197,13 @@ onUnmounted(() => {
         >
           <Clipboard v-if="copied" class="w-3 h-3 text-emerald-500" />
           <Copy v-else class="w-3 h-3" />
+        </button>
+        <button
+          class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          title="从此处分支"
+          @click.stop="emit('branch', message.id)"
+        >
+          <GitBranch class="w-3 h-3" />
         </button>
         <button
           class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"
