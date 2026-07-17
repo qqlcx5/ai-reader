@@ -41,8 +41,8 @@ async function select(item: QuickActionItem) {
 </script>
 
 <template>
-  <UFloatingBall>
-    <UQuickActions :items="items" :floating="false" @select="select">
+  <UFloatingBall v-slot="{ edge }">
+    <UQuickActions :items="items" :floating="false" :side="edge" @select="select">
       <template #trigger>✦</template>
     </UQuickActions>
   </UFloatingBall>
