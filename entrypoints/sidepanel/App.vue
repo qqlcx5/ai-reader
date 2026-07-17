@@ -22,7 +22,6 @@ import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import Toaster from '@/components/Toaster.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
-import PageQuickActions from '@/components/common/PageQuickActions.vue'
 
 const appStore = useAppStore()
 const workspaceStore = useWorkspaceStore()
@@ -40,17 +39,23 @@ const windowMode = isWindowMode()
 useBackNavigation()
 
 function handleBackgroundMessage(
-  message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload>,
+  message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload> | { type: string; payload?: { tabId?: number } },
 ) {
+  if (message.type === 'FLOATING_CAPTURE') {
+    const tabId = message.payload?.tabId
+    if (tabId) triggerAutoExtract(tabId)
+    return
+  }
   if (message.type === 'TAB_ACTIVATED' || message.type === 'TAB_UPDATED') {
-    appStore.setActiveTab(message.payload.tab)
+    const payload = message.payload as TabActivatedPayload | TabUpdatedPayload
+    appStore.setActiveTab(payload.tab)
     if (workspaceStore.documentSource === 'library') {
       appStore.showPageChangeHint = true
     }
 
     // Auto-extract on tab change
     if (!windowMode && settingsStore.settings.capture.autoExtractOnTabChange) {
-      triggerAutoExtract(message.payload.tab.id)
+      triggerAutoExtract(payload.tab.id)
     }
   }
 }
@@ -197,12 +202,6 @@ onUnmounted(() => {
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 
-    <PageQuickActions
-      v-if="!windowMode"
-      :capturing="workspaceStore.isExtracting"
-      @capture="triggerAutoExtract(appStore.activeTab?.id ?? 0)"
-      @select="(key) => appStore.setCurrentView(key as any, { resetHistory: true })"
-    />
     <Toaster />
   </div>
 </template>

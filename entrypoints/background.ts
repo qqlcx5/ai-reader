@@ -63,6 +63,25 @@ export default defineBackground(() => {
 
   // Handle getCurrentTab request
   b.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    if (message.type === 'FLOATING_OPEN') {
+      if (sidePanel && _sender.tab?.id) {
+        sidePanel.open({ tabId: _sender.tab.id }).catch(() => {})
+      }
+      sendResponse({ ok: true })
+      return true
+    }
+
+    if (message.type === 'FLOATING_CAPTURE') {
+      const tabId = _sender.tab?.id
+      if (!tabId) {
+        sendResponse({ ok: false, message: '无法识别当前标签页' })
+        return true
+      }
+      b.runtime.sendMessage({ type: 'FLOATING_CAPTURE', payload: { tabId } }).catch(() => {})
+      sendResponse({ ok: true })
+      return true
+    }
+
     if (message.type === 'GET_CURRENT_TAB') {
       b.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
         const tab = tabs[0]

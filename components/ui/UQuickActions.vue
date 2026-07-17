@@ -17,9 +17,11 @@ const props = withDefaults(defineProps<{
   items: QuickActionItem[]
   position?: 'top' | 'right' | 'bottom' | 'left'
   direction?: 'horizontal' | 'vertical'
+  floating?: boolean
 }>(), {
   position: 'right',
   direction: 'vertical',
+  floating: true,
 })
 
 const emit = defineEmits<{ select: [item: QuickActionItem] }>()
@@ -56,13 +58,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <Teleport to="body">
-  <div ref="root" class="fixed z-40" :class="{
-    'top-1/2 right-3 -translate-y-1/2': position === 'right',
-    'top-1/2 left-3 -translate-y-1/2': position === 'left',
-    'top-3 left-1/2 -translate-x-1/2': position === 'top',
-    'bottom-3 left-1/2 -translate-x-1/2': position === 'bottom',
-  }" @mouseenter="expanded = true" @mouseleave="expanded = locked">
+  <div ref="root" :class="[props.floating ? 'fixed z-40' : 'relative', {
+    'top-1/2 right-3 -translate-y-1/2': props.position === 'right',
+    'top-1/2 left-3 -translate-y-1/2': props.position === 'left',
+    'top-3 left-1/2 -translate-x-1/2': props.position === 'top',
+    'bottom-3 left-1/2 -translate-x-1/2': props.position === 'bottom',
+  }]" @mouseenter="expanded = true" @mouseleave="expanded = locked">
     <div class="flex items-center gap-2" :class="direction === 'vertical' ? 'flex-col' : 'flex-row'">
       <TransitionGroup name="quick-action" tag="div" class="flex items-center gap-2" :class="direction === 'vertical' ? 'flex-col' : 'flex-row'">
         <slot v-for="item in visibleItems()" name="item" :item="item">
@@ -93,7 +94,6 @@ onUnmounted(() => {
       </button>
     </div>
   </div>
-  </Teleport>
 </template>
 
 <style scoped>

@@ -1,10 +1,24 @@
 import { defineContentScript } from 'wxt/utils/define-content-script'
 import { extractPage, cleanFullHtml } from '@/utils/content/extract'
+import { createApp } from 'vue'
+import PageFloatingAssistant from '@/components/common/PageFloatingAssistant.vue'
 
 export default defineContentScript({
   matches: ['*://*/*'],
 
   main() {
+    if (document.getElementById('auramind-floating-assistant')) return
+    const host = document.createElement('div')
+    host.id = 'auramind-floating-assistant'
+    Object.assign(host.style, {
+      position: 'fixed',
+      inset: '0',
+      zIndex: '2147483647',
+      pointerEvents: 'none',
+    })
+    document.documentElement.appendChild(host)
+    createApp(PageFloatingAssistant).mount(host)
+
     let lastUrl = window.location.href
 
     function notifyPageUpdated(): void {
