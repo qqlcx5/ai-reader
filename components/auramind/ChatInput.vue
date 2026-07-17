@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
 import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
@@ -137,10 +137,9 @@ const canSendMulti = computed(() => {
   if (chatStore.isSending || chatStore.isStreaming) return false
   if (multiModelIds.value.length === 0) return false
 
-  // Single-model: delegate to existing canSend
+  // Single-model: delegate to store canSend (handleModelChange already
+  // keeps multiModelIds and modelStore.currentModelId in sync).
   if (multiModelIds.value.length === 1) {
-    // Ensure the single model is selected in store for canSend to work
-    if (modelStore.currentModelId !== multiModelIds.value[0]) return false
     return chatStore.canSend
   }
 

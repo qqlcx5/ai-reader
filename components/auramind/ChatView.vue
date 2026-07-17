@@ -25,8 +25,14 @@ const contextDoc = computed(() =>
 const contextTitle = computed(() => contextDoc.value?.title ?? null)
 
 // ── Model name lookup ───────────────────────────────────
-function modelNameFor(modelId?: string): string | undefined {
-  if (!modelId) return undefined
+function modelNameFor(modelId?: string, modelConfigId?: string): string | undefined {
+  if (!modelId && !modelConfigId) return undefined
+  // Prefer modelConfigId (unique UUID) to avoid ambiguity when two configs
+  // share the same modelId (e.g. GPT-4o via different providers).
+  if (modelConfigId) {
+    const m = modelStore.models.find((mod) => mod.id === modelConfigId)
+    if (m) return m.name
+  }
   const m = modelStore.models.find((mod) => mod.modelId === modelId)
   return m?.name
 }
@@ -250,7 +256,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
       <ChatMessage
         v-if="round.userMsg.content"
         :message="round.userMsg"
-        :model-name="modelNameFor(round.userMsg.modelId)"
+        :model-name="modelNameFor(round.userMsg.modelId, round.userMsg.modelConfigId)"
         @copy="handleCopy"
         @delete="handleDeleteMessage"
         @edit="handleEdit"
@@ -260,7 +266,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
       <ChatMessage
         v-if="round.assistantMsgs.length === 1"
         :message="round.assistantMsgs[0]"
-        :model-name="modelNameFor(round.assistantMsgs[0].modelId)"
+        :model-name="modelNameFor(round.assistantMsgs[0].modelId, round.assistantMsgs[0].modelConfigId)"
         :meta="metaFor(round.assistantMsgs[0])"
         :is-last-assistant="round.assistantMsgs[0].id === lastAssistantMsgId"
         @regenerate="handleRegenerate"
@@ -277,7 +283,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
           v-for="amsg in round.assistantMsgs"
           :key="amsg.id"
           :message="amsg"
-          :model-name="modelNameFor(amsg.modelId)"
+          :model-name="modelNameFor(amsg.modelId, amsg.modelConfigId)"
           :meta="metaFor(amsg)"
           :is-multi-model="true"
           :is-last-assistant="amsg.id === lastAssistantMsgId"

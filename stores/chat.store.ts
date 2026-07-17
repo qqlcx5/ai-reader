@@ -246,6 +246,7 @@ export const useChatStore = defineStore('chat', () => {
       role: 'assistant',
       content: '',
       modelId: model.modelId,
+      modelConfigId: model.id,
       status: 'streaming',
       createdAt: new Date().toISOString(),
     }
@@ -427,6 +428,7 @@ export const useChatStore = defineStore('chat', () => {
       role: 'assistant',
       content: '',
       modelId: model.modelId,
+      modelConfigId: model.id,
       status: 'streaming',
       createdAt: new Date().toISOString(),
     }
@@ -467,6 +469,7 @@ export const useChatStore = defineStore('chat', () => {
       role: 'assistant' as const,
       content: '',
       modelId: m.modelId,
+      modelConfigId: m.id,
       status: 'streaming' as const,
       createdAt: new Date().toISOString(),
     }))
@@ -734,6 +737,7 @@ export const useChatStore = defineStore('chat', () => {
     // Truncate from this user message onward, then set input to its content
     messages.value.splice(idx)
     inputText.value = content
+    if (lastError.value) lastError.value = null
     persistConversation()
   }
 

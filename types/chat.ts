@@ -1,4 +1,4 @@
-export interface ChatMessage {
+﻿export interface ChatMessage {
   id: string
 
   role: 'user' | 'assistant' | 'system'
@@ -8,6 +8,9 @@ export interface ChatMessage {
   reasoningContent?: string
 
   modelId?: string
+  /** Internal ModelConfig.id (UUID) for unambiguous name lookup.
+   *  Falls back to modelId when absent (legacy messages). */
+  modelConfigId?: string
 
   status?: 'pending' | 'sending' | 'streaming' | 'success' | 'failed' | 'aborted'
 
