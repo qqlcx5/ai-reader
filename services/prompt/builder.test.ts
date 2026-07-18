@@ -52,6 +52,23 @@ describe('PromptBuilder', () => {
     expect(historyIdx).toBeLessThan(userIdx)
   })
 
+  it('should preserve context when the current question is empty', () => {
+    const result = builder.build({ context: 'Page content', userInput: '' })
+
+    expect(result.messages).toEqual([{ role: 'user', content: 'Page content' }])
+  })
+
+  it('should trim whitespace from system prompt and user turn parts', () => {
+    const result = builder.build({
+      systemPrompt: '  System  ',
+      context: '  Context  ',
+      userInput: '  Question  ',
+    })
+
+    expect(result.system).toBe('System')
+    expect(result.messages).toEqual([{ role: 'user', content: 'Context\n\nQuestion' }])
+  })
+
   it('should return undefined system when systemPrompt is empty', () => {
     const result = builder.build({ userInput: 'Hi' })
 

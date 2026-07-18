@@ -120,14 +120,14 @@ const sendLabel = computed(() => {
   return ''
 })
 
-// ── Helper: check if system prompt or document context exists ──
+// ── Helper: empty turns require attachable page context ──
 function hasContentContext(): boolean {
-  const model = modelStore.currentModel
-  if (!model) return false
-  if (model.systemPrompt || settingsStore.settings.globalSystemPrompt) return true
+  if (!chatStore.includeContext) return false
+  if (chatStore.messages.some((message) =>
+    (message.role === 'user' || message.role === 'assistant') && message.content.trim(),
+  )) return false
   const doc = documentStore.pageDocument || documentStore.currentDocument
-  if (doc?.markdown) return true
-  return false
+  return !!doc?.markdown?.trim()
 }
 
 // ── canSend for multi-model: at least 1 model selected ───

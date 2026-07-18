@@ -75,6 +75,7 @@ vi.mock('../services/prompt/truncate', () => ({
 
 import { useChatStore } from './chat.store'
 import { useModelStore } from './model.store'
+import { useDocumentStore } from './document.store'
 
 // ── Helpers ────────────────────────────────────────────
 function makeModel(overrides: Partial<ModelConfig> = {}): ModelConfig {
@@ -107,10 +108,15 @@ function makeConv(id: string, documentId: string): ConversationEntity {
 }
 
 function setupStreamSuccess(content: string) {
-  mockBuild.mockReturnValue({
-    messages: [{ role: 'user', content: 'test' }],
-    system: undefined,
-  })
+  mockBuild.mockImplementation((input: { context?: string; history?: Array<{ role: 'user' | 'assistant'; content: string }>; userInput: string; systemPrompt?: string }) => ({
+    messages: [
+      ...(input.history ?? []),
+      ...([input.context, input.userInput].filter(Boolean).join('\n\n')
+        ? [{ role: 'user', content: [input.context, input.userInput].filter(Boolean).join('\n\n') }]
+        : []),
+    ],
+    system: input.systemPrompt,
+  }))
   mockStreamChat.mockImplementation(
     async (
       _input: any,
@@ -197,6 +203,32 @@ describe('stores/chat.store', () => {
     expect(store.messages[1].role).toBe('assistant')
     expect(store.messages[1].content).toBe('Hello!')
     expect(store.messages[1].status).toBe('success')
+  })
+
+  it('should preserve page context when the first question is empty', async () => {
+    await seedModel()
+    setupStreamSuccess('Summary')
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'Page',
+      url: 'https://example.com',
+      markdown: 'Page content',
+      wordCount: 2,
+      tokenCount: 2,
+      contentHash: 'hash',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('')
+
+    expect(store.messages[0].content).toContain('Page content')
+    expect(mockBuild).toHaveBeenCalledWith(expect.objectContaining({ userInput: '' }))
   })
 
   // 4. sendMessage validation: no model selected

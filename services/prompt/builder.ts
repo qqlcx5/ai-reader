@@ -16,6 +16,7 @@ export class PromptBuilder {
 
     // Context and the current question belong to one user turn.
     const userContent = [input.context, input.userInput]
+      .map((part) => part?.trim())
       .filter((part): part is string => Boolean(part))
       .join('\n\n')
 
@@ -35,7 +36,7 @@ export class PromptBuilder {
 
     return {
       messages,
-      system: input.systemPrompt || undefined,
+      system: input.systemPrompt?.trim() || undefined,
     }
   }
 }

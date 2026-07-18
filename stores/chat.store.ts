@@ -64,6 +64,16 @@ export const useChatStore = defineStore('chat', () => {
     { immediate: true },
   )
 
+  function hasAttachablePageContext(): boolean {
+    if (!includeContext.value) return false
+    if (messages.value.some((message) =>
+      (message.role === 'user' || message.role === 'assistant') && message.content.trim(),
+    )) return false
+    const documentStore = useDocumentStore()
+    const doc = documentStore.pageDocument || documentStore.currentDocument
+    return !!doc?.markdown?.trim()
+  }
+
   const canSend = computed<boolean>(() => {
     if (isSending.value || isStreaming.value) return false
 
@@ -76,15 +86,8 @@ export const useChatStore = defineStore('chat', () => {
     // Ollama doesn't require API key
     if (model.provider !== 'ollama' && !model.apiKey) return false
 
-    // Allow empty input when system prompt or document context exists
-    if (!inputText.value.trim()) {
-      const settingsStore = useSettingsStore()
-      const hasSystemPrompt = !!(model.systemPrompt || settingsStore.settings.globalSystemPrompt)
-      const documentStore = useDocumentStore()
-      const doc = documentStore.pageDocument || documentStore.currentDocument
-      const hasContext = !!(doc?.markdown)
-      if (!hasSystemPrompt && !hasContext) return false
-    }
+    // A blank question is valid only when page context will be attached.
+    if (!inputText.value.trim() && !hasAttachablePageContext()) return false
 
     return true
   })
@@ -140,6 +143,10 @@ export const useChatStore = defineStore('chat', () => {
         throw new Error(`API key is not set for provider "${m.name}". Set it in Settings.`)
       }
       resolvedModels.push(m)
+    }
+
+    if (!content.trim() && !hasAttachablePageContext()) {
+      throw new Error('请输入问题，或先挂载页面上下文。')
     }
 
     // ── Ensure active conversation ───────────────────────
@@ -271,7 +278,7 @@ export const useChatStore = defineStore('chat', () => {
     streamStates.value.set(cid, state)
 
     try {
-      await streamToProvider(userMsg.content, userMsg.id, assistantMsg, model, settingsStore.settings, state)
+      await streamToProvider(userMsg.content, userMsg.id, assistantMsg, model, settingsStore.settings, state, false)
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
@@ -486,7 +493,7 @@ export const useChatStore = defineStore('chat', () => {
     streamStates.value.set(cid, state)
 
     try {
-      await streamToProvider(userContent, userMsgId, assistantMsg, model, settings, state)
+      await streamToProvider(userContent, userMsgId, assistantMsg, model, settings, state, true)
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
@@ -532,7 +539,7 @@ export const useChatStore = defineStore('chat', () => {
 
     // Fire all streams concurrently
     const tasks = models.map((model, i) =>
-      streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings, state).catch(
+      streamToProvider(userContent, userMsgId, assistantMsgs[i], model, settings, state, true).catch(
         (err) => {
           // Mark the specific assistant message as failed.
           // Use capturedMessages so we target the correct conversation even
@@ -568,16 +575,20 @@ export const useChatStore = defineStore('chat', () => {
     model: ModelConfig,
     settings: AppSettings,
     streamState: StreamState,
+    attachContext: boolean,
   ): Promise<void> {
     // Build prompt using the captured messages array so history remains stable
     // if the user switches conversations during streaming.
     const capturedMessages = streamState.messages
     const hasHistory = capturedMessages.some((message) =>
-      message.id !== currentUserMsgId && (message.role === 'user' || message.role === 'assistant'),
+      message.id !== currentUserMsgId
+      && message.id !== assistantMsg.id
+      && (message.role === 'user' || message.role === 'assistant')
+      && message.content.trim().length > 0,
     )
     const documentStore = useDocumentStore()
     let context: string | undefined
-    if (!hasHistory && includeContext.value) {
+    if (attachContext && !hasHistory && hasAttachablePageContext()) {
       const doc = documentStore.pageDocument || documentStore.currentDocument
       if (doc?.markdown) {
         context = buildPageContext(
@@ -603,6 +614,13 @@ export const useChatStore = defineStore('chat', () => {
     // post-build by checking m.role === 'system', but context is now user-role).
     if (context) {
       context = truncateContext(context, settings.context.maxContextTokens)
+
+      // Persist the first turn as one user message so later requests retain
+      // the page context through conversation history, including empty queries.
+      const currentUser = capturedMessages.find((message) => message.id === currentUserMsgId)
+      if (currentUser && currentUser.role === 'user') {
+        currentUser.content = [context, userContent].filter(Boolean).join('\n\n')
+      }
     }
 
     const builder = new PromptBuilder()
@@ -618,6 +636,12 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     const promptOutput = builder.build(promptInput)
+
+    // Store exactly the user turn sent to the provider. This is important when
+    // the question is empty: the page context must remain in conversation history.
+    const currentUser = capturedMessages.find((message) => message.id === currentUserMsgId)
+    const sentUserTurn = [...promptOutput.messages].reverse().find((message) => message.role === 'user')
+    if (currentUser && sentUserTurn) currentUser.content = sentUserTurn.content
 
     // Call provider stream.
     // Use capturedMessages (not messages.value) for all callbacks so tokens

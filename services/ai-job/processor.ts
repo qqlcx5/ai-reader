@@ -89,13 +89,18 @@ async function processJob(job: AiJobEntity, settings: AppSettings | undefined): 
         messages: out.messages,
       })
 
+      // Save the exact user turn sent to the model, including context-only jobs.
+      const userMessageContent = [...out.messages]
+        .reverse()
+        .find((message) => message.role === 'user')?.content ?? userInput
+
       const now = dayjs().toISOString()
       const conversation: ConversationEntity = {
         id: uuid(),
         documentId: doc.id,
         title: template?.title ?? '自动分析',
         messages: [
-          { id: uuid(), role: 'user', content: userInput, createdAt: now },
+          { id: uuid(), role: 'user', content: userMessageContent, createdAt: now },
           {
             id: uuid(),
             role: 'assistant',
