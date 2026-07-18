@@ -569,11 +569,15 @@ export const useChatStore = defineStore('chat', () => {
     settings: AppSettings,
     streamState: StreamState,
   ): Promise<void> {
-    // Build page context from current document (skipped when the user
-    // has toggled "include context" off in the chat dialog).
+    // Build prompt using the captured messages array so history remains stable
+    // if the user switches conversations during streaming.
+    const capturedMessages = streamState.messages
+    const hasHistory = capturedMessages.some((message) =>
+      message.id !== currentUserMsgId && (message.role === 'user' || message.role === 'assistant'),
+    )
     const documentStore = useDocumentStore()
     let context: string | undefined
-    if (includeContext.value) {
+    if (!hasHistory && includeContext.value) {
       const doc = documentStore.pageDocument || documentStore.currentDocument
       if (doc?.markdown) {
         context = buildPageContext(
@@ -601,17 +605,13 @@ export const useChatStore = defineStore('chat', () => {
       context = truncateContext(context, settings.context.maxContextTokens)
     }
 
-    // Build prompt using the captured messages array (streamState.messages)
-    // rather than messages.value, so history stays correct even if the user
-    // switches to another conversation mid-stream.
     const builder = new PromptBuilder()
-    const capturedMessages = streamState.messages
     const history = buildHistory(
       capturedMessages.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
     )
 
     const promptInput: PromptInput = {
-      systemPrompt: model.systemPrompt || settings.globalSystemPrompt,
+      systemPrompt: model.systemPrompt?.trim() || settings.globalSystemPrompt?.trim() || undefined,
       context,
       history,
       userInput: userContent,

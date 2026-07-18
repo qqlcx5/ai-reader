@@ -20,9 +20,6 @@ export const OpenAICompatibleProvider: AIProvider = {
     if (input.systemPrompt) {
       messages.push({ role: 'system', content: input.systemPrompt })
     }
-    if (input.context) {
-      messages.push({ role: 'system', content: input.context })
-    }
     messages.push(...input.messages.map((m) => ({ role: m.role, content: m.content })))
 
     const body = JSON.stringify({
@@ -68,9 +65,6 @@ export const OpenAICompatibleProvider: AIProvider = {
     const messages: { role: string; content: string }[] = []
     if (input.systemPrompt) {
       messages.push({ role: 'system', content: input.systemPrompt })
-    }
-    if (input.context) {
-      messages.push({ role: 'system', content: input.context })
     }
     messages.push(...input.messages.map((m) => ({ role: m.role, content: m.content })))
 

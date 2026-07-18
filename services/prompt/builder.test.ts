@@ -23,7 +23,7 @@ describe('PromptBuilder', () => {
     expect(result.messages[0]).toEqual({ role: 'user', content: 'Hi' })
   })
 
-  it('should inject context as an user message before history and user input', () => {
+  it('should combine context and current input into one user message', () => {
     const result = builder.build({
       context: '# Page Content',
       history: [
@@ -33,25 +33,22 @@ describe('PromptBuilder', () => {
       userInput: 'Current Q',
     })
 
-    expect(result.messages).toHaveLength(4)
-    expect(result.messages[0]).toEqual({ role: 'user', content: '# Page Content' })
-    expect(result.messages[1]).toEqual({ role: 'user', content: 'Previous Q' })
-    expect(result.messages[2]).toEqual({ role: 'assistant', content: 'Previous A' })
-    expect(result.messages[3]).toEqual({ role: 'user', content: 'Current Q' })
+    expect(result.messages).toHaveLength(3)
+    expect(result.messages[0]).toEqual({ role: 'user', content: 'Previous Q' })
+    expect(result.messages[1]).toEqual({ role: 'assistant', content: 'Previous A' })
+    expect(result.messages[2]).toEqual({ role: 'user', content: '# Page Content\n\nCurrent Q' })
   })
 
-  it('should place context before history messages', () => {
+  it('should keep history before the current user turn', () => {
     const result = builder.build({
       context: 'Context',
       history: [{ role: 'user', content: 'History Q' }],
       userInput: 'Now',
     })
 
-    const contextIdx = result.messages.findIndex((m) => m.content === 'Context')
     const historyIdx = result.messages.findIndex((m) => m.content === 'History Q')
-    const userIdx = result.messages.findIndex((m) => m.content === 'Now')
+    const userIdx = result.messages.findIndex((m) => m.content === 'Context\n\nNow')
 
-    expect(contextIdx).toBeLessThan(historyIdx)
     expect(historyIdx).toBeLessThan(userIdx)
   })
 
@@ -69,9 +66,8 @@ describe('PromptBuilder', () => {
       userInput: 'Q',
     })
 
-    expect(result.messages).toHaveLength(2)
-    expect(result.messages[0]).toEqual({ role: 'user', content: 'Ctx' })
-    expect(result.messages[1]).toEqual({ role: 'user', content: 'Q' })
+    expect(result.messages).toHaveLength(1)
+    expect(result.messages[0]).toEqual({ role: 'user', content: 'Ctx\n\nQ' })
   })
 
   it('should handle undefined history', () => {
@@ -93,9 +89,8 @@ describe('PromptBuilder', () => {
     })
 
     expect(result.system).toBe('System prompt')
-    expect(result.messages).toHaveLength(3)
-    expect(result.messages[0]).toEqual({ role: 'user', content: 'Context info' })
-    expect(result.messages[1]).toEqual({ role: 'user', content: 'Hist' })
-    expect(result.messages[2]).toEqual({ role: 'user', content: 'Question' })
+    expect(result.messages).toHaveLength(2)
+    expect(result.messages[0]).toEqual({ role: 'user', content: 'Hist' })
+    expect(result.messages[1]).toEqual({ role: 'user', content: 'Context info\n\nQuestion' })
   })
 })

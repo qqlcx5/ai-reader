@@ -14,11 +14,10 @@ export class PromptBuilder {
   build(input: PromptInput): PromptOutput {
     const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = []
 
-    // Inject page context as an user-role message,
-    // placing it before conversation history and the user's actual input.
-    if (input.context) {
-      messages.push({ role: 'user', content: input.context })
-    }
+    // Context and the current question belong to one user turn.
+    const userContent = [input.context, input.userInput]
+      .filter((part): part is string => Boolean(part))
+      .join('\n\n')
 
     // Append conversation history (skip entries with empty content)
     if (input.history && input.history.length > 0) {
@@ -29,9 +28,9 @@ export class PromptBuilder {
       }
     }
 
-    // Append current user input (skip if empty)
-    if (input.userInput) {
-      messages.push({ role: 'user', content: input.userInput })
+    // Append the current user turn (context + input, when present).
+    if (userContent) {
+      messages.push({ role: 'user', content: userContent })
     }
 
     return {

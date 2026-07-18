@@ -12,9 +12,6 @@ function buildOllamaMessages(input: ChatInput): OllamaMessage[] {
   if (input.systemPrompt) {
     messages.push({ role: 'system', content: input.systemPrompt })
   }
-  if (input.context) {
-    messages.push({ role: 'system', content: input.context })
-  }
   for (const m of input.messages) {
     if (m.role === 'system') {
       messages.push({ role: 'system', content: m.content })

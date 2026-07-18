@@ -86,7 +86,7 @@ describe('OllamaProvider', () => {
       expect(sysMsg.content).toBe('You are a pirate.')
     })
 
-    it('should inject context as a system message', async () => {
+    it('should not inject legacy context separately', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ message: { content: 'ok' } }),
@@ -100,10 +100,7 @@ describe('OllamaProvider', () => {
       })
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-      const contextMsgs = body.messages.filter(
-        (m: { role: string; content: string }) => m.role === 'system' && m.content === '# Page Content',
-      )
-      expect(contextMsgs.length).toBe(1)
+      expect(body.messages).toEqual([{ role: 'user', content: 'Summarize' }])
     })
 
     it('should throw on non-ok response', async () => {
