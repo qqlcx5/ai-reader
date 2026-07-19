@@ -4,6 +4,36 @@
 
 ## 1. 启动与基本界面
 
+安装
+```bash
+npm install -g @earendil-works/pi-coding-agent
+```
+根目录下 .pi/agent/models.json
+```
+{
+  "providers": {
+    "openai-god": {
+      "baseUrl": "http://66.154.117.189:3000/v1",
+      "apiKey": "sk-vxJNsGJnlf3zKzku9hF0S1kx4xgVYmYEbztjjY2ZV4qwVkrk",
+      "api": "openai-responses",
+      "models": [
+        {
+          "id": "gpt-5.6-terra-¥100/1M",
+          "name": "GPT-5.6 Terra",
+          "contextWindow": 1050000,
+          "maxTokens": 128000
+        },
+        {
+          "id": "gpt-5.6-luna-¥40/1M",
+          "name": "GPT-5.6 Luna",
+          "contextWindow": 1050000,
+          "maxTokens": 128000
+        }
+      ]
+    }
+  }
+}
+```
 启动交互模式：
 
 ```bash
@@ -26,11 +56,6 @@ pi -r
 pi --resume
 ```
 
-启动时常见提示：
-
-```text
-escape interrupt · ctrl+c/ctrl+d clear/exit · / commands · ! bash · ctrl+o more
-```
 
 含义：
 
