@@ -6,10 +6,8 @@ import { ChatRepository } from '../db/repositories/chat.repository'
 import { useModelStore } from './model.store'
 import { useSettingsStore } from './settings.store'
 import { useDocumentStore } from './document.store'
-import { PromptBuilder } from '../services/prompt/builder'
-import type { PromptInput } from '../services/prompt/builder'
-import { buildPageContext, buildHighlightContext } from '../services/prompt/context'
-import { truncateContext } from '../services/prompt/truncate'
+import { buildAnalysisPrompt } from '../services/prompt/analysis'
+import type { Highlight } from '../types/document'
 import { estimateTokens } from '../utils/token'
 import { createProvider } from '../services/ai/factory'
 import type { ModelConfig } from '../types/model'
@@ -587,61 +585,44 @@ export const useChatStore = defineStore('chat', () => {
       && message.content.trim().length > 0,
     )
     const documentStore = useDocumentStore()
-    let context: string | undefined
+    let page: { title: string; url: string; markdown: string; wordCount: number; tokenCount: number; siteName?: string; capturedAt?: string } | undefined
+    let highlights: Highlight[] | undefined
     if (attachContext && !hasHistory && hasAttachablePageContext()) {
       const doc = documentStore.pageDocument || documentStore.currentDocument
       if (doc?.markdown) {
-        context = buildPageContext(
-          {
-            title: doc.title,
-            url: doc.url,
-            markdown: doc.markdown,
-            wordCount: doc.wordCount,
-            tokenCount: doc.tokenCount,
-            siteName: doc.siteName,
-            capturedAt: doc.capturedAt,
-          },
-          settings.context,
-        )
-        // Append user highlights as supplementary context.
-        if (doc.highlights?.length) {
-          context += buildHighlightContext(doc.highlights)
+        page = {
+          title: doc.title,
+          url: doc.url,
+          markdown: doc.markdown,
+          wordCount: doc.wordCount,
+          tokenCount: doc.tokenCount,
+          siteName: doc.siteName,
+          capturedAt: doc.capturedAt,
         }
+        highlights = doc.highlights
       }
     }
 
-    // Truncate context before building the prompt (was previously done
-    // post-build by checking m.role === 'system', but context is now user-role).
-    if (context) {
-      context = truncateContext(context, settings.context.maxContextTokens)
-
-      // Persist the first turn as one user message so later requests retain
-      // the page context through conversation history, including empty queries.
-      const currentUser = capturedMessages.find((message) => message.id === currentUserMsgId)
-      if (currentUser && currentUser.role === 'user') {
-        currentUser.content = [context, userContent].filter(Boolean).join('\n\n')
-      }
-    }
-
-    const builder = new PromptBuilder()
     const history = buildHistory(
       capturedMessages.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
     )
 
-    const promptInput: PromptInput = {
-      systemPrompt: model.systemPrompt?.trim() || settings.globalSystemPrompt?.trim() || undefined,
-      context,
+    const promptOutput = buildAnalysisPrompt({
+      model,
+      fallbackSystemPrompt: settings.globalSystemPrompt,
+      contextSettings: settings.context,
+      page,
+      highlights,
       history,
       userInput: userContent,
-    }
+    })
 
-    const promptOutput = builder.build(promptInput)
-
-    // Store exactly the user turn sent to the provider. This is important when
+    // Persist exactly the user turn sent to the provider. This is important when
     // the question is empty: the page context must remain in conversation history.
     const currentUser = capturedMessages.find((message) => message.id === currentUserMsgId)
-    const sentUserTurn = [...promptOutput.messages].reverse().find((message) => message.role === 'user')
-    if (currentUser && sentUserTurn) currentUser.content = sentUserTurn.content
+    if (currentUser && promptOutput.sentUserContent) {
+      currentUser.content = promptOutput.sentUserContent
+    }
 
     // Call provider stream.
     // Use capturedMessages (not messages.value) for all callbacks so tokens

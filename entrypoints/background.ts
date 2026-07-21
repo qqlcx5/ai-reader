@@ -1,7 +1,13 @@
 import { setupFeedAlarm, onFeedAlarm } from '@/services/feed/bg-refresh'
+import { reclaimStaleJobs } from '@/services/ai-job/processor'
+import { runSchedules } from '@/services/schedule/runner'
 
 export default defineBackground(() => {
   console.log('AuraMind background', { id: browser.runtime.id })
+
+  // Crash recovery: any job stuck in 'processing' from a prior SW lifetime
+  // can never complete (its AbortController is gone). Flip to failed once.
+  void reclaimStaleJobs()
 
   const b = browser as any
 
@@ -114,11 +120,19 @@ export default defineBackground(() => {
   // RSS periodic refresh — runs entirely in background via offscreen document.
   // No longer depends on the side panel being open.
   const FEED_ALARM = 'feed-refresh'
-  b.runtime.onInstalled?.addListener(() => setupFeedAlarm())
-  b.runtime.onStartup?.addListener(() => setupFeedAlarm())
+  const SCHEDULE_ALARM = 'schedule-tick'
+  function setupScheduleAlarm() {
+    b.alarms?.create(SCHEDULE_ALARM, { periodInMinutes: 1 }).catch(() => {})
+  }
+  b.runtime.onInstalled?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm() })
+  b.runtime.onStartup?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm() })
   setupFeedAlarm()
+  setupScheduleAlarm()
   b.alarms?.onAlarm?.addListener((alarm: any) => {
     if (alarm?.name === FEED_ALARM) onFeedAlarm()
+    if (alarm?.name === SCHEDULE_ALARM) {
+      runSchedules().catch((e: any) => console.warn('[bg] schedule tick failed:', e))
+    }
   })
 
   // Panel can request an immediate refresh (e.g. on open if stale)

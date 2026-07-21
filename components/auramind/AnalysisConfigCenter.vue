@@ -7,6 +7,9 @@ import {
   Loader2, AlertCircle, DollarSign, Timer, TrendingUp, Save,
 } from '@lucide/vue'
 import { useAiJobStore } from '@/stores/ai-job.store'
+import { useWorkflowStore } from '@/stores/workflow.store'
+import { useScheduleStore } from '@/stores/schedule.store'
+import { useAnalysisRuleStore } from '@/stores/analysis-rule.store'
 import { useModelStore } from '@/stores/model.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -18,10 +21,18 @@ import UInput from '@/components/ui/UInput.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
 import type { AutoAnalysisSettings } from '@/types/settings'
 import type { ModelConfig } from '@/types/model'
+import type { WorkflowEntity } from '@/types/workflow'
+import type { ScheduleEntity } from '@/types/schedule'
+import type { AnalysisRuleEntity } from '@/types/analysis-rule'
+import { ChatRepository } from '@/db/repositories/chat.repository'
+import { aggregateUsage, type UsageAggregate, formatTokens, formatCNY } from '@/utils/cost'
 import type { PromptTemplate } from '@/types/prompt-template'
 
 // ── Stores ──
 const aiJobStore = useAiJobStore()
+const workflowStore = useWorkflowStore()
+const scheduleStore = useScheduleStore()
+const analysisRuleStore = useAnalysisRuleStore()
 const modelStore = useModelStore()
 const promptStore = usePromptTemplateStore()
 const settingsStore = useSettingsStore()
@@ -55,148 +66,67 @@ function updateAutoCfg(patch: Partial<AutoAnalysisSettings>) {
   settingsStore.updateAutoAnalysis(patch)
 }
 
-// ── Rule conditions (advanced) ──
-interface RuleCondition {
-  id: string
-  field: 'domain' | 'wordCount' | 'hasCode' | 'language'
-  operator: 'contains' | 'gt' | 'lt' | 'equals'
-  value: string
-}
-
-interface AnalysisRule {
-  id: string
-  name: string
-  enabled: boolean
-  conditions: RuleCondition[]
-  modelId: string
-  promptTemplateId: string
-  priority: 'high' | 'normal' | 'low'
-}
-
-const analysisRules = ref<AnalysisRule[]>([])
+// ── Advanced analysis rules (backed by analysisRuleStore + IndexedDB) ──
+const analysisRules = computed(() => analysisRuleStore.rules)
 
 function addRule() {
-  analysisRules.value.push({
-    id: `rule_${crypto.randomUUID()}`,
-    name: `规则 ${analysisRules.value.length + 1}`,
-    enabled: true,
-    conditions: [{ id: `c_${crypto.randomUUID()}`, field: 'wordCount', operator: 'gt', value: '500' }],
-    modelId: autoCfg.value.modelId || modelStore.defaultModel?.id || '',
-    promptTemplateId: autoCfg.value.promptTemplateId || '',
-    priority: 'normal',
-  })
+  const draft = analysisRuleStore.createDraft()
+  // Seed model/template from current auto-analysis defaults for convenience.
+  draft.modelId = autoCfg.value.modelId || modelStore.defaultModel?.id || ''
+  draft.promptTemplateId = autoCfg.value.promptTemplateId || ''
+  void analysisRuleStore.save(draft)
 }
 
-function removeRule(id: string) {
-  analysisRules.value = analysisRules.value.filter((r) => r.id !== id)
+async function removeRule(id: string) {
+  await analysisRuleStore.remove(id)
 }
 
-// ── Workflow orchestration ──
-interface WorkflowStep {
-  id: string
-  templateId: string
-  modelId: string
-  label: string
-  /** Whether to wait for the previous step to finish before starting this one */
-  waitForPrevious: boolean
+async function persistRule(rule: AnalysisRuleEntity) {
+  await analysisRuleStore.save(rule)
 }
 
-interface Workflow {
-  id: string
-  name: string
-  enabled: boolean
-  steps: WorkflowStep[]
-  description: string
-}
-
-const workflows = ref<Workflow[]>([
-  {
-    id: 'wf_default',
-    name: '默认三步分析',
-    enabled: false,
-    description: '先摘要 → 再提取行动项 → 最后生成标签',
-    steps: [
-      { id: 's1', templateId: '', modelId: '', label: 'TL;DR 摘要', waitForPrevious: true },
-      { id: 's2', templateId: '', modelId: '', label: '行动清单', waitForPrevious: true },
-      { id: 's3', templateId: '', modelId: '', label: '智能标签', waitForPrevious: true },
-    ],
-  },
-])
+// ── Workflow orchestration (backed by workflowStore + IndexedDB) ──
+const workflows = computed(() => workflowStore.workflows)
 
 function addWorkflow() {
-  workflows.value.push({
-    id: `wf_${crypto.randomUUID()}`,
-    name: `工作流 ${workflows.value.length + 1}`,
-    enabled: false,
-    description: '',
-    steps: [{ id: `s_${crypto.randomUUID()}`, templateId: '', modelId: '', label: '步骤 1', waitForPrevious: true }],
-  })
+  const draft = workflowStore.createDraft()
+  void workflowStore.save(draft)
 }
 
-function removeWorkflow(id: string) {
-  workflows.value = workflows.value.filter((w) => w.id !== id)
+async function removeWorkflow(id: string) {
+  await workflowStore.remove(id)
 }
 
-function addStep(wfId: string) {
-  const wf = workflows.value.find((w) => w.id === wfId)
-  if (!wf) return
-  wf.steps.push({
-    id: `s_${crypto.randomUUID()}`,
-    templateId: '',
-    modelId: '',
-    label: `步骤 ${wf.steps.length + 1}`,
-    waitForPrevious: true,
-  })
+async function addStep(wfId: string) {
+  await workflowStore.addStep(wfId)
 }
 
-function removeStep(wfId: string, stepId: string) {
-  const wf = workflows.value.find((w) => w.id === wfId)
-  if (!wf) return
-  wf.steps = wf.steps.filter((s) => s.id !== stepId)
+async function removeStep(wfId: string, stepId: string) {
+  await workflowStore.removeStep(wfId, stepId)
 }
 
-// ── Schedule ──
-interface ScheduleConfig {
-  id: string
-  enabled: boolean
-  cron: string
-  label: string
-  /** Which documents to process: today's captures, unread, all, specific collection */
-  scope: 'today' | 'unread' | 'all' | 'collection'
-  collectionId?: string
-  modelId: string
-  promptTemplateId: string
-  priority: 'high' | 'normal' | 'low'
+// Persist on field edits. v-model mutates the store object in place; we save
+// on @change (fires on blur / selection) to avoid the deep-watch recursion
+// that an auto-save watcher would cause (save → store updates array →
+// watch fires → save again → ...).
+async function persistWorkflow(wf: WorkflowEntity) {
+  await workflowStore.save(wf)
 }
 
-const schedules = ref<ScheduleConfig[]>([
-  {
-    id: 'sched_nightly',
-    enabled: false,
-    cron: '0 23 * * *',
-    label: '每晚 23:00 自动分析当日收藏',
-    scope: 'today',
-    modelId: '',
-    promptTemplateId: '',
-    priority: 'low',
-  },
-])
+// ── Schedule (backed by scheduleStore + IndexedDB; fired by background alarm) ──
+const schedules = computed(() => scheduleStore.schedules)
 
 function addSchedule() {
-  schedules.value.push({
-    id: `sched_${crypto.randomUUID()}`,
-    enabled: false,
-    cron: '0 9 * * 1-5',
-    label: '新定时计划',
-    scope: 'all',
-    modelId: '',
-    promptTemplateId: '',
-    priority: 'normal',
-  })
+  const draft = scheduleStore.createDraft()
+  void scheduleStore.save(draft)
 }
 
-function removeSchedule(id: string) {
-  schedules.value = schedules.value.filter((s) => s.id !== id)
+async function removeSchedule(id: string) {
+  await scheduleStore.remove(id)
+}
+
+async function persistSchedule(s: ScheduleEntity) {
+  await scheduleStore.save(s)
 }
 
 const cronPresets = [
@@ -207,21 +137,23 @@ const cronPresets = [
   { label: '每 6 小时', value: '0 */6 * * *' },
 ]
 
-// ── Cost stats ──
-const costStats = computed(() => {
-  const jobs = aiJobStore.jobs.filter((j) => j.status === 'success')
-  const totalJobs = jobs.length
-  // Would need actual token usage data from conversations
-  // For now, estimate from job count
-  return {
-    totalJobs,
-    estimatedInputTokens: totalJobs * 3500, // avg 3500 tokens per doc
-    estimatedOutputTokens: totalJobs * 800,  // avg 800 tokens per response
-    estimatedCostCNY: totalJobs * 0.015,     // avg ¥0.015 per analysis
-    avgDurationMs: aiJobStore.stats.avgDurationMs,
-    successRate: aiJobStore.stats.successRate,
-  }
-})
+// ── Real usage stats ──
+const usageStats = ref<UsageAggregate>(aggregateUsage([], []))
+
+async function refreshUsageStats() {
+  const conversations = await ChatRepository.findAll()
+  usageStats.value = aggregateUsage(conversations, modelStore.models)
+}
+
+const costStats = computed(() => ({
+  totalJobs: usageStats.value.totalMessages,
+  inputTokens: usageStats.value.totalPrompt,
+  outputTokens: usageStats.value.totalCompletion,
+  totalTokens: usageStats.value.totalTokens,
+  actualCostCNY: usageStats.value.totalCost,
+  avgDurationMs: usageStats.value.avgDurationMs,
+  successRate: aiJobStore.stats.successRate,
+}))
 
 // ── Model & Template options ──
 const modelOptions = computed(() =>
@@ -270,6 +202,11 @@ const autoCfgWarnings = computed<string[]>(() => {
   return warns
 })
 
+watch(
+  () => aiJobStore.stats.success,
+  () => { void refreshUsageStats() },
+)
+
 // ── Lifecycle ──
 onMounted(async () => {
   await Promise.all([
@@ -277,7 +214,11 @@ onMounted(async () => {
     promptStore.initTemplates(),
     settingsStore.loadSettings(),
     aiJobStore.loadJobs(),
+    workflowStore.load(),
+    scheduleStore.load(),
+    analysisRuleStore.load(),
   ])
+  await refreshUsageStats()
   // autoCfg is a computed from store — no manual sync needed
 })
 </script>
@@ -465,12 +406,13 @@ onMounted(async () => {
               <div class="flex items-center gap-2">
                 <Switch
                   :model-value="rule.enabled"
-                  @update:model-value="(v: boolean) => { rule.enabled = v }"
+                  @update:model-value="(v: boolean) => { rule.enabled = v; persistRule(rule) }"
                 />
                 <UInput
                   v-model="rule.name"
                   class="flex-1 text-[11px]"
                   placeholder="规则名称"
+                  @change="persistRule(rule)"
                 />
                 <button
                   class="p-1 rounded text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors"
@@ -485,15 +427,16 @@ onMounted(async () => {
                 <select
                   v-model="rule.conditions[0].field"
                   class="text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-0.5 outline-none"
+                  @change="persistRule(rule)"
                 >
                   <option value="domain">域名</option>
+                  <option value="siteName">站点名</option>
                   <option value="wordCount">字数</option>
-                  <option value="hasCode">包含代码</option>
-                  <option value="language">语言</option>
                 </select>
                 <select
                   v-model="rule.conditions[0].operator"
                   class="text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-0.5 outline-none"
+                  @change="persistRule(rule)"
                 >
                   <option value="contains">包含</option>
                   <option value="gt">大于</option>
@@ -504,6 +447,7 @@ onMounted(async () => {
                   v-model="rule.conditions[0].value"
                   class="flex-1 text-[10px]"
                   placeholder="值"
+                  @change="persistRule(rule)"
                 />
               </div>
               <!-- Rule actions -->
@@ -513,6 +457,7 @@ onMounted(async () => {
                   <select
                     v-model="rule.modelId"
                     class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                    @change="persistRule(rule)"
                   >
                     <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
@@ -522,6 +467,7 @@ onMounted(async () => {
                   <select
                     v-model="rule.promptTemplateId"
                     class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                    @change="persistRule(rule)"
                   >
                     <option v-for="opt in templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
@@ -531,6 +477,7 @@ onMounted(async () => {
                   <select
                     v-model="rule.priority"
                     class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                    @change="persistRule(rule)"
                   >
                     <option value="high">高</option>
                     <option value="normal">中</option>
@@ -567,12 +514,13 @@ onMounted(async () => {
             <div class="flex items-center gap-2 flex-1 min-w-0">
               <Switch
                 :model-value="wf.enabled"
-                @update:model-value="(v: boolean) => { wf.enabled = v }"
+                @update:model-value="(v: boolean) => { wf.enabled = v; persistWorkflow(wf) }"
               />
               <UInput
                 v-model="wf.name"
                 class="flex-1 text-[12px] font-medium"
                 placeholder="工作流名称"
+                @change="persistWorkflow(wf)"
               />
             </div>
             <button
@@ -589,6 +537,7 @@ onMounted(async () => {
               v-model="wf.description"
               class="w-full text-[10px] text-zinc-500"
               placeholder="工作流描述"
+              @change="persistWorkflow(wf)"
             />
           </div>
 
@@ -608,11 +557,13 @@ onMounted(async () => {
                 v-model="step.label"
                 class="w-24 text-[10px]"
                 placeholder="步骤名"
+                @change="persistWorkflow(wf)"
               />
               <!-- Template -->
               <select
                 v-model="step.templateId"
                 class="flex-1 text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                @change="persistWorkflow(wf)"
               >
                 <option value="">不使用模板</option>
                 <option v-for="opt in templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -621,6 +572,7 @@ onMounted(async () => {
               <select
                 v-model="step.modelId"
                 class="w-28 text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                @change="persistWorkflow(wf)"
               >
                 <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
@@ -671,13 +623,14 @@ onMounted(async () => {
             <div class="flex items-center gap-2 flex-1 min-w-0">
               <Switch
                 :model-value="sched.enabled"
-                @update:model-value="(v: boolean) => { sched.enabled = v }"
+                @update:model-value="(v: boolean) => { sched.enabled = v; persistSchedule(sched) }"
               />
               <Clock class="w-3.5 h-3.5 text-blue-500 shrink-0" />
               <UInput
                 v-model="sched.label"
                 class="flex-1 text-[11px] font-medium"
                 placeholder="计划名称"
+                @change="persistSchedule(sched)"
               />
             </div>
             <button
@@ -701,7 +654,7 @@ onMounted(async () => {
                   :class="sched.cron === preset.value
                     ? 'bg-zinc-900 text-white'
                     : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'"
-                  @click="sched.cron = preset.value"
+                  @click="sched.cron = preset.value; persistSchedule(sched)"
                 >
                   {{ preset.label }}
                 </button>
@@ -710,6 +663,7 @@ onMounted(async () => {
                 v-model="sched.cron"
                 class="w-28 text-[10px] font-mono"
                 placeholder="自定义 Cron"
+                @change="persistSchedule(sched)"
               />
             </div>
 
@@ -728,7 +682,7 @@ onMounted(async () => {
                   :class="sched.scope === opt.value
                     ? 'bg-blue-500 text-white'
                     : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'"
-                  @click="sched.scope = opt.value as any"
+                  @click="sched.scope = opt.value as any; persistSchedule(sched)"
                 >
                   {{ opt.label }}
                 </button>
@@ -742,6 +696,7 @@ onMounted(async () => {
                 <select
                   v-model="sched.modelId"
                   class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                  @change="persistSchedule(sched)"
                 >
                   <option value="">默认模型</option>
                   <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -752,6 +707,7 @@ onMounted(async () => {
                 <select
                   v-model="sched.promptTemplateId"
                   class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+                  @change="persistSchedule(sched)"
                 >
                   <option value="">不使用模板</option>
                   <option v-for="opt in templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -772,7 +728,7 @@ onMounted(async () => {
         <div class="grid grid-cols-4 gap-2">
           <div class="p-2.5 rounded-lg border border-zinc-200 bg-zinc-50/50">
             <div class="flex items-center gap-1 text-[9px] text-zinc-400">
-              <TrendingUp class="w-2.5 h-2.5" /> 总分析
+              <TrendingUp class="w-2.5 h-2.5" /> 总响应
             </div>
             <div class="text-[16px] font-bold text-zinc-900 mt-0.5">{{ costStats.totalJobs }}</div>
           </div>
@@ -794,28 +750,28 @@ onMounted(async () => {
           </div>
           <div class="p-2.5 rounded-lg border border-zinc-200 bg-zinc-50/50">
             <div class="flex items-center gap-1 text-[9px] text-zinc-400">
-              <DollarSign class="w-2.5 h-2.5" /> 估算成本
+              <DollarSign class="w-2.5 h-2.5" /> 实际成本
             </div>
-            <div class="text-[16px] font-bold text-amber-600 mt-0.5">¥{{ costStats.estimatedCostCNY.toFixed(2) }}</div>
+            <div class="text-[16px] font-bold text-amber-600 mt-0.5">{{ costStats.actualCostCNY > 0 ? formatCNY(costStats.actualCostCNY) : '—' }}</div>
           </div>
         </div>
 
         <!-- Token usage breakdown -->
         <div class="rounded-lg border border-zinc-200 p-3">
-          <div class="text-[11px] font-medium text-zinc-600 mb-2">Token 用量估算</div>
+          <div class="text-[11px] font-medium text-zinc-600 mb-2">实际 Token 用量</div>
           <div class="space-y-1.5">
             <div class="flex items-center justify-between text-[10px]">
-              <span class="text-zinc-500">输入 Tokens（正文+上下文）</span>
-              <span class="font-mono text-zinc-700">{{ costStats.estimatedInputTokens.toLocaleString() }}</span>
+              <span class="text-zinc-500">输入 Tokens（实际记录）</span>
+              <span class="font-mono text-zinc-700">{{ formatTokens(costStats.inputTokens) }}</span>
             </div>
             <div class="flex items-center justify-between text-[10px]">
-              <span class="text-zinc-500">输出 Tokens（AI 生成）</span>
-              <span class="font-mono text-zinc-700">{{ costStats.estimatedOutputTokens.toLocaleString() }}</span>
+              <span class="text-zinc-500">输出 Tokens（实际记录）</span>
+              <span class="font-mono text-zinc-700">{{ formatTokens(costStats.outputTokens) }}</span>
             </div>
             <div class="flex items-center justify-between text-[10px] pt-1.5 border-t border-zinc-100">
               <span class="text-zinc-500 font-medium">总计 Tokens</span>
               <span class="font-mono text-zinc-900 font-bold">
-                {{ (costStats.estimatedInputTokens + costStats.estimatedOutputTokens).toLocaleString() }}
+                {{ formatTokens(costStats.totalTokens) }}
               </span>
             </div>
           </div>
@@ -823,7 +779,7 @@ onMounted(async () => {
 
         <!-- Per-model breakdown -->
         <div class="rounded-lg border border-zinc-200 p-3">
-          <div class="text-[11px] font-medium text-zinc-600 mb-2">模型使用分布</div>
+          <div class="text-[11px] font-medium text-zinc-600 mb-2">模型响应分布</div>
           <div v-if="aiJobStore.jobs.length === 0" class="text-center py-3 text-[10px] text-zinc-400">
             暂无数据
           </div>
@@ -848,30 +804,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Cost trend placeholder -->
-        <div class="rounded-lg border border-zinc-200 p-3">
-          <div class="text-[11px] font-medium text-zinc-600 mb-2">成本趋势</div>
-          <div class="flex items-end gap-1 h-16">
-            <div
-              v-for="(val, i) in Array.from({ length: 14 }, (_, i) => {
-                const date = dayjs().subtract(13 - i, 'day')
-                const dayJobs = aiJobStore.jobs.filter(j =>
-                  dayjs(j.createdAt).isSame(date, 'day') && j.status === 'success'
-                ).length
-                return Math.min(100, dayJobs * 15)
-              })"
-              :key="i"
-              class="flex-1 rounded-t transition-all duration-300 hover:opacity-80"
-              :class="val > 0 ? 'bg-gradient-to-t from-blue-400 to-indigo-300' : 'bg-zinc-100'"
-              :style="{ height: `${Math.max(4, val)}%` }"
-              :title="`${14 - i} 天前`"
-            />
-          </div>
-          <div class="flex justify-between text-[8px] text-zinc-400 mt-1">
-            <span>14 天前</span>
-            <span>今天</span>
-          </div>
-        </div>
       </div>
     </div>
   </div>

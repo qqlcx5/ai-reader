@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { AiJobRepository } from '../db/repositories/ai-job.repository'
 import { SettingsRepository } from '../db/repositories/settings.repository'
-import { drainAll } from '../services/ai-job/processor'
+import { drainAll, cancelJob, reclaimStaleJobs } from '../services/ai-job/processor'
 import { enqueueBatch, type BatchEnqueueOptions } from '../services/ai-job/queue'
 import type { AiJobEntity, AiJobStats, AiJobFilter, AiJobStatus, AiJobPriority } from '../types/ai-job'
 import { PRIORITY_WEIGHT } from '../types/ai-job'
@@ -13,7 +13,7 @@ export const useAiJobStore = defineStore('ai-job', () => {
   const draining = ref(false)
   const queuePaused = ref(false)
   const stats = ref<AiJobStats>({
-    total: 0, pending: 0, processing: 0, success: 0, failed: 0,
+    total: 0, pending: 0, processing: 0, success: 0, failed: 0, cancelled: 0,
     successRate: 0, avgDurationMs: 0,
   })
 
@@ -133,18 +133,35 @@ export const useAiJobStore = defineStore('ai-job', () => {
     queuePaused.value = newPaused
   }
 
-  /** Reset a failed job to pending and kick off a drain. */
+  /** Reset a failed/cancelled job to pending and kick off a drain. */
   async function retry(jobId: string) {
     const job = jobs.value.find((j) => j.id === jobId) ?? (await AiJobRepository.findById(jobId))
-    if (!job || job.status !== 'failed') return
+    if (!job || (job.status !== 'failed' && job.status !== 'cancelled')) return
     await AiJobRepository.save({
       ...job,
       status: 'pending',
       error: undefined,
+      cancelRequested: false,
       retries: job.retries + 1,
     })
     await loadJobs()
     void drain()
+  }
+
+  /** Cancel an in-flight (processing) or queued (pending) job.
+   *  Processing jobs abort their live provider request; pending jobs just flip status. */
+  async function cancel(jobId: string) {
+    const job = jobs.value.find((j) => j.id === jobId) ?? (await AiJobRepository.findById(jobId))
+    if (!job) return
+    if (job.status === 'processing') {
+      await cancelJob(jobId)
+    } else if (job.status === 'pending') {
+      await AiJobRepository.setStatus(jobId, 'cancelled', {
+        finishedAt: dayjs().toISOString(),
+        error: undefined,
+      })
+    }
+    await loadJobs()
   }
 
   /** Retry all failed jobs in one go. */
@@ -288,6 +305,7 @@ export const useAiJobStore = defineStore('ai-job', () => {
     refreshPauseState,
     toggleQueuePause,
     retry,
+    cancel,
     retryAllFailed,
     remove,
     clearDone,

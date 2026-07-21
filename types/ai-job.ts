@@ -1,4 +1,4 @@
-export type AiJobStatus = 'pending' | 'processing' | 'success' | 'failed'
+export type AiJobStatus = 'pending' | 'processing' | 'success' | 'failed' | 'cancelled'
 
 /** Job priority — higher = processed first by the scheduler. */
 export type AiJobPriority = 'high' | 'normal' | 'low'
@@ -26,6 +26,8 @@ export interface AiJobEntity {
   promptTemplateId: string
 
   status: AiJobStatus
+  /** Set by cancel(); the processor checks it between retries and aborts the in-flight request. */
+  cancelRequested?: boolean
   /** Resulting conversation id once the model reply is saved. */
   conversationId?: string
   error?: string
@@ -33,6 +35,13 @@ export interface AiJobEntity {
 
   createdAt: string
   finishedAt?: string
+
+  /** If this job is one step of a workflow run, the workflow id. */
+  workflowId?: string
+  /** If part of a workflow run, the step index (0-based). */
+  workflowStepIndex?: number
+  /** Run instance id grouping all jobs from one workflow invocation. */
+  workflowRunId?: string
 
   /** Batch ID for grouping jobs from the same batch trigger. */
   batchId?: string
@@ -52,6 +61,7 @@ export interface AiJobStats {
   processing: number
   success: number
   failed: number
+  cancelled: number
   /** Success rate (0–1). */
   successRate: number
   /** Average processing duration in ms (finished jobs only). */

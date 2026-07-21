@@ -7,29 +7,43 @@ interface SavedPosition { edge: FloatingEdge; offset: number }
 const props = withDefaults(defineProps<{
   storageKey?: string
   size?: number
-}>(), { storageKey: 'auramind-floating-ball', size: 44 })
+  /** Edge-reveal gap when hidden (px exposed). 0 = fully visible. */
+  hideInset?: number
+}>(), { storageKey: 'auramind-floating-ball', size: 44, hideInset: 14 })
 
 const emit = defineEmits<{ 'update:edge': [edge: FloatingEdge] }>()
 const edge = defineModel<FloatingEdge>('edge', { default: 'right' })
 const offset = ref(0.5)
 const dragging = ref(false)
 const moved = ref(false)
+const hovered = ref(false)
 const start = ref({ x: 0, y: 0 })
 const root = ref<HTMLElement | null>(null)
 
+// After pointer-up the ball tucks against the nearest edge, exposing only
+// `hideInset` px. Hovering (or dragging) slides it fully out so it stays
+// discoverable without blocking content. Starts fully visible — only hides
+// after the first drag, so first-time users can find it.
+const hidden = ref(false)
+const peek = computed(() => hidden.value && !hovered.value && !dragging.value)
+
 const style = computed(() => {
+  // When peeking, shift the ball past the edge so only `hideInset` px shows.
+  // negative = off-screen on that side.
+  const overshoot = peek.value ? props.size - props.hideInset : 0
   const position: Record<string, string> = {
     position: 'fixed', zIndex: '2147483647',
     width: `${props.size}px`, height: `${props.size}px`,
+    transition: dragging.value ? 'none' : 'transform .18s ease, left .18s ease, right .18s ease, top .18s ease, bottom .18s ease',
   }
   if (edge.value === 'left' || edge.value === 'right') {
     position.top = `${offset.value * 100}%`
-    position[edge.value] = '12px'
-    position.transform = 'translateY(-50%)'
+    position[edge.value] = `${12 - overshoot}px`
+    position.transform = `translateY(-50%) scale(${dragging.value ? 1.1 : 1})`
   } else {
     position.left = `${offset.value * 100}%`
-    position[edge.value] = '12px'
-    position.transform = 'translateX(-50%)'
+    position[edge.value] = `${12 - overshoot}px`
+    position.transform = `translateX(-50%) scale(${dragging.value ? 1.1 : 1})`
   }
   return position
 })
@@ -67,6 +81,7 @@ function end(event?: PointerEvent) {
   if (!dragging.value) return
   dragging.value = false
   if (event && root.value?.hasPointerCapture(event.pointerId)) root.value.releasePointerCapture(event.pointerId)
+  hidden.value = true
   save()
 }
 function startDrag(event: PointerEvent) {
@@ -97,8 +112,10 @@ onUnmounted(() => { if (dragging.value) end(); window.removeEventListener('resiz
     @pointermove="move"
     @pointerup="end"
     @pointercancel="end"
+    @pointerenter="hovered = true"
+    @pointerleave="hovered = false"
     @click.capture="suppressClick"
   >
-    <slot :edge="edge" />
+    <slot :edge="edge" :peek="peek" />
   </div>
 </template>

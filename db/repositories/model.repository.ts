@@ -25,7 +25,8 @@ export const ModelRepository: IRepository<ModelConfig> & {
   },
 
   async findDefault(): Promise<ModelConfig | undefined> {
-    return db.models.where('isDefault').equals(1).first()
+    // Boolean indexes are inconsistent across IndexedDB implementations.
+    return (await db.models.toArray()).find((model) => model.isDefault)
   },
 
   async setDefault(id: string): Promise<void> {

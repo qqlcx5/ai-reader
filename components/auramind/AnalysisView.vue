@@ -5,10 +5,12 @@ import {
   Zap, Loader2, CheckCircle2, XCircle, Clock, RefreshCw, Trash2,
   Play, Pause, ChevronDown, ChevronRight, Filter, X, AlertCircle,
   Activity, Timer, CheckSquare, Square,
-  ArrowUp, ArrowDown, MoreVertical,
+  ArrowUp, ArrowDown, MoreVertical, Plus, Ban,
 } from '@lucide/vue'
-import PipelineVisualization from '@/components/auramind/PipelineVisualization.vue'
 import AnalysisConfigCenter from '@/components/auramind/AnalysisConfigCenter.vue'
+import DocumentPickerDialog from '@/components/auramind/DocumentPickerDialog.vue'
+import BatchAnalysisDialog from '@/components/auramind/BatchAnalysisDialog.vue'
+import UDropdownMenu from '@/components/ui/UDropdownMenu.vue'
 import { useAiJobStore } from '@/stores/ai-job.store'
 import { useAppStore } from '@/stores/app.store'
 import { useModelStore } from '@/stores/model.store'
@@ -94,6 +96,7 @@ const statusOptions: { value: AiJobStatus | 'all'; label: string; icon: any; col
   { value: 'processing', label: '处理中', icon: Loader2, color: 'text-blue-500' },
   { value: 'success', label: '成功', icon: CheckCircle2, color: 'text-emerald-500' },
   { value: 'failed', label: '失败', icon: XCircle, color: 'text-red-500' },
+  { value: 'cancelled', label: '已取消', icon: Ban, color: 'text-zinc-400' },
 ]
 
 const modelFilterOptions = computed(() =>
@@ -206,16 +209,8 @@ async function handleBatchPriority(priority: AiJobPriority) {
 }
 
 // ── Single job priority ──
-const priorityMenuJobId = ref<string | null>(null)
-
 async function handleSetPriority(jobId: string, priority: AiJobPriority) {
   await aiJobStore.setPriority(jobId, priority)
-  priorityMenuJobId.value = null
-}
-
-function togglePriorityMenu(jobId: string, e: Event) {
-  e.stopPropagation()
-  priorityMenuJobId.value = priorityMenuJobId.value === jobId ? null : jobId
 }
 
 // ── Drag-and-drop reorder (pending jobs only) ──
@@ -293,6 +288,26 @@ const showDragDropList = computed(() => {
   return (!st || st === 'all' || st === 'pending') && aiJobStore.sortedPendingJobs.length > 1
 })
 
+// ── New analysis (from AnalysisView): pick docs → batch dialog ──
+const showDocPicker = ref(false)
+const showBatchDialog = ref(false)
+const pickedDocIds = ref<string[]>([])
+
+function startNewAnalysis() {
+  showDocPicker.value = true
+}
+
+function onDocsPicked(ids: string[]) {
+  pickedDocIds.value = ids
+  showBatchDialog.value = true
+}
+
+// ── Cancel processing job ──
+async function handleCancel(jobId: string) {
+  await aiJobStore.cancel(jobId)
+  appStore.showToast('已取消', 'info')
+}
+
 // ── Format helpers ──
 function formatTime(iso: string): string {
   const date = dayjs(iso)
@@ -323,6 +338,7 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
   processing: { color: 'text-blue-600', bg: 'bg-blue-50', icon: Loader2, label: '处理中' },
   success: { color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle2, label: '成功' },
   failed: { color: 'text-red-600', bg: 'bg-red-50', icon: XCircle, label: '失败' },
+  cancelled: { color: 'text-zinc-500', bg: 'bg-zinc-100', icon: XCircle, label: '已取消' },
 }
 </script>
 
@@ -342,6 +358,14 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
         </span>
       </div>
       <div class="flex items-center gap-1.5">
+        <!-- New analysis -->
+        <button
+          class="px-2.5 py-1 rounded-md text-[11px] font-medium text-white bg-brand hover:bg-brand-dark transition-colors flex items-center gap-1"
+          @click="startNewAnalysis"
+        >
+          <Plus class="w-3 h-3" />
+          新建分析
+        </button>
         <!-- Multi-select toggle -->
         <button
           class="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1"
@@ -397,23 +421,20 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
       </span>
       <div class="flex-1" />
       <!-- Priority dropdown -->
-      <div class="relative">
-        <button
-          class="px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-500 bg-white border border-zinc-200 hover:bg-zinc-50 transition-colors flex items-center gap-1"
-          @click="priorityMenuJobId = priorityMenuJobId === '__batch__' ? null : '__batch__'"
-        >
-          <ArrowUp class="w-3 h-3" /> 优先级
-        </button>
-        <div
-          v-if="priorityMenuJobId === '__batch__'"
-          class="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-20 py-0.5 min-w-[80px]"
-          @mouseleave="priorityMenuJobId = null"
-        >
-          <button class="w-full px-2.5 py-1 text-left text-[11px] text-zinc-600 hover:bg-zinc-50" @click="handleBatchPriority('high')">高优先级</button>
-          <button class="w-full px-2.5 py-1 text-left text-[11px] text-zinc-600 hover:bg-zinc-50" @click="handleBatchPriority('normal')">中优先级</button>
-          <button class="w-full px-2.5 py-1 text-left text-[11px] text-zinc-600 hover:bg-zinc-50" @click="handleBatchPriority('low')">低优先级</button>
-        </div>
-      </div>
+      <UDropdownMenu
+        :items="[
+          { key: 'high', label: '高优先级' },
+          { key: 'normal', label: '中优先级' },
+          { key: 'low', label: '低优先级' },
+        ]"
+        @select="(item) => handleBatchPriority(item.key as AiJobPriority)"
+      >
+        <template #trigger>
+          <button class="px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-500 bg-white border border-zinc-200 hover:bg-zinc-50 transition-colors flex items-center gap-1">
+            <ArrowUp class="w-3 h-3" /> 优先级
+          </button>
+        </template>
+      </UDropdownMenu>
       <button
         class="px-2.5 py-1 rounded-md text-[11px] font-medium text-blue-500 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-1"
         @click="handleBatchRetry"
@@ -435,9 +456,6 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
     </div>
 
     <main class="flex-1 min-h-0 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-      <!-- Pipeline Visualization -->
-      <PipelineVisualization :show-stats="true" />
-
       <!-- Analysis Config Center -->
       <AnalysisConfigCenter />
 
@@ -545,6 +563,7 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
             {{ opt.value === 'pending' ? aiJobStore.stats.pending
                : opt.value === 'processing' ? aiJobStore.stats.processing
                : opt.value === 'success' ? aiJobStore.stats.success
+               : opt.value === 'cancelled' ? aiJobStore.stats.cancelled
                : aiJobStore.stats.failed }}
           </span>
         </button>
@@ -661,23 +680,22 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
               </div>
 
               <!-- Priority menu (pending jobs only) -->
-              <div v-if="job.status === 'pending'" class="relative shrink-0">
-                <button
-                  class="p-1 rounded-md text-zinc-300 hover:text-zinc-500 hover:bg-zinc-100 transition-colors"
-                  @click.stop="togglePriorityMenu(job.id, $event)"
-                >
-                  <MoreVertical class="w-3.5 h-3.5" />
-                </button>
-                <div
-                  v-if="priorityMenuJobId === job.id"
-                  class="absolute right-0 top-full mt-1 bg-white rounded-lg border border-zinc-200 shadow-lg z-20 py-0.5 min-w-[80px]"
-                  @mouseleave="priorityMenuJobId = null"
-                >
-                  <button class="w-full px-2.5 py-1 text-left text-[11px] hover:bg-zinc-50" :class="job.priority === 'high' ? 'text-red-500 font-medium' : 'text-zinc-600'" @click.stop="handleSetPriority(job.id, 'high')">高优先级</button>
-                  <button class="w-full px-2.5 py-1 text-left text-[11px] hover:bg-zinc-50" :class="job.priority === 'normal' ? 'text-brand font-medium' : 'text-zinc-600'" @click.stop="handleSetPriority(job.id, 'normal')">中优先级</button>
-                  <button class="w-full px-2.5 py-1 text-left text-[11px] hover:bg-zinc-50" :class="job.priority === 'low' ? 'text-zinc-400 font-medium' : 'text-zinc-600'" @click.stop="handleSetPriority(job.id, 'low')">低优先级</button>
-                </div>
-              </div>
+              <UDropdownMenu
+                v-if="job.status === 'pending'"
+                :items="[
+                  { key: 'high', label: `高优先级${job.priority === 'high' ? ' ✓' : ''}` },
+                  { key: 'normal', label: `中优先级${job.priority === 'normal' || !job.priority ? ' ✓' : ''}` },
+                  { key: 'low', label: `低优先级${job.priority === 'low' ? ' ✓' : ''}` },
+                ]"
+                content-class="min-w-[100px]"
+                @select="(item) => handleSetPriority(job.id, item.key as AiJobPriority)"
+              >
+                <template #trigger>
+                  <button class="p-1 rounded-md text-zinc-300 hover:text-zinc-500 hover:bg-zinc-100 transition-colors shrink-0">
+                    <MoreVertical class="w-3.5 h-3.5" />
+                  </button>
+                </template>
+              </UDropdownMenu>
 
               <!-- Expand chevron (hidden in select mode) -->
               <ChevronRight
@@ -724,20 +742,27 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
 
             <!-- Actions -->
             <div class="flex items-center gap-2">
-              <button
-                v-if="job.status === 'failed'"
+              <div
+                v-if="job.status === 'processing'"
+                class="px-2.5 py-1 rounded-md text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors flex items-center gap-1"
+                @click.stop="handleCancel(job.id)"
+              >
+                <Ban class="w-3 h-3" /> 取消
+              </div>
+              <div
+                v-if="job.status === 'failed' || job.status === 'cancelled'"
                 class="px-2.5 py-1 rounded-md text-[11px] font-medium text-blue-500 bg-blue-50 hover:bg-blue-100 transition-colors flex items-center gap-1"
                 @click.stop="handleRetry(job.id)"
               >
                 <RefreshCw class="w-3 h-3" /> 重试
-              </button>
-              <button
+            </div>
+              <div
                 v-if="job.status === 'success' && job.conversationId"
                 class="px-2.5 py-1 rounded-md text-[11px] font-medium text-brand bg-brand/10 hover:bg-brand/20 transition-colors flex items-center gap-1"
                 @click.stop="openConversation(job)"
               >
                 <Zap class="w-3 h-3" /> 查看对话
-              </button>
+              </div>
               <button
                 class="px-2.5 py-1 rounded-md text-[11px] font-medium text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center gap-1"
                 @click.stop="handleRemove(job.id)"
@@ -749,7 +774,7 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
         </div>
 
         <!-- Bulk clear actions at bottom -->
-        <div v-if="aiJobStore.stats.success > 0 || aiJobStore.stats.failed > 0" class="flex items-center justify-center gap-2 pt-3 pb-2">
+        <div v-if="aiJobStore.stats.success > 0 || aiJobStore.stats.failed > 0 || aiJobStore.stats.cancelled > 0" class="flex items-center justify-center gap-2 pt-3 pb-2">
           <button
             v-if="aiJobStore.stats.success > 0"
             class="px-2.5 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
@@ -764,8 +789,28 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
           >
             清除失败 ({{ aiJobStore.stats.failed }})
           </button>
+          <button
+            v-if="aiJobStore.stats.cancelled > 0"
+            class="px-2.5 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+            @click="handleClearByStatus('cancelled')"
+          >
+            清除已取消 ({{ aiJobStore.stats.cancelled }})
+          </button>
         </div>
       </div>
     </main>
+
+    <!-- New analysis dialogs -->
+    <DocumentPickerDialog
+      :open="showDocPicker"
+      @close="showDocPicker = false"
+      @confirm="onDocsPicked"
+    />
+    <BatchAnalysisDialog
+      :open="showBatchDialog"
+      :document-count="pickedDocIds.length"
+      :document-ids="pickedDocIds"
+      @close="showBatchDialog = false"
+    />
   </div>
 </template>

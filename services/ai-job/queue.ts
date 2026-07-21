@@ -3,8 +3,11 @@ import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
 import { SettingsRepository } from '@/db/repositories/settings.repository'
+import { WorkflowRepository } from '@/db/repositories/workflow.repository'
+import { findMatchingRule } from '@/services/ai-job/rule-engine'
 import type { AppSettings } from '@/types/settings'
 import type { AiJobPriority } from '@/types/ai-job'
+import type { WorkflowEntity } from '@/types/workflow'
 
 function uuid(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
@@ -12,8 +15,13 @@ function uuid(): string {
 
 /**
  * Enqueue an auto-analysis job for a document. No-op when the feature is off,
- * unconfigured (no template / no usable model), or a job already exists for the
+ * unconfigured (no usable model), or a job already exists for the
  * document — enforcing one analysis per document. Retry is a separate op.
+ *
+ * Model/template/priority resolution order:
+ *   1. First matching analysis rule (if any) overrides the defaults.
+ *   2. Falls back to autoAnalysis.modelId / promptTemplateId (priority normal).
+ *   3. modelId unset → global default model.
  */
 export async function enqueueForDocument(
   documentId: string,
@@ -23,25 +31,37 @@ export async function enqueueForDocument(
   const cfg = s?.autoAnalysis
   if (!cfg?.enabled) return
 
-  const promptTemplateId = cfg.promptTemplateId
-  if (!promptTemplateId) return
-
-  const modelId = cfg.modelId || (await ModelRepository.findDefault())?.id
-  if (!modelId) return
-
   // One job per document (dedupe).
   if ((await AiJobRepository.findByDocument(documentId)).length) return
 
   const doc = await DocumentRepository.findById(documentId)
+  if (!doc) return
+
+  // Rule match overrides default model/template/priority.
+  const matchedRule = await findMatchingRule(doc)
+  const modelId = matchedRule?.modelId || cfg.modelId || (await ModelRepository.findDefault())?.id
+  if (!modelId) return
+
+  // When no rule matched, preserve original behavior: require a template.
+  // When a rule matched, the rule's template wins (even if empty — the rule
+  // explicitly opted into a system-prompt-only analysis for this doc).
+  const promptTemplateId = matchedRule
+    ? matchedRule.promptTemplateId
+    : (cfg.promptTemplateId || '')
+  if (!matchedRule && !promptTemplateId) return
+
+  const priority: AiJobPriority = matchedRule?.priority ?? 'normal'
+
   await AiJobRepository.save({
     id: uuid(),
     documentId,
-    documentTitle: doc?.title,
+    documentTitle: doc.title,
     modelId,
     promptTemplateId,
     status: 'pending',
     retries: 0,
     createdAt: dayjs().toISOString(),
+    priority,
   })
 }
 
@@ -101,4 +121,67 @@ export async function enqueueBatch(
   }
 
   return { enqueued, skipped, batchId }
+}
+
+export interface WorkflowEnqueueOptions {
+  documentIds: string[]
+  workflowId: string
+  /** Priority for all jobs across all steps. Default the workflow's priority. */
+  priority?: AiJobPriority
+}
+
+export interface WorkflowEnqueueResult {
+  enqueuedDocs: number
+  skippedDocs: number
+  runId: string
+}
+
+/** Enqueue a workflow run: each document starts at step 0; subsequent steps
+ *  are enqueued by the processor when the previous step succeeds. All jobs
+ *  for one (doc, run) share workflowRunId so the UI can group them. */
+export async function enqueueWorkflow(
+  opts: WorkflowEnqueueOptions,
+): Promise<WorkflowEnqueueResult> {
+  const { documentIds, workflowId } = opts
+  const runId = uuid()
+  if (!documentIds.length || !workflowId) {
+    return { enqueuedDocs: 0, skippedDocs: 0, runId }
+  }
+
+  const wf = await WorkflowRepository.findById(workflowId)
+  if (!wf || !wf.steps.length) {
+    return { enqueuedDocs: 0, skippedDocs: 0, runId }
+  }
+
+  const priority = opts.priority ?? wf.priority
+  const firstStep = wf.steps[0]
+  let enqueuedDocs = 0
+  let skippedDocs = 0
+  const now = dayjs().toISOString()
+
+  for (const documentId of documentIds) {
+    const doc = await DocumentRepository.findById(documentId)
+    if (!doc) {
+      skippedDocs++
+      continue
+    }
+    await AiJobRepository.save({
+      id: uuid(),
+      documentId,
+      documentTitle: doc.title,
+      modelId: firstStep.modelId,
+      promptTemplateId: firstStep.templateId,
+      status: 'pending',
+      retries: 0,
+      createdAt: now,
+      jobSource: 'manual',
+      priority,
+      workflowId,
+      workflowStepIndex: 0,
+      workflowRunId: runId,
+    })
+    enqueuedDocs++
+  }
+
+  return { enqueuedDocs, skippedDocs, runId }
 }

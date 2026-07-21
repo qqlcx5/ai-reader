@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { db } from '@/db'
 
-const chatMock = vi.fn(async () => ({ content: 'AI 摘要内容', usage: { totalTokens: 42 } }))
+const chatMock = vi.fn(async (_input?: any) => ({ content: 'AI 摘要内容', usage: { totalTokens: 42 } }))
 vi.mock('@/services/ai/factory', () => ({
   createProvider: () => ({ chat: chatMock }),
 }))
 
-import { drainAll } from './processor'
+import { drainAll, cancelJob, reclaimStaleJobs } from './processor'
 import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 
@@ -291,5 +291,89 @@ describe('ai-job processor', () => {
     // Higher priority jobs should have earlier finishedAt
     expect(new Date(highJob.finishedAt!).getTime()).toBeLessThanOrEqual(new Date(normalJob.finishedAt!).getTime())
     expect(new Date(normalJob.finishedAt!).getTime()).toBeLessThanOrEqual(new Date(lowJob.finishedAt!).getTime())
+  })
+
+  it('cancelJob marks a job cancelled and aborts the in-flight request', async () => {
+    let abortSignal: AbortSignal | undefined
+    chatMock.mockImplementation(async (input: any) => {
+      abortSignal = input.signal
+      // Simulate a long-running request that gets aborted mid-flight
+      await new Promise((_, reject) => {
+        input.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+      })
+      return { content: 'never', usage: { totalTokens: 1 } }
+    })
+
+    await AiJobRepository.save({
+      id: 'job-c', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1',
+      status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z',
+    })
+
+    // Kick off drain, cancel once the request is in flight
+    const drainPromise = drainAll()
+    // Wait for chatMock to register the signal (request has started → job is processing)
+    await vi.waitFor(() => expect(abortSignal).toBeDefined())
+    await cancelJob('job-c')
+    const r = await drainPromise
+
+    expect(r.cancelled).toBe(1)
+    expect(r.succeeded).toBe(0)
+    const job = await AiJobRepository.findById('job-c')
+    expect(job?.status).toBe('cancelled')
+    expect(job?.cancelRequested).toBe(true)
+    expect(abortSignal?.aborted).toBe(true)
+  })
+
+  it('reclaimStaleJobs flips stuck processing jobs to failed', async () => {
+    await AiJobRepository.save({
+      id: 'job-stuck', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1',
+      status: 'processing', retries: 0, createdAt: '2026-01-01T00:00:00Z',
+    })
+    const count = await reclaimStaleJobs()
+    expect(count).toBe(1)
+    const job = await AiJobRepository.findById('job-stuck')
+    expect(job?.status).toBe('failed')
+    expect(job?.error).toContain('中断')
+  })
+
+  it('workflow chains: next step is enqueued after the previous step succeeds', async () => {
+    chatMock.mockResolvedValue({ content: 'step result', usage: { totalTokens: 1 } })
+
+    // Define a 2-step workflow
+    await db.workflows.put({
+      id: 'wf-1',
+      name: '2-step',
+      description: '',
+      enabled: true,
+      priority: 'normal',
+      steps: [
+        { id: 's1', templateId: 'tpl-1', modelId: 'm1', label: 'first', waitForPrevious: true },
+        { id: 's2', templateId: 'tpl-1', modelId: 'm1', label: 'second', waitForPrevious: true },
+      ],
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    })
+
+    const { enqueueWorkflow } = await import('./queue')
+    const res = await enqueueWorkflow({ documentIds: ['doc-1'], workflowId: 'wf-1' })
+    expect(res.enqueuedDocs).toBe(1)
+
+    // First drain runs step 0 and enqueues step 1
+    const r1 = await drainAll()
+    expect(r1.succeeded).toBe(1)
+    const jobsAfterFirst = await AiJobRepository.findAll()
+    expect(jobsAfterFirst.length).toBe(2)
+    const step0 = jobsAfterFirst.find((j) => j.workflowStepIndex === 0)!
+    const step1 = jobsAfterFirst.find((j) => j.workflowStepIndex === 1)!
+    expect(step0.status).toBe('success')
+    expect(step1.status).toBe('pending')
+    expect(step0.workflowRunId).toBe(step1.workflowRunId)
+
+    // Second drain runs step 1; no step 2 is enqueued
+    const r2 = await drainAll()
+    expect(r2.succeeded).toBe(1)
+    const jobsAfterSecond = await AiJobRepository.findAll()
+    expect(jobsAfterSecond.length).toBe(2) // no third job spawned
+    expect(jobsAfterSecond.find((j) => j.workflowStepIndex === 1)!.status).toBe('success')
   })
 })

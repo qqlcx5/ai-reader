@@ -82,12 +82,23 @@ export const AiJobRepository = {
     return db.aiJobs.count()
   },
 
+  /** Fetch all jobs with a given status. */
+  async findByStatus(status: AiJobStatus): Promise<AiJobEntity[]> {
+    return db.aiJobs.where('status').equals(status).toArray()
+  },
+
+  /** Partial update a job by id. */
+  async savePatch(id: string, patch: Partial<AiJobEntity>): Promise<void> {
+    await db.aiJobs.update(id, patch)
+  },
+
   async getStats(): Promise<AiJobStats> {
-    const [pending, processing, success, failed, all] = await Promise.all([
+    const [pending, processing, success, failed, cancelled, all] = await Promise.all([
       db.aiJobs.where('status').equals('pending').count(),
       db.aiJobs.where('status').equals('processing').count(),
       db.aiJobs.where('status').equals('success').count(),
       db.aiJobs.where('status').equals('failed').count(),
+      db.aiJobs.where('status').equals('cancelled').count(),
       db.aiJobs.count(),
     ])
 
@@ -112,6 +123,7 @@ export const AiJobRepository = {
       processing,
       success,
       failed,
+      cancelled,
       successRate: total > 0 ? success / total : 0,
       avgDurationMs: durationCount > 0 ? Math.round(totalDuration / durationCount) : 0,
     }

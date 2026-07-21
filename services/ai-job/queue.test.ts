@@ -5,7 +5,7 @@ import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import type { AppSettings } from '@/types/settings'
 
 async function resetDB() {
-  await Promise.all([db.documents, db.models, db.settings, db.kvMeta, db.aiJobs].map((t) => t.clear()))
+  await Promise.all([db.documents, db.models, db.settings, db.kvMeta, db.aiJobs, db.analysisRules].map((t) => t.clear()))
 }
 
 function settings(over: Partial<AppSettings['autoAnalysis']> = {}): AppSettings {
@@ -74,6 +74,66 @@ describe('enqueueForDocument', () => {
   it('is a no-op when no template configured', async () => {
     await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
     expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
+  })
+
+  // ── rule engine integration ──
+  it('matching rule overrides model/template/priority', async () => {
+    await db.analysisRules.put({
+      id: 'r1', name: 'github rule', enabled: true,
+      conditions: [{ field: 'domain', operator: 'contains', value: 'github.com' }],
+      modelId: 'm-rule', promptTemplateId: 'tpl-rule', priority: 'high',
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
+    // doc-1 url is https://x — doesn't match. Use a github doc.
+    await db.documents.put({
+      id: 'doc-gh', url: 'https://github.com/foo/bar', title: 'GH', markdown: 'm',
+      wordCount: 1, tokenCount: 1, contentHash: 'hg', extractionMethod: 'manual',
+      source: 'library', capturedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
+    await enqueueForDocument('doc-gh', settings())
+    const jobs = await AiJobRepository.findByDocument('doc-gh')
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0].modelId).toBe('m-rule')
+    expect(jobs[0].promptTemplateId).toBe('tpl-rule')
+    expect(jobs[0].priority).toBe('high')
+  })
+
+  it('non-matching rule falls back to autoAnalysis defaults', async () => {
+    await db.analysisRules.put({
+      id: 'r1', name: 'never matches', enabled: true,
+      conditions: [{ field: 'domain', operator: 'contains', value: 'nonexistent.example' }],
+      modelId: 'm-rule', promptTemplateId: 'tpl-rule', priority: 'high',
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
+    await enqueueForDocument('doc-1', settings())
+    const jobs = await AiJobRepository.findByDocument('doc-1')
+    expect(jobs[0].modelId).toBe('m1') // from settings
+    expect(jobs[0].promptTemplateId).toBe('tpl-1')
+    expect(jobs[0].priority).toBe('normal')
+  })
+
+  it('preserves "no enqueue without template" when no rule matches and no default template', async () => {
+    await db.analysisRules.put({
+      id: 'r1', name: 'never matches', enabled: true,
+      conditions: [{ field: 'domain', operator: 'contains', value: 'nonexistent.example' }],
+      modelId: 'm-rule', promptTemplateId: 'tpl-rule', priority: 'high',
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
+    await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
+    expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
+  })
+
+  it('matching rule allows empty template (rule explicitly opts in)', async () => {
+    await db.analysisRules.put({
+      id: 'r1', name: 'match all', enabled: true,
+      conditions: [], // no conditions = always matches
+      modelId: 'm-rule', promptTemplateId: '', priority: 'normal',
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
+    await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
+    const jobs = await AiJobRepository.findByDocument('doc-1')
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0].promptTemplateId).toBe('')
   })
 })
 

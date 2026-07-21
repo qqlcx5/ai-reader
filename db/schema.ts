@@ -1,4 +1,4 @@
-export const DB_VERSION = 11
+export const DB_VERSION = 13
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',
@@ -14,5 +14,12 @@ export const STORE_MAP = {
   feeds: 'id, url, folder, lastFetchedAt, updatedAt',
   feedItems: 'id, feedId, guid, [feedId+publishedAt], readAt, documentId',
   // Background auto-analysis jobs (panel-drained queue). Local-only.
-  aiJobs: 'id, documentId, status, createdAt, batchId, priority',
+  aiJobs: 'id, documentId, status, createdAt, batchId, priority, workflowRunId',
+  // Reusable multi-step analysis pipelines. Local-only.
+  workflows: 'id, enabled, createdAt',
+  // Cron-triggered auto-analysis plans. Local-only.
+  schedules: 'id, enabled, lastFiredAt',
+  // Condition-based rules that override default model/template selection
+  // for auto-analysis. Local-only.
+  analysisRules: 'id, enabled, createdAt',
 } as const

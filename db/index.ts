@@ -8,6 +8,9 @@ import type { PromptTemplate } from '../types/prompt-template'
 import type { CollectionEntity, CollectionItemEntity } from '../types/collection'
 import type { FeedEntity, FeedItemEntity } from '../types/feed'
 import type { AiJobEntity } from '../types/ai-job'
+import type { WorkflowEntity } from '../types/workflow'
+import type { ScheduleEntity } from '../types/schedule'
+import type { AnalysisRuleEntity } from '../types/analysis-rule'
 
 export class AuraMindDB extends Dexie {
   documents!: Table<DocumentEntity, string>
@@ -21,6 +24,9 @@ export class AuraMindDB extends Dexie {
   feeds!: Table<FeedEntity, string>
   feedItems!: Table<FeedItemEntity, string>
   aiJobs!: Table<AiJobEntity, string>
+  workflows!: Table<WorkflowEntity, string>
+  schedules!: Table<ScheduleEntity, string>
+  analysisRules!: Table<AnalysisRuleEntity, string>
 
   constructor() {
     super('AuraMindDB')
