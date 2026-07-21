@@ -29,6 +29,15 @@ const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
 
+// Long user messages (e.g. first send with page context attached) collapse
+// to a few lines with an expand toggle, so the chat isn't dominated by one
+// giant bubble. Threshold is char-based — cheap and good enough.
+const USER_COLLAPSE_THRESHOLD = 280
+const userExpanded = ref(false)
+const userCollapsible = computed(() =>
+  isUser.value && props.message.content.length > USER_COLLAPSE_THRESHOLD,
+)
+
 const isHovered = ref(false)
 const thinkingExpanded = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
@@ -156,8 +165,17 @@ onUnmounted(() => {
     </div>
     <div
       class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm whitespace-pre-wrap"
+      :class="!userExpanded && userCollapsible ? 'max-h-[7.5em] overflow-hidden' : ''"
     >
       {{ message.content }}
+      <button
+        v-if="userCollapsible"
+        type="button"
+        class="block mt-1 text-[11px] text-white/80 hover:text-white underline-offset-2 hover:underline"
+        @click.stop="userExpanded = !userExpanded"
+      >
+        {{ userExpanded ? '收起' : '展开全部内容' }}
+      </button>
     </div>
   </div>
 

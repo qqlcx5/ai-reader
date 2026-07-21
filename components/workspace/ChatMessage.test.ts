@@ -59,6 +59,30 @@ describe('ChatMessage', () => {
     expect(wrapper.text()).toContain('partial')
   })
 
+  it('collapses long user message and expands on click', async () => {
+    const long = 'x'.repeat(500)
+    const wrapper = mount(ChatMessage, {
+      props: { message: makeMsg({ role: 'user', content: long }) },
+    })
+    const bubble = wrapper.find('.bg-brand.text-white')
+    // Collapsed by default: bubble is height-climited and toggle is visible
+    const toggle = bubble.find('button')
+    expect(toggle.exists()).toBe(true)
+    expect(toggle.text()).toBe('展开全部内容')
+    expect(bubble.classes()).toContain('max-h-[7.5em]')
+    await toggle.trigger('click')
+    expect(bubble.find('button').text()).toBe('收起')
+    expect(bubble.classes()).not.toContain('max-h-[7.5em]')
+  })
+
+  it('does not show collapse toggle for short user message', () => {
+    const wrapper = mount(ChatMessage, {
+      props: { message: makeMsg({ role: 'user', content: 'short' }) },
+    })
+    const bubble = wrapper.find('.bg-brand.text-white')
+    expect(bubble.find('button').exists()).toBe(false)
+  })
+
   it('renders failed state with error message', () => {
     const wrapper = mount(ChatMessage, {
       props: {
