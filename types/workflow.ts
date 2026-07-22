@@ -16,8 +16,6 @@ export interface WorkflowStep {
   modelId: string
   /** Display label shown in the UI. */
   label: string
-  /** When true, this step's job only enqueues after the previous step succeeds. */
-  waitForPrevious: boolean
 }
 
 export interface WorkflowEntity {

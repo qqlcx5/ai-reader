@@ -71,9 +71,11 @@ describe('enqueueForDocument', () => {
     expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
   })
 
-  it('is a no-op when no template configured', async () => {
+  it('enqueues with system prompt only when no template is configured', async () => {
     await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
-    expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
+    const jobs = await AiJobRepository.findByDocument('doc-1')
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0].promptTemplateId).toBe('')
   })
 
   // ── rule engine integration ──
@@ -112,7 +114,7 @@ describe('enqueueForDocument', () => {
     expect(jobs[0].priority).toBe('normal')
   })
 
-  it('preserves "no enqueue without template" when no rule matches and no default template', async () => {
+  it('non-matching rule still uses system-prompt-only default when template is empty', async () => {
     await db.analysisRules.put({
       id: 'r1', name: 'never matches', enabled: true,
       conditions: [{ field: 'domain', operator: 'contains', value: 'nonexistent.example' }],
@@ -120,7 +122,10 @@ describe('enqueueForDocument', () => {
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     })
     await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
-    expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
+    const jobs = await AiJobRepository.findByDocument('doc-1')
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0].modelId).toBe('m1')
+    expect(jobs[0].promptTemplateId).toBe('')
   })
 
   it('matching rule allows empty template (rule explicitly opts in)', async () => {

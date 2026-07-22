@@ -63,12 +63,12 @@ const templateOptions = computed(() => [
 ])
 
 const workflowOptions = computed(() =>
-  workflowStore.workflows.length
-    ? workflowStore.workflows.map((w) => ({
-        value: w.id,
-        label: `${w.name}（${w.steps.length} 步）`,
-      }))
-    : [],
+  workflowStore.workflows
+    .filter((w) => w.enabled && w.steps.length > 0 && w.steps.every((step) => step.modelId))
+    .map((w) => ({
+      value: w.id,
+      label: `${w.name}（${w.steps.length} 步）`,
+    }))
 )
 
 // The model that would actually be used for the first analysis step.
@@ -235,7 +235,7 @@ async function handleSubmit() {
               class="flex-1 py-1.5 rounded-md text-[11px] font-medium transition-colors flex items-center justify-center gap-1"
               :class="mode === 'workflow' ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500'"
               :disabled="workflowOptions.length === 0"
-              :title="workflowOptions.length === 0 ? '请先在「AI 分析配置 → 工作流编排」创建工作流' : ''"
+              :title="workflowOptions.length === 0 ? '请先在「AI 分析配置 → 工作流编排」启用并配置完整工作流' : ''"
               @click="mode = 'workflow'"
             >
               <WorkflowIcon class="w-3 h-3" /> 工作流
@@ -272,7 +272,7 @@ async function handleSubmit() {
                 placeholder="选择工作流"
               />
               <p v-if="workflowOptions.length === 0" class="text-[10px] text-amber-600 mt-1">
-                暂无工作流。请到「AI 分析」面板的配置中心创建。
+                暂无已启用且配置完整的工作流。请到「AI 分析配置 → 工作流编排」启用并配置每一步模型。
               </p>
             </div>
           </template>

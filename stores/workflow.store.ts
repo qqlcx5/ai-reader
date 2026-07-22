@@ -39,7 +39,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
       enabled: false,
       priority: 'normal',
       steps: [
-        { id: uuid(), templateId: '', modelId: '', label: '步骤 1', waitForPrevious: true },
+        { id: uuid(), templateId: '', modelId: '', label: '步骤 1' },
       ],
       createdAt: now,
       updatedAt: now,
@@ -55,7 +55,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
       templateId: '',
       modelId: '',
       label: `步骤 ${wf.steps.length + 1}`,
-      waitForPrevious: true,
     }
     wf.steps.push(step)
     await save(wf)

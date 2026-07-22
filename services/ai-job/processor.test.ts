@@ -347,8 +347,8 @@ describe('ai-job processor', () => {
       enabled: true,
       priority: 'normal',
       steps: [
-        { id: 's1', templateId: 'tpl-1', modelId: 'm1', label: 'first', waitForPrevious: true },
-        { id: 's2', templateId: 'tpl-1', modelId: 'm1', label: 'second', waitForPrevious: true },
+        { id: 's1', templateId: 'tpl-1', modelId: 'm1', label: 'first' },
+        { id: 's2', templateId: 'tpl-1', modelId: 'm1', label: 'second' },
       ],
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z',

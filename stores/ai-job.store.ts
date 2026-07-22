@@ -164,16 +164,17 @@ export const useAiJobStore = defineStore('ai-job', () => {
     await loadJobs()
   }
 
-  /** Retry all failed jobs in one go. */
+  /** Retry all failed or cancelled jobs in one go. */
   async function retryAllFailed() {
-    const failedJobs = jobs.value.filter((j) => j.status === 'failed')
-    if (!failedJobs.length) return
+    const retryableJobs = jobs.value.filter((j) => j.status === 'failed' || j.status === 'cancelled')
+    if (!retryableJobs.length) return
 
-    for (const job of failedJobs) {
+    for (const job of retryableJobs) {
       await AiJobRepository.save({
         ...job,
         status: 'pending',
         error: undefined,
+        cancelRequested: false,
         retries: job.retries + 1,
       })
     }
@@ -181,15 +182,16 @@ export const useAiJobStore = defineStore('ai-job', () => {
     void drain()
   }
 
-  /** Retry selected failed jobs. */
+  /** Retry selected failed or cancelled jobs. */
   async function retrySelected() {
-    const toRetry = selectedJobs.value.filter((j) => j.status === 'failed')
+    const toRetry = selectedJobs.value.filter((j) => j.status === 'failed' || j.status === 'cancelled')
     if (!toRetry.length) return
     for (const job of toRetry) {
       await AiJobRepository.save({
         ...job,
         status: 'pending',
         error: undefined,
+        cancelRequested: false,
         retries: job.retries + 1,
       })
     }

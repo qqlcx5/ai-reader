@@ -154,10 +154,10 @@ async function handleRetry(jobId: string) {
 }
 
 async function handleRetryAllFailed() {
-  const count = aiJobStore.jobs.filter((j) => j.status === 'failed').length
+  const count = aiJobStore.jobs.filter((j) => j.status === 'failed' || j.status === 'cancelled').length
   if (!count) return
   await aiJobStore.retryAllFailed()
-  appStore.showToast(`已重新入队 ${count} 个失败任务`, 'success')
+  appStore.showToast(`已重新入队 ${count} 个失败或取消任务`, 'success')
 }
 
 async function handleRemove(jobId: string) {
@@ -391,12 +391,11 @@ const statusConfig: Record<AiJobStatus, { color: string; bg: string; icon: any; 
         </button>
         <!-- Retry all failed -->
         <button
-          v-if="aiJobStore.stats.failed > 0"
+          v-if="aiJobStore.stats.failed > 0 || aiJobStore.stats.cancelled > 0"
           class="px-2.5 py-1 rounded-md text-[11px] font-medium text-red-500 bg-red-50 hover:bg-red-100 transition-colors flex items-center gap-1"
           @click="handleRetryAllFailed"
         >
-          <RefreshCw class="w-3 h-3" />
-          重试全部失败
+          <RefreshCw class="w-3 h-3" /> 重试失败/取消
         </button>
         <!-- Start processing -->
         <button

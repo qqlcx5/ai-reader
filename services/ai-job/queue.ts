@@ -42,14 +42,9 @@ export async function enqueueForDocument(
   const modelId = matchedRule?.modelId || cfg.modelId || (await ModelRepository.findDefault())?.id
   if (!modelId) return
 
-  // When no rule matched, preserve original behavior: require a template.
-  // When a rule matched, the rule's template wins (even if empty — the rule
-  // explicitly opted into a system-prompt-only analysis for this doc).
-  const promptTemplateId = matchedRule
-    ? matchedRule.promptTemplateId
-    : (cfg.promptTemplateId || '')
-  if (!matchedRule && !promptTemplateId) return
-
+  // A matching rule may intentionally use only the system prompt; the default
+  // auto-analysis path does too, as exposed by the settings UI.
+  const promptTemplateId = matchedRule?.promptTemplateId || cfg.promptTemplateId || ''
   const priority: AiJobPriority = matchedRule?.priority ?? 'normal'
 
   await AiJobRepository.save({
@@ -149,7 +144,7 @@ export async function enqueueWorkflow(
   }
 
   const wf = await WorkflowRepository.findById(workflowId)
-  if (!wf || !wf.steps.length) {
+  if (!wf || !wf.enabled || !wf.steps.length || wf.steps.some((step) => !step.modelId)) {
     return { enqueuedDocs: 0, skippedDocs: 0, runId }
   }
 
