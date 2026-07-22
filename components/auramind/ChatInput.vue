@@ -120,20 +120,10 @@ const sendLabel = computed(() => {
   return ''
 })
 
-// ── Helper: empty turns require attachable page context ──
-function hasContentContext(): boolean {
-  if (!chatStore.includeContext) return false
-  if (chatStore.messages.some((message) =>
-    (message.role === 'user' || message.role === 'assistant') && message.content.trim(),
-  )) return false
-  const doc = documentStore.pageDocument || documentStore.currentDocument
-  return !!doc?.markdown?.trim()
-}
-
 // ── canSend for multi-model: at least 1 model selected ───
 const canSendMulti = computed(() => {
   const msg = chatStore.inputText.trim()
-  if (!msg && !hasContentContext()) return false
+  if (!msg && !chatStore.canSendEmpty) return false
   if (chatStore.isSending || chatStore.isStreaming) return false
   if (multiModelIds.value.length === 0) return false
 
@@ -163,7 +153,7 @@ function handleModelChange(value: string | string[]) {
 
 function submit() {
   const msg = chatStore.inputText.trim()
-  if (!msg && !hasContentContext()) return
+  if (!msg && !chatStore.canSendEmpty) return
   if (!canSendMulti.value) return
 
   chatStore.clearError()

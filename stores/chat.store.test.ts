@@ -205,7 +205,7 @@ describe('stores/chat.store', () => {
     expect(store.messages[1].status).toBe('success')
   })
 
-  it('should preserve page context when the first question is empty', async () => {
+  it('should send page context to the model on the first turn but keep the user message clean', async () => {
     await seedModel()
     setupStreamSuccess('Summary')
     const store = useChatStore()
@@ -227,8 +227,45 @@ describe('stores/chat.store', () => {
 
     await store.sendMessage('')
 
-    expect(store.messages[0].content).toContain('Page content')
+    // Context reaches the model (the sent user turn contains the page markdown)...
     expect(mockBuild).toHaveBeenCalledWith(expect.objectContaining({ userInput: '' }))
+    const builtInput = mockBuild.mock.calls.at(-1)![0]
+    expect(builtInput.context).toContain('Page content')
+    // ...but the persisted user message stays clean (no page dump).
+    expect(store.messages[0].content).toBe('')
+  })
+
+  // Regression: a mounted page MUST reach the model on the first turn even
+  // when the user typed a question. Previously a buggy guard made
+  // hasAttachablePageContext() return false whenever any message existed,
+  // so only the bare question was sent.
+  it('should attach page context to the model request on the first turn even with a non-empty question', async () => {
+    await seedModel()
+    setupStreamSuccess('Answer')
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'Page',
+      url: 'https://example.com',
+      markdown: 'Page body',
+      wordCount: 2,
+      tokenCount: 2,
+      contentHash: 'hash',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('What is this about?')
+
+    const builtInput = mockBuild.mock.calls.at(-1)![0]
+    expect(builtInput.context).toContain('Page body')
+    expect(builtInput.userInput).toBe('What is this about?')
+    // Persisted user message keeps only the question.
+    expect(store.messages[0].content).toBe('What is this about?')
   })
 
   // 4. sendMessage validation: no model selected
@@ -350,6 +387,137 @@ describe('stores/chat.store', () => {
 
     expect(store.messages[1].modelConfigId).toBe(original.id)
     expect(mockStreamChat.mock.calls.at(-1)?.[0].model.id).toBe(original.id)
+  })
+
+  // #3 regression: an empty first question must still produce a non-blank
+  // conversation title (falls back to the document title).
+  it('should fall back to the document title when the first question is empty', async () => {
+    await seedModel()
+    setupStreamSuccess('Summary')
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'My Page Title',
+      url: 'https://example.com',
+      markdown: 'body',
+      wordCount: 1,
+      tokenCount: 1,
+      contentHash: 'h',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    await store.sendMessage('')
+
+    const conv = chatDb.get(store.currentConversationId!)
+    expect(conv?.title).toBe('My Page Title')
+  })
+
+  // #4 regression: regenerating the FIRST assistant turn must re-attach the
+  // page context — otherwise the model regenerates without seeing the page.
+  it('regenerate of the first turn should re-attach page context', async () => {
+    await seedModel()
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'Page',
+      url: 'https://example.com',
+      markdown: 'First-turn page body',
+      wordCount: 3,
+      tokenCount: 3,
+      contentHash: 'h',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    setupStreamSuccess('First answer')
+    await store.sendMessage('Summarize')
+
+    // Second turn so history exists — proves regenerate targets the first turn.
+    setupStreamSuccess('Second answer')
+    await store.sendMessage('More?')
+
+    // Regenerate the first assistant message.
+    const firstAssistant = store.messages.find((m) => m.role === 'assistant')!
+    setupStreamSuccess('Regenerated')
+    await store.regenerate(firstAssistant.id)
+
+    const builtInput = mockBuild.mock.calls.at(-1)![0]
+    expect(builtInput.context).toContain('First-turn page body')
+  })
+
+  it('regenerate of a later turn should NOT re-attach page context', async () => {
+    await seedModel()
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'Page',
+      url: 'https://example.com',
+      markdown: 'Page body',
+      wordCount: 2,
+      tokenCount: 2,
+      contentHash: 'h',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    setupStreamSuccess('First answer')
+    await store.sendMessage('Q1')
+    setupStreamSuccess('Second answer')
+    await store.sendMessage('Q2')
+
+    // Regenerate the second assistant message (a later turn).
+    const assistants = store.messages.filter((m) => m.role === 'assistant')
+    const secondAssistant = assistants[assistants.length - 1]
+    setupStreamSuccess('Regenerated')
+    await store.regenerate(secondAssistant.id)
+
+    const builtInput = mockBuild.mock.calls.at(-1)![0]
+    expect(builtInput.context).toBeUndefined()
+  })
+
+  // #2 regression: regenerating a multi-model round must re-run ALL models
+  // of that round, not just the last bubble. Previously the no-arg path
+  // popped a single assistant, silently dropping the other models' answers.
+  it('regenerate (no arg) of a multi-model round should regenerate every model', async () => {
+    const m1 = await seedModel({ id: 'm1', name: 'Model One', modelId: 'model-one' })
+    const m2 = makeModel({ id: 'm2', name: 'Model Two', modelId: 'model-two' })
+    modelDb.set(m2.id, m2)
+    const modelStore = useModelStore()
+    await modelStore.loadModels()
+    modelStore.setSelectedModelIds([m1.id, m2.id])
+
+    const store = useChatStore()
+    await store.createConversation('doc-1')
+
+    setupStreamSuccess('answer')
+    await store.sendMessage('Q', [m1.id, m2.id])
+
+    // Two assistants for the single user turn.
+    expect(store.messages.filter((m) => m.role === 'assistant')).toHaveLength(2)
+
+    setupStreamSuccess('regenerated')
+    await store.regenerate()
+
+    // Still two assistants after regenerate — none dropped.
+    const assistants = store.messages.filter((m) => m.role === 'assistant')
+    expect(assistants).toHaveLength(2)
+    // Both were re-run: two distinct modelConfigIds, both regenerated content.
+    const configIds = new Set(assistants.map((m) => m.modelConfigId))
+    expect(configIds).toEqual(new Set([m1.id, m2.id]))
+    expect(assistants.every((m) => m.content === 'regenerated')).toBe(true)
   })
 
   // 11. Streaming state

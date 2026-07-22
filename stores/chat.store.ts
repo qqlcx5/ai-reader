@@ -62,15 +62,29 @@ export const useChatStore = defineStore('chat', () => {
     { immediate: true },
   )
 
+  /** True when there's a mounted page with content AND the user hasn't
+   *  disabled context. Has nothing to do with whether history exists —
+   *  the first-turn-vs-history distinction is handled at the call site. */
   function hasAttachablePageContext(): boolean {
     if (!includeContext.value) return false
-    if (messages.value.some((message) =>
-      (message.role === 'user' || message.role === 'assistant') && message.content.trim(),
-    )) return false
     const documentStore = useDocumentStore()
     const doc = documentStore.pageDocument || documentStore.currentDocument
     return !!doc?.markdown?.trim()
   }
+
+  /** True when no prior user/assistant turn exists — i.e. the next send is
+   *  the first turn of the conversation, which is the only turn that carries
+   *  the page context. */
+  function isFirstTurn(): boolean {
+    return !messages.value.some((message) =>
+      (message.role === 'user' || message.role === 'assistant') && message.content.trim(),
+    )
+  }
+
+  /** True when a blank question can be sent this turn — only on the first
+   *  turn with an attachable page. Exposed so ChatInput's multi-model path
+   *  can reuse the exact same rule as `canSend`. */
+  const canSendEmpty = computed<boolean>(() => isFirstTurn() && hasAttachablePageContext())
 
   const canSend = computed<boolean>(() => {
     if (isSending.value || isStreaming.value) return false
@@ -84,8 +98,10 @@ export const useChatStore = defineStore('chat', () => {
     // Ollama doesn't require API key
     if (model.provider !== 'ollama' && !model.apiKey) return false
 
-    // A blank question is valid only when page context will be attached.
-    if (!inputText.value.trim() && !hasAttachablePageContext()) return false
+    // A blank question is valid only on the first turn when page context
+    // will be attached. Later turns require an actual question (context is
+    // not re-sent, so an empty question would send nothing meaningful).
+    if (!inputText.value.trim() && !(isFirstTurn() && hasAttachablePageContext())) return false
 
     return true
   })
@@ -143,7 +159,7 @@ export const useChatStore = defineStore('chat', () => {
       resolvedModels.push(m)
     }
 
-    if (!content.trim() && !hasAttachablePageContext()) {
+    if (!content.trim() && !(isFirstTurn() && hasAttachablePageContext())) {
       throw new Error('请输入问题，或先挂载页面上下文。')
     }
 
@@ -164,7 +180,13 @@ export const useChatStore = defineStore('chat', () => {
     // ── Set title from first user message ────────────────
     const isFirstMessage = messages.value.length === 0
     if (isFirstMessage) {
-      const title = content.slice(0, 40) + (content.length > 40 ? '...' : '')
+      const title = content.trim()
+        ? (content.slice(0, 40) + (content.length > 40 ? '...' : ''))
+        // Empty first question: fall back to the document title so the
+        // conversation list doesn't show a blank title.
+        : (useDocumentStore().pageDocument?.title
+          || useDocumentStore().currentDocument?.title
+          || '新对话')
       await updateConversationTitle(title)
     }
 
@@ -195,88 +217,133 @@ export const useChatStore = defineStore('chat', () => {
     if (!state) return
     state.controller.abort()
     streamStates.value.delete(cid)
-    // Mark streaming assistant messages in the CURRENT conversation as aborted
-    for (let i = messages.value.length - 1; i >= 0; i--) {
-      const msg = messages.value[i]
+    // Mark streaming assistant messages as aborted. Iterate the StreamState's
+    // captured messages (not the global messages.value) so this works even
+    // when the user has switched to a different conversation mid-stream —
+    // the background stream keeps writing into state.messages, so the
+    // streaming placeholders live there, not necessarily in messages.value.
+    for (const msg of state.messages) {
       if (msg.role === 'assistant' && msg.status === 'streaming') {
         msg.status = 'aborted'
-        if (!msg.content) {
-          msg.content = '(stopped)'
-        }
         msg.updatedAt = dayjs().toISOString()
       }
     }
+    // Persist so the partially-generated content survives a reload.
+    // (Requirement: "保留已生成内容".) We deliberately do NOT write any
+    // placeholder text — the aborted status is the source of truth and the
+    // UI renders its own "已停止生成" hint.
+    void persistConversationForId(cid, state.messages)
   }
 
   async function regenerate(targetAssistantId?: string): Promise<void> {
     const modelStore = useModelStore()
     const settingsStore = useSettingsStore()
-    let model: ModelConfig | null = modelStore.currentModel
-    let userMsg: ChatMessage | undefined
+    const defaultModel = modelStore.currentModel
+
+    // Each entry = one assistant slot to (re)generate, with the model to use.
+    interface RegenSlot { userMsg: ChatMessage; model: ModelConfig }
+    const slots: RegenSlot[] = []
 
     if (targetAssistantId) {
-      // Regenerate a specific assistant message: find its corresponding user message
+      // Regenerate a specific assistant message: find its preceding user message.
       const asstIdx = messages.value.findIndex((m) => m.id === targetAssistantId)
       if (asstIdx === -1) return
       const original = messages.value[asstIdx]
-      model = modelStore.models.find((candidate) => candidate.id === original.modelConfigId)
-        ?? modelStore.models.find((candidate) => candidate.modelId === original.modelId)
-        ?? model
+      const model = modelStore.models.find((c) => c.id === original.modelConfigId)
+        ?? modelStore.models.find((c) => c.modelId === original.modelId)
+        ?? defaultModel
+      if (!model) return
 
-      // Walk backwards to find the preceding user message
       for (let i = asstIdx - 1; i >= 0; i--) {
         if (messages.value[i].role === 'user') {
-          userMsg = messages.value[i]
           // Keep the prompt and replace this assistant response.
           messages.value.splice(i + 1)
+          slots.push({ userMsg: messages.value[i], model })
           break
         }
       }
-      if (!userMsg) return
+      if (slots.length === 0) return
     } else {
+      // No-arg regenerate: replace the LAST round's assistant message(s).
+      // A round = last user message + all consecutive assistants after it.
+      // Multi-model sends produce N assistants per round — all must be
+      // regenerated, otherwise only the last bubble is re-done and the
+      // others silently disappear (data loss).
       const lastUserIdx = findLastUserMessageIndex()
       if (lastUserIdx === -1) return
 
-      // Remove the last assistant message (if any)
-      if (messages.value.length > lastUserIdx + 1) {
-        const lastAsst = messages.value[messages.value.length - 1]
-        if (lastAsst.role === 'assistant') {
-          messages.value.pop()
-        }
+      const userMsg = messages.value[lastUserIdx]
+      const roundAssistants = messages.value.slice(lastUserIdx + 1)
+        .filter((m) => m.role === 'assistant')
+
+      if (roundAssistants.length === 0) {
+        // No assistant yet for this user turn — nothing to regenerate.
+        return
       }
 
-      userMsg = messages.value[lastUserIdx]
-      const original = messages.value[lastUserIdx + 1]
-      if (original?.role === 'assistant') {
-        model = modelStore.models.find((candidate) => candidate.id === original.modelConfigId)
-          ?? modelStore.models.find((candidate) => candidate.modelId === original.modelId)
-          ?? model
+      // Truncate everything after the user message, then re-create one
+      // assistant slot per original model.
+      messages.value.splice(lastUserIdx + 1)
+      for (const original of roundAssistants) {
+        const model = modelStore.models.find((c) => c.id === original.modelConfigId)
+          ?? modelStore.models.find((c) => c.modelId === original.modelId)
+          ?? defaultModel
+        if (!model) continue
+        slots.push({ userMsg, model })
       }
+      if (slots.length === 0) return
     }
 
-    if (!model) return
+    // All slots in one regenerate call share the same user message, so they
+    // share the same first-turn/context decision.
+    const firstSlot = slots[0]
+    const regenUserIdx = messages.value.findIndex((m) => m.id === firstSlot.userMsg.id)
+    const hasPriorHistory = regenUserIdx >= 0
+      && messages.value.slice(0, regenUserIdx).some((m) =>
+        (m.role === 'user' || m.role === 'assistant') && m.content.trim(),
+      )
+    const attachContext = !hasPriorHistory
 
-    // Create a fresh assistant message for re-generation
-    const assistantMsg: ChatMessage = {
+    // Create one fresh streaming assistant per slot.
+    const assistantMsgs: ChatMessage[] = slots.map(({ model }) => ({
       id: crypto.randomUUID(),
-      role: 'assistant',
+      role: 'assistant' as const,
       content: '',
       modelId: model.modelId,
       modelConfigId: model.id,
-      status: 'streaming',
+      status: 'streaming' as const,
       createdAt: dayjs().toISOString(),
-    }
-    messages.value.push(assistantMsg)
+    }))
+    for (const msg of assistantMsgs) messages.value.push(msg)
 
     const cid = currentConversationId.value!
     const capturedMessages = messages.value
-
     const controller = new AbortController()
     const state: StreamState = { controller, provider: null, messages: capturedMessages }
     streamStates.value.set(cid, state)
 
+    const tasks = slots.map((slot, i) =>
+      streamToProvider(
+        slot.userMsg.content,
+        slot.userMsg.id,
+        assistantMsgs[i],
+        slot.model,
+        settingsStore.settings,
+        state,
+        attachContext,
+      ).catch((err) => {
+        const msg = capturedMessages.find((m) => m.id === assistantMsgs[i].id)
+        if (msg && msg.status === 'streaming') {
+          if (state.controller.signal.aborted) return
+          msg.status = 'failed'
+          msg.error = err?.message || String(err)
+          msg.updatedAt = dayjs().toISOString()
+        }
+      }),
+    )
+
     try {
-      await streamToProvider(userMsg.content, userMsg.id, assistantMsg, model, settingsStore.settings, state, false)
+      await Promise.allSettled(tasks)
     } finally {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
@@ -617,12 +684,11 @@ export const useChatStore = defineStore('chat', () => {
       userInput: userContent,
     })
 
-    // Persist exactly the user turn sent to the provider. This is important when
-    // the question is empty: the page context must remain in conversation history.
-    const currentUser = capturedMessages.find((message) => message.id === currentUserMsgId)
-    if (currentUser && promptOutput.sentUserContent) {
-      currentUser.content = promptOutput.sentUserContent
-    }
+    // NOTE: page context is sent to the model this turn but NOT written back
+    // into the user message. The persisted (and UI-visible) user turn keeps
+    // only the user's original question, so history stays clean and the chat
+    // bubble doesn't dump the whole page markdown. Subsequent turns rely on
+    // history alone — the full page is never re-sent (design B).
 
     // Call provider stream.
     // Use capturedMessages (not messages.value) for all callbacks so tokens
@@ -880,6 +946,7 @@ export const useChatStore = defineStore('chat', () => {
     includeContext,
     // computed
     canSend,
+    canSendEmpty,
     // actions
     setInputText,
     setIncludeContext,
