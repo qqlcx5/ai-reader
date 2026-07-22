@@ -684,11 +684,16 @@ export const useChatStore = defineStore('chat', () => {
       userInput: userContent,
     })
 
-    // NOTE: page context is sent to the model this turn but NOT written back
-    // into the user message. The persisted (and UI-visible) user turn keeps
-    // only the user's original question, so history stays clean and the chat
-    // bubble doesn't dump the whole page markdown. Subsequent turns rely on
-    // history alone — the full page is never re-sent (design B).
+    // Cherry Studio semantics (option A): when the page context is attached
+    // this turn, it is written back into the persisted user message. That way
+    // the context becomes part of the conversation history, so the model can
+    // see it on every subsequent turn via `history` — without re-sending the
+    // full page markdown each time. The user bubble shows the page too, but
+    // ChatMessage collapses long user messages so it stays readable.
+    if (page && promptOutput.sentUserContent) {
+      const userMsg = capturedMessages.find((m) => m.id === currentUserMsgId)
+      if (userMsg) userMsg.content = promptOutput.sentUserContent
+    }
 
     // Call provider stream.
     // Use capturedMessages (not messages.value) for all callbacks so tokens

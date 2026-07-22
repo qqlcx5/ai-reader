@@ -205,7 +205,7 @@ describe('stores/chat.store', () => {
     expect(store.messages[1].status).toBe('success')
   })
 
-  it('should send page context to the model on the first turn but keep the user message clean', async () => {
+  it('should send page context to the model on the first turn AND persist it into the user message (Cherry Studio option A)', async () => {
     await seedModel()
     setupStreamSuccess('Summary')
     const store = useChatStore()
@@ -231,8 +231,9 @@ describe('stores/chat.store', () => {
     expect(mockBuild).toHaveBeenCalledWith(expect.objectContaining({ userInput: '' }))
     const builtInput = mockBuild.mock.calls.at(-1)![0]
     expect(builtInput.context).toContain('Page content')
-    // ...but the persisted user message stays clean (no page dump).
-    expect(store.messages[0].content).toBe('')
+    // ...and it is written back into the persisted user message, so later
+    // turns can inherit it via history (option A).
+    expect(store.messages[0].content).toContain('Page content')
   })
 
   // Regression: a mounted page MUST reach the model on the first turn even
@@ -264,8 +265,46 @@ describe('stores/chat.store', () => {
     const builtInput = mockBuild.mock.calls.at(-1)![0]
     expect(builtInput.context).toContain('Page body')
     expect(builtInput.userInput).toBe('What is this about?')
-    // Persisted user message keeps only the question.
-    expect(store.messages[0].content).toBe('What is this about?')
+    // Persisted user message now carries the page context too (option A),
+    // so it can flow into later turns via history.
+    expect(store.messages[0].content).toContain('Page body')
+    expect(store.messages[0].content).toContain('What is this about?')
+  })
+
+  // Option A payoff: the page context persisted in turn 1 becomes history
+  // on turn 2, so the model can see the page without it being re-attached.
+  it('should make page context visible to the model on turn 2 via inherited history (option A)', async () => {
+    await seedModel()
+    const store = useChatStore()
+    const documentStore = useDocumentStore()
+    documentStore.setCurrentDocument({
+      id: 'doc-1',
+      title: 'Page',
+      url: 'https://example.com',
+      markdown: 'Page body',
+      wordCount: 2,
+      tokenCount: 2,
+      contentHash: 'hash',
+      extractionMethod: 'manual',
+      source: 'library',
+      capturedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    })
+    await store.createConversation('doc-1')
+
+    setupStreamSuccess('First answer')
+    await store.sendMessage('Q1')
+    setupStreamSuccess('Second answer')
+    await store.sendMessage('Q2')
+
+    // Turn 2: page is NOT re-attached as context (first-turn-only guard),
+    // but it MUST appear in the history that's sent to the model — inherited
+    // from the turn-1 user message that persisted it.
+    const secondBuilt = mockBuild.mock.calls.at(-1)![0]
+    expect(secondBuilt.context).toBeUndefined()
+    const historyUserMsg = secondBuilt.history?.find((h: { role: string; content: string }) => h.role === 'user')
+    expect(historyUserMsg?.content).toContain('Page body')
+    expect(historyUserMsg?.content).toContain('Q1')
   })
 
   // 4. sendMessage validation: no model selected
