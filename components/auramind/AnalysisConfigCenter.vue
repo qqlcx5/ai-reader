@@ -13,6 +13,7 @@ import RulesTab from './config/RulesTab.vue'
 import WorkflowTab from './config/WorkflowTab.vue'
 import ScheduleTab from './config/ScheduleTab.vue'
 import CostTab from './config/CostTab.vue'
+import QueueStatusBar from './config/QueueStatusBar.vue'
 import type { SelectOption } from './config/select-option'
 
 type TabId = 'rules' | 'workflow' | 'schedule' | 'cost'
@@ -88,8 +89,13 @@ onMounted(async () => {
       </button>
     </div>
 
+    <!-- Queue status: global runtime state, visible across all tabs -->
+    <div class="px-3 pt-3 shrink-0">
+      <QueueStatusBar />
+    </div>
+
     <!-- Tab content (no inner scroll — let the parent page scroll) -->
-    <div class="min-h-0 p-4 overflow-visible">
+    <div class="min-h-50 p-4 overflow-visible">
       <RulesTab
         v-if="activeTab === 'rules'"
         :model-options="modelOptions"

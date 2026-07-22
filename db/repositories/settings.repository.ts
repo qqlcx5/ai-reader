@@ -67,9 +67,7 @@ export const SettingsRepository: IRepository<AppSettings> & {
         ...existing.capture,
       },
       autoAnalysis: {
-        enabled: existing.autoAnalysis?.enabled ?? false,
-        modelId: existing.autoAnalysis?.modelId,
-        promptTemplateId: existing.autoAnalysis?.promptTemplateId,
+        queuePaused: existing.autoAnalysis?.queuePaused,
       },
       createdAt: existing.createdAt || dayjs().toISOString(),
       updatedAt: dayjs().toISOString(),

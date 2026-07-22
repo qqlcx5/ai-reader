@@ -6,7 +6,7 @@ import { useWorkflowStore } from '@/stores/workflow.store'
 import type { WorkflowEntity } from '@/types/workflow'
 import type { SelectOption } from './select-option'
 
-defineProps<{
+const props = defineProps<{
   modelOptions: SelectOption[]
   templateOptions: SelectOption[]
 }>()
@@ -107,18 +107,17 @@ function stepIncomplete(wf: WorkflowEntity): boolean {
           />
           <select
             v-model="step.templateId"
-            class="min-w-0 w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+            class="min-w-0 w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none focus:border-brand"
             @change="persistWorkflow(wf)"
           >
-            <option value="">不使用模板</option>
-            <option v-for="opt in templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            <option v-for="opt in props.templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
           <select
             v-model="step.modelId"
-            class="min-w-0 w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+            class="min-w-0 w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none focus:border-brand"
             @change="persistWorkflow(wf)"
           >
-            <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            <option v-for="opt in props.modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
           <button
             class="p-0.5 rounded text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"

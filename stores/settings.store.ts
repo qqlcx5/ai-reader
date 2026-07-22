@@ -25,9 +25,7 @@ const defaultCaptureSettings: CaptureSettings = {
   compressRawHtml: true,
 }
 
-const defaultAutoAnalysisSettings: AutoAnalysisSettings = {
-  enabled: false,
-}
+const defaultAutoAnalysisSettings: AutoAnalysisSettings = {}
 
 function createDefaultSettings(): AppSettings {
   return {

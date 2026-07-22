@@ -9,7 +9,7 @@ import { useCollectionStore } from '@/stores/collection.store'
 import type { ScheduleEntity, ScheduleScope } from '@/types/schedule'
 import type { SelectOption } from './select-option'
 
-defineProps<{
+const props = defineProps<{
   modelOptions: SelectOption[]
   templateOptions: SelectOption[]
 }>()
@@ -63,6 +63,11 @@ function scheduleStatusLabel(sched: ScheduleEntity): string {
   if (sched.lastFiredAt) return `上次执行：${dayjs(sched.lastFiredAt).format('MM-DD HH:mm')}`
   return '尚未执行'
 }
+
+const modelOptionsWithDefault = computed<SelectOption[]>(() => [
+  { value: '', label: '默认模型' },
+  ...props.modelOptions,
+])
 </script>
 
 <template>
@@ -159,7 +164,7 @@ function scheduleStatusLabel(sched: ScheduleEntity): string {
           <label class="text-[10px] text-zinc-500 w-12 shrink-0">合集</label>
           <select
             v-model="sched.collectionId"
-            class="flex-1 text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+            class="flex-1 text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none focus:border-brand"
             @change="persistSchedule(sched)"
           >
             <option value="">选择合集</option>
@@ -173,22 +178,20 @@ function scheduleStatusLabel(sched: ScheduleEntity): string {
             <label class="text-[9px] text-zinc-400 block mb-0.5">模型</label>
             <select
               v-model="sched.modelId"
-              class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+              class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none focus:border-brand"
               @change="persistSchedule(sched)"
             >
-              <option value="">默认模型</option>
-              <option v-for="opt in modelOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              <option v-for="opt in modelOptionsWithDefault" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
           <div>
             <label class="text-[9px] text-zinc-400 block mb-0.5">模板</label>
             <select
               v-model="sched.promptTemplateId"
-              class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none"
+              class="w-full text-[10px] bg-white border border-zinc-200 rounded px-1.5 py-1 outline-none focus:border-brand"
               @change="persistSchedule(sched)"
             >
-              <option value="">不使用模板</option>
-              <option v-for="opt in templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              <option v-for="opt in props.templateOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
         </div>

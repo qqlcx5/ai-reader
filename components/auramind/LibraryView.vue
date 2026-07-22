@@ -524,7 +524,7 @@ function cancelDelete() {
             </button>
           </div>
 
-          <div class="w-[120px] shrink-0">
+          <div class="w-[85px] shrink-0">
             <Select
               :model-value="documentStore.librarySortKey"
               :options="sortOptions"

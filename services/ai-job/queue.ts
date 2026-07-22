@@ -2,10 +2,8 @@ import dayjs from 'dayjs'
 import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { ModelRepository } from '@/db/repositories/model.repository'
-import { SettingsRepository } from '@/db/repositories/settings.repository'
 import { WorkflowRepository } from '@/db/repositories/workflow.repository'
 import { findMatchingRule } from '@/services/ai-job/rule-engine'
-import type { AppSettings } from '@/types/settings'
 import type { AiJobPriority } from '@/types/ai-job'
 import type { WorkflowEntity } from '@/types/workflow'
 
@@ -14,23 +12,18 @@ function uuid(): string {
 }
 
 /**
- * Enqueue an auto-analysis job for a document. No-op when the feature is off,
- * unconfigured (no usable model), or a job already exists for the
- * document — enforcing one analysis per document. Retry is a separate op.
+ * Enqueue an auto-analysis job for a document. No-op when unconfigured
+ * (no usable model) or a job already exists for the document — enforcing
+ * one analysis per document. Retry is a separate op.
  *
- * Model/template/priority resolution order:
+ * Auto-analysis is always on for newly captured docs. Model/template/priority
+ * resolution order:
  *   1. First matching analysis rule (if any) overrides the defaults.
- *   2. Falls back to autoAnalysis.modelId / promptTemplateId (priority normal).
- *   3. modelId unset → global default model.
+ *   2. Falls back to the global default model + system prompt (priority normal).
  */
 export async function enqueueForDocument(
   documentId: string,
-  settings?: AppSettings,
 ): Promise<void> {
-  const s = settings ?? (await SettingsRepository.get())
-  const cfg = s?.autoAnalysis
-  if (!cfg?.enabled) return
-
   // One job per document (dedupe).
   if ((await AiJobRepository.findByDocument(documentId)).length) return
 
@@ -39,12 +32,12 @@ export async function enqueueForDocument(
 
   // Rule match overrides default model/template/priority.
   const matchedRule = await findMatchingRule(doc)
-  const modelId = matchedRule?.modelId || cfg.modelId || (await ModelRepository.findDefault())?.id
+  const modelId = matchedRule?.modelId || (await ModelRepository.findDefault())?.id
   if (!modelId) return
 
   // A matching rule may intentionally use only the system prompt; the default
-  // auto-analysis path does too, as exposed by the settings UI.
-  const promptTemplateId = matchedRule?.promptTemplateId || cfg.promptTemplateId || ''
+  // auto-analysis path does too (system prompt only).
+  const promptTemplateId = matchedRule?.promptTemplateId || ''
   const priority: AiJobPriority = matchedRule?.priority ?? 'normal'
 
   await AiJobRepository.save({

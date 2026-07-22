@@ -1,36 +1,10 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { Zap, RefreshCw, Trash2, RotateCcw } from '@lucide/vue'
-import Switch from '@/components/ui/Switch.vue'
-import Select from '@/components/ui/Select.vue'
-import UButton from '@/components/ui/UButton.vue'
-import { useSettingsStore } from '@/stores/settings.store'
-import { useModelStore } from '@/stores/model.store'
-import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import { useAiJobStore } from '@/stores/ai-job.store'
 
-const settingsStore = useSettingsStore()
-const modelStore = useModelStore()
-const promptStore = usePromptTemplateStore()
 const aiJobStore = useAiJobStore()
-
-const cfg = computed(() => settingsStore.settings.autoAnalysis)
-
-const modelOptions = computed(() =>
-  modelStore.models
-    .filter((m) => m.enabled)
-    .map((m) => ({ value: m.id, label: m.name })),
-)
-
-const templateOptions = computed(() => [
-  { value: '__none__', label: '不使用模板（仅系统提示词）' },
-  ...promptStore.templates.map((t) => ({ value: t.id, label: t.title })),
-])
-
-function setStatus(v: boolean) {
-  settingsStore.updateAutoAnalysis({ enabled: v })
-}
 
 onMounted(async () => {
   aiJobStore.loadJobs()
@@ -68,39 +42,11 @@ function fmtTime(iso?: string) {
         <Zap class="w-3.5 h-3.5 text-zinc-400" />
         自动 AI 分析
       </span>
-      <Switch :model-value="cfg.enabled" @update:model-value="setStatus" />
-    </div>
-
-    <div class="p-3 space-y-2.5">
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="text-[11px] text-zinc-500 font-medium">模型</label>
-          <Select
-            :model-value="cfg.modelId ?? ''"
-            :options="modelOptions"
-            class="mt-1"
-            @update:model-value="(v: string) => settingsStore.updateAutoAnalysis({ modelId: v })"
-          />
-        </div>
-        <div>
-          <label class="text-[11px] text-zinc-500 font-medium">提示词模板</label>
-          <Select
-            :model-value="cfg.promptTemplateId ?? '__none__'"
-            :options="templateOptions"
-            placeholder="不选则使用系统提示词"
-            class="mt-1"
-            @update:model-value="(v: string) => settingsStore.updateAutoAnalysis({ promptTemplateId: v === '__none__' ? undefined : v })"
-          />
-        </div>
-      </div>
-      <p class="text-[10px] text-zinc-400 leading-relaxed">
-        开启后，自动入库的文章会用所选模型 + 模板自动分析，结果存为该文档的一条会话。
-        模板可留空 —— 只用系统提示词也能工作。仅对「自动入库」的订阅源生效。
-      </p>
+      <span class="text-[10px] text-zinc-400">新捕获的文档将自动入队</span>
     </div>
 
     <!-- Queue -->
-    <div class="border-t border-zinc-100 p-3">
+    <div class="p-3">
       <div class="flex items-center justify-between mb-2">
         <span class="text-[11px] text-zinc-400 font-medium">处理队列</span>
         <div class="flex items-center gap-1">

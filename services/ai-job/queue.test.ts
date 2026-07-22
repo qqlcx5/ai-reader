@@ -2,41 +2,20 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from '@/db'
 import { enqueueForDocument, enqueueBatch } from './queue'
 import { AiJobRepository } from '@/db/repositories/ai-job.repository'
-import type { AppSettings } from '@/types/settings'
 
 async function resetDB() {
   await Promise.all([db.documents, db.models, db.settings, db.kvMeta, db.aiJobs, db.analysisRules].map((t) => t.clear()))
 }
 
-function settings(over: Partial<AppSettings['autoAnalysis']> = {}): AppSettings {
-  return {
-    id: 'app-settings',
-    globalSystemPrompt: '',
-    context: {
-      maxContextTokens: 1050000,
-      includeMetadataInPrompt: true,
-      includeUrlInPrompt: true,
-      includeTitleInPrompt: true,
-      includeCapturedAtInPrompt: false,
-      includeConversationHistory: true,
-      maxHistoryMessages: 20,
-    },
-    capture: {
-      autoExtractOnOpen: true,
-      autoExtractOnTabChange: false,
-      preferCache: true,
-      saveRawHtml: false,
-      compressRawHtml: true,
-    },
-    autoAnalysis: { enabled: true, modelId: 'm1', promptTemplateId: 'tpl-1', ...over },
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: '2026-01-01T00:00:00Z',
-  }
-}
-
 describe('enqueueForDocument', () => {
   beforeEach(async () => {
     await resetDB()
+    // Default model resolved via ModelRepository.findDefault().
+    await db.models.put({
+      id: 'm1', name: 'M1', provider: 'openai-compatible', modelId: 'gpt-4',
+      enabled: true, isDefault: true,
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    })
     await db.documents.put({
       id: 'doc-1',
       url: 'https://x',
@@ -52,30 +31,26 @@ describe('enqueueForDocument', () => {
     })
   })
 
-  it('enqueues a pending job when enabled + configured', async () => {
-    await enqueueForDocument('doc-1', settings())
+  it('enqueues a pending job using the default model', async () => {
+    await enqueueForDocument('doc-1')
     const jobs = await AiJobRepository.findByDocument('doc-1')
     expect(jobs).toHaveLength(1)
     expect(jobs[0].status).toBe('pending')
     expect(jobs[0].documentTitle).toBe('T')
+    expect(jobs[0].modelId).toBe('m1')
+    expect(jobs[0].promptTemplateId).toBe('')
   })
 
   it('does not duplicate (one job per document)', async () => {
-    await enqueueForDocument('doc-1', settings())
-    await enqueueForDocument('doc-1', settings())
+    await enqueueForDocument('doc-1')
+    await enqueueForDocument('doc-1')
     expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(1)
   })
 
-  it('is a no-op when disabled', async () => {
-    await enqueueForDocument('doc-1', settings({ enabled: false }))
+  it('is a no-op when no default model is configured', async () => {
+    await db.models.clear()
+    await enqueueForDocument('doc-1')
     expect(await AiJobRepository.findByDocument('doc-1')).toHaveLength(0)
-  })
-
-  it('enqueues with system prompt only when no template is configured', async () => {
-    await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
-    const jobs = await AiJobRepository.findByDocument('doc-1')
-    expect(jobs).toHaveLength(1)
-    expect(jobs[0].promptTemplateId).toBe('')
   })
 
   // ── rule engine integration ──
@@ -92,7 +67,7 @@ describe('enqueueForDocument', () => {
       wordCount: 1, tokenCount: 1, contentHash: 'hg', extractionMethod: 'manual',
       source: 'library', capturedAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     })
-    await enqueueForDocument('doc-gh', settings())
+    await enqueueForDocument('doc-gh')
     const jobs = await AiJobRepository.findByDocument('doc-gh')
     expect(jobs).toHaveLength(1)
     expect(jobs[0].modelId).toBe('m-rule')
@@ -100,32 +75,18 @@ describe('enqueueForDocument', () => {
     expect(jobs[0].priority).toBe('high')
   })
 
-  it('non-matching rule falls back to autoAnalysis defaults', async () => {
+  it('non-matching rule falls back to the global default model + system prompt', async () => {
     await db.analysisRules.put({
       id: 'r1', name: 'never matches', enabled: true,
       conditions: [{ field: 'domain', operator: 'contains', value: 'nonexistent.example' }],
       modelId: 'm-rule', promptTemplateId: 'tpl-rule', priority: 'high',
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     })
-    await enqueueForDocument('doc-1', settings())
+    await enqueueForDocument('doc-1')
     const jobs = await AiJobRepository.findByDocument('doc-1')
-    expect(jobs[0].modelId).toBe('m1') // from settings
-    expect(jobs[0].promptTemplateId).toBe('tpl-1')
+    expect(jobs[0].modelId).toBe('m1') // global default
+    expect(jobs[0].promptTemplateId).toBe('') // system prompt only
     expect(jobs[0].priority).toBe('normal')
-  })
-
-  it('non-matching rule still uses system-prompt-only default when template is empty', async () => {
-    await db.analysisRules.put({
-      id: 'r1', name: 'never matches', enabled: true,
-      conditions: [{ field: 'domain', operator: 'contains', value: 'nonexistent.example' }],
-      modelId: 'm-rule', promptTemplateId: 'tpl-rule', priority: 'high',
-      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
-    })
-    await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
-    const jobs = await AiJobRepository.findByDocument('doc-1')
-    expect(jobs).toHaveLength(1)
-    expect(jobs[0].modelId).toBe('m1')
-    expect(jobs[0].promptTemplateId).toBe('')
   })
 
   it('matching rule allows empty template (rule explicitly opts in)', async () => {
@@ -135,7 +96,7 @@ describe('enqueueForDocument', () => {
       modelId: 'm-rule', promptTemplateId: '', priority: 'normal',
       createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
     })
-    await enqueueForDocument('doc-1', settings({ promptTemplateId: undefined }))
+    await enqueueForDocument('doc-1')
     const jobs = await AiJobRepository.findByDocument('doc-1')
     expect(jobs).toHaveLength(1)
     expect(jobs[0].promptTemplateId).toBe('')

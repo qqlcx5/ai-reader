@@ -12,6 +12,11 @@ export default defineConfig({
     permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms', 'offscreen'],
     host_permissions: ['<all_urls>'],
   },
+  dev: {
+    server: {
+      port: 8080,
+    },
+  },
   // vite: () => ({
   //   build: {
   //     chunkSizeWarningLimit: 500,
