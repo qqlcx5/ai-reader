@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
-import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard, GitBranch } from '@lucide/vue'
+import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard, GitBranch, Paperclip } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
 import { formatMessageForCopy, copyToClipboard } from '@/utils/conversation-export'
 import type { ChatMessage } from '@/types/chat'
@@ -14,6 +14,11 @@ const props = defineProps<{
   isLastAssistant?: boolean
   /** Token usage + cost summary, e.g. "1.5k · ¥0.003" */
   meta?: string
+  /** When set, renders a compact "📄 {label}" tag inside a user bubble to
+   *  indicate the conversation's bound page context. Only passed for the
+   *  first user message of a conversation (option 3: context lives on the
+   *  document, not in the message, so later messages need no tag). */
+  contextLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -28,15 +33,6 @@ const isUser = computed(() => props.message.role === 'user')
 const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
-
-// Long user messages (e.g. first send with page context attached) collapse
-// to a few lines with an expand toggle, so the chat isn't dominated by one
-// giant bubble. Threshold is char-based — cheap and good enough.
-const USER_COLLAPSE_THRESHOLD = 280
-const userExpanded = ref(false)
-const userCollapsible = computed(() =>
-  isUser.value && props.message.content.length > USER_COLLAPSE_THRESHOLD,
-)
 
 const isHovered = ref(false)
 const thinkingExpanded = ref(false)
@@ -165,17 +161,15 @@ onUnmounted(() => {
     </div>
     <div
       class="max-w-[84%] bg-brand text-white text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-sm shadow-sm whitespace-pre-wrap"
-      :class="!userExpanded && userCollapsible ? 'max-h-[7.5em] overflow-hidden' : ''"
     >
-      {{ message.content }}
-      <button
-        v-if="userCollapsible"
-        type="button"
-        class="block mt-1 text-[11px] text-white/80 hover:text-white underline-offset-2 hover:underline"
-        @click.stop="userExpanded = !userExpanded"
+      <div
+        v-if="contextLabel"
+        class="flex items-center gap-1 mb-1.5 pb-1.5 border-b border-white/20 text-[10px] text-white/80"
       >
-        {{ userExpanded ? '收起' : '展开全部内容' }}
-      </button>
+        <Paperclip class="w-3 h-3 shrink-0" />
+        <span class="truncate">{{ contextLabel }}</span>
+      </div>
+      {{ message.content }}
     </div>
   </div>
 

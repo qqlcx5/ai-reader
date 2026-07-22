@@ -62,13 +62,25 @@ export const useChatStore = defineStore('chat', () => {
     { immediate: true },
   )
 
-  /** True when there's a mounted page with content AND the user hasn't
-   *  disabled context. Has nothing to do with whether history exists —
-   *  the first-turn-vs-history distinction is handled at the call site. */
+  /** Resolve the document whose context should be attached. Priority:
+   *  the conversation's bound document (durable — survives reload) → the
+   *  in-memory mounted page (current-page capture). Returns undefined when
+   *  the document can't be found (e.g. deleted from the library). */
+  function resolveAttachedDocument(documentStore: ReturnType<typeof useDocumentStore>) {
+    const boundId = currentDocumentId.value
+    if (boundId) {
+      const inList = documentStore.documents.find((d) => d.id === boundId)
+      if (inList) return inList
+    }
+    return documentStore.pageDocument || documentStore.currentDocument
+  }
+
+  /** True when there's an attachable document with content AND the user
+   *  hasn't disabled context. */
   function hasAttachablePageContext(): boolean {
     if (!includeContext.value) return false
     const documentStore = useDocumentStore()
-    const doc = documentStore.pageDocument || documentStore.currentDocument
+    const doc = resolveAttachedDocument(documentStore)
     return !!doc?.markdown?.trim()
   }
 
@@ -295,14 +307,10 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     // All slots in one regenerate call share the same user message, so they
-    // share the same first-turn/context decision.
+    // share the same context-attachment decision. Option 3: page context is
+    // re-attached every turn from the bound document, independent of history.
     const firstSlot = slots[0]
-    const regenUserIdx = messages.value.findIndex((m) => m.id === firstSlot.userMsg.id)
-    const hasPriorHistory = regenUserIdx >= 0
-      && messages.value.slice(0, regenUserIdx).some((m) =>
-        (m.role === 'user' || m.role === 'assistant') && m.content.trim(),
-      )
-    const attachContext = !hasPriorHistory
+    const attachContext = hasAttachablePageContext()
 
     // Create one fresh streaming assistant per slot.
     const assistantMsgs: ChatMessage[] = slots.map(({ model }) => ({
@@ -645,17 +653,18 @@ export const useChatStore = defineStore('chat', () => {
     // Build prompt using the captured messages array so history remains stable
     // if the user switches conversations during streaming.
     const capturedMessages = streamState.messages
-    const hasHistory = capturedMessages.some((message) =>
-      message.id !== currentUserMsgId
-      && message.id !== assistantMsg.id
-      && (message.role === 'user' || message.role === 'assistant')
-      && message.content.trim().length > 0,
-    )
     const documentStore = useDocumentStore()
     let page: { title: string; url: string; markdown: string; wordCount: number; tokenCount: number; siteName?: string; capturedAt?: string } | undefined
     let highlights: Highlight[] | undefined
-    if (attachContext && !hasHistory && hasAttachablePageContext()) {
-      const doc = documentStore.pageDocument || documentStore.currentDocument
+    // Option 3 (Cherry Studio semantics, DB-clean variant): the page context
+    // is NEVER persisted into the user message — DB stays clean and the chat
+    // bubble shows only the user's question. Instead, on EVERY turn the
+    // context is re-attached from the conversation's bound document, so the
+    // model sees it regardless of turn number. Source priority: the
+    // conversation's bound document (durable across reloads) → in-memory
+    // mounted page (current-page capture, not yet saved).
+    if (attachContext && hasAttachablePageContext()) {
+      const doc = resolveAttachedDocument(documentStore)
       if (doc?.markdown) {
         page = {
           title: doc.title,
@@ -684,16 +693,11 @@ export const useChatStore = defineStore('chat', () => {
       userInput: userContent,
     })
 
-    // Cherry Studio semantics (option A): when the page context is attached
-    // this turn, it is written back into the persisted user message. That way
-    // the context becomes part of the conversation history, so the model can
-    // see it on every subsequent turn via `history` — without re-sending the
-    // full page markdown each time. The user bubble shows the page too, but
-    // ChatMessage collapses long user messages so it stays readable.
-    if (page && promptOutput.sentUserContent) {
-      const userMsg = capturedMessages.find((m) => m.id === currentUserMsgId)
-      if (userMsg) userMsg.content = promptOutput.sentUserContent
-    }
+    // NOTE: page context is NEVER written into the persisted user message
+    // (option 3). DB content stays as the user's raw question, so the chat
+    // bubble stays clean. The model still sees the page every turn because
+    // it's re-attached above from the bound document — no history inheritance
+    // needed.
 
     // Call provider stream.
     // Use capturedMessages (not messages.value) for all callbacks so tokens

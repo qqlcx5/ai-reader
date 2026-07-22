@@ -267,6 +267,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         v-if="round.userMsg.content"
         :message="round.userMsg"
         :model-name="modelNameFor(round.userMsg.modelId, round.userMsg.modelConfigId)"
+        :context-label="ri === 0 && contextTitle ? `已附带：${contextTitle}` : undefined"
         @copy="handleCopy"
         @delete="handleDeleteMessage"
         @edit="handleEdit"
