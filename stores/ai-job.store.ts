@@ -3,9 +3,21 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { AiJobRepository } from '../db/repositories/ai-job.repository'
 import { SettingsRepository } from '../db/repositories/settings.repository'
-import { drainAll, cancelJob, reclaimStaleJobs } from '../services/ai-job/processor'
+import { drainAll, cancelJob } from '../services/ai-job/processor'
 import { enqueueBatch, type BatchEnqueueOptions } from '../services/ai-job/queue'
-import type { AiJobEntity, AiJobStats, AiJobFilter, AiJobStatus, AiJobPriority } from '../types/ai-job'
+import {
+  cancelPendingJob,
+  clearCompletedJobs,
+  clearJobsByStatus,
+  removeJob,
+  removeJobs,
+  reorderJobs,
+  retryJob,
+  retryJobs,
+  setJobPriority,
+  setJobsPriority,
+} from '../services/ai-job/job-control'
+import type { AiJobEntity, AiJobStats, AiJobStatus, AiJobPriority } from '../types/ai-job'
 import { PRIORITY_WEIGHT } from '../types/ai-job'
 
 export const useAiJobStore = defineStore('ai-job', () => {
@@ -15,37 +27,6 @@ export const useAiJobStore = defineStore('ai-job', () => {
   const stats = ref<AiJobStats>({
     total: 0, pending: 0, processing: 0, success: 0, failed: 0, cancelled: 0,
     successRate: 0, avgDurationMs: 0,
-  })
-
-  // Filter state for the analysis panel
-  const filter = ref<AiJobFilter>({ status: 'all' })
-
-  // ── Multi-select state ──
-  const selectedIds = ref<Set<string>>(new Set())
-  const selectMode = ref(false)
-
-  const filteredJobs = computed(() => {
-    let result = jobs.value
-
-    if (filter.value.status && filter.value.status !== 'all') {
-      result = result.filter((j) => j.status === filter.value.status)
-    }
-    if (filter.value.modelId) {
-      result = result.filter((j) => j.modelId === filter.value.modelId)
-    }
-    if (filter.value.batchId) {
-      result = result.filter((j) => j.batchId === filter.value.batchId)
-    }
-    if (filter.value.search) {
-      const q = filter.value.search.toLowerCase()
-      result = result.filter(
-        (j) =>
-          j.documentTitle?.toLowerCase().includes(q) ||
-          j.error?.toLowerCase().includes(q),
-      )
-    }
-
-    return result
   })
 
   /** Pending jobs sorted by priority → sortOrder → createdAt (for drag-and-drop list). */
@@ -79,33 +60,6 @@ export const useAiJobStore = defineStore('ai-job', () => {
     return [...map.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   })
 
-  // ── Selection helpers ──
-  function toggleSelect(jobId: string) {
-    const s = new Set(selectedIds.value)
-    if (s.has(jobId)) s.delete(jobId)
-    else s.add(jobId)
-    selectedIds.value = s
-  }
-
-  function selectAll() {
-    selectedIds.value = new Set(filteredJobs.value.map((j) => j.id))
-  }
-
-  function selectNone() {
-    selectedIds.value = new Set()
-  }
-
-  function toggleSelectMode() {
-    selectMode.value = !selectMode.value
-    if (!selectMode.value) selectNone()
-  }
-
-  const selectedJobs = computed(() =>
-    jobs.value.filter((j) => selectedIds.value.has(j.id)),
-  )
-
-  const selectedCount = computed(() => selectedIds.value.size)
-
   async function loadJobs() {
     jobs.value = await AiJobRepository.findAll()
     await refreshStats()
@@ -136,14 +90,7 @@ export const useAiJobStore = defineStore('ai-job', () => {
   /** Reset a failed/cancelled job to pending and kick off a drain. */
   async function retry(jobId: string) {
     const job = jobs.value.find((j) => j.id === jobId) ?? (await AiJobRepository.findById(jobId))
-    if (!job || (job.status !== 'failed' && job.status !== 'cancelled')) return
-    await AiJobRepository.save({
-      ...job,
-      status: 'pending',
-      error: undefined,
-      cancelRequested: false,
-      retries: job.retries + 1,
-    })
+    if (!job || !(await retryJob(job))) return
     await loadJobs()
     void drain()
   }
@@ -156,10 +103,7 @@ export const useAiJobStore = defineStore('ai-job', () => {
     if (job.status === 'processing') {
       await cancelJob(jobId)
     } else if (job.status === 'pending') {
-      await AiJobRepository.setStatus(jobId, 'cancelled', {
-        finishedAt: dayjs().toISOString(),
-        error: undefined,
-      })
+      await cancelPendingJob(jobId)
     }
     await loadJobs()
   }
@@ -168,82 +112,57 @@ export const useAiJobStore = defineStore('ai-job', () => {
   async function retryAllFailed() {
     const retryableJobs = jobs.value.filter((j) => j.status === 'failed' || j.status === 'cancelled')
     if (!retryableJobs.length) return
-
-    for (const job of retryableJobs) {
-      await AiJobRepository.save({
-        ...job,
-        status: 'pending',
-        error: undefined,
-        cancelRequested: false,
-        retries: job.retries + 1,
-      })
-    }
+    await retryJobs(retryableJobs)
     await loadJobs()
     void drain()
   }
 
-  /** Retry selected failed or cancelled jobs. */
-  async function retrySelected() {
-    const toRetry = selectedJobs.value.filter((j) => j.status === 'failed' || j.status === 'cancelled')
-    if (!toRetry.length) return
-    for (const job of toRetry) {
-      await AiJobRepository.save({
-        ...job,
-        status: 'pending',
-        error: undefined,
-        cancelRequested: false,
-        retries: job.retries + 1,
-      })
-    }
-    selectNone()
+  /** Retry the supplied failed or cancelled jobs. */
+  async function retryMany(ids: string[]) {
+    const selected = jobs.value.filter((j) => ids.includes(j.id))
+    if (!selected.length) return
+    await retryJobs(selected)
     await loadJobs()
     void drain()
   }
 
   async function remove(jobId: string) {
-    await AiJobRepository.delete(jobId)
+    await removeJob(jobId)
     await loadJobs()
   }
 
-  /** Delete all selected jobs. */
-  async function removeSelected() {
-    const ids = [...selectedIds.value]
-    if (!ids.length) return
-    await AiJobRepository.deleteMany(ids)
-    selectNone()
+  /** Delete the supplied jobs. */
+  async function removeMany(ids: string[]) {
+    await removeJobs(ids)
     await loadJobs()
   }
 
   async function clearDone() {
-    await AiJobRepository.deleteByStatus('success')
-    await AiJobRepository.deleteByStatus('failed')
+    await clearCompletedJobs()
     await loadJobs()
   }
 
   /** Remove all jobs matching a given status. */
   async function clearByStatus(status: AiJobStatus) {
-    await AiJobRepository.deleteByStatus(status)
+    await clearJobsByStatus(status)
     await loadJobs()
   }
 
   /** Set priority for a single job. */
   async function setPriority(jobId: string, priority: AiJobPriority) {
-    await AiJobRepository.batchUpdate([jobId], { priority })
+    await setJobPriority(jobId, priority)
     await loadJobs()
   }
 
-  /** Set priority for all selected jobs. */
-  async function setPrioritySelected(priority: AiJobPriority) {
-    const ids = [...selectedIds.value]
-    if (!ids.length) return
-    await AiJobRepository.batchUpdate(ids, { priority })
-    selectNone()
+  /** Set priority for the supplied jobs. */
+  async function setPriorityMany(ids: string[], priority: AiJobPriority) {
+    await setJobsPriority(ids, priority)
     await loadJobs()
   }
 
   /** Reorder pending jobs (drag-and-drop). Pass the full ordered list of pending job IDs. */
   async function reorderPendingJobs(orderedIds: string[]) {
-    await AiJobRepository.reorderPendingJobs(orderedIds)
+    await reorderJobs(orderedIds)
     await loadJobs()
   }
 
@@ -272,36 +191,13 @@ export const useAiJobStore = defineStore('ai-job', () => {
     }
   }
 
-  function setFilter(patch: Partial<AiJobFilter>) {
-    filter.value = { ...filter.value, ...patch }
-  }
-
-  function resetFilter() {
-    filter.value = { status: 'all' }
-  }
-
   return {
     jobs,
-    filteredJobs,
     sortedPendingJobs,
     batches,
     draining,
     queuePaused,
     stats,
-    filter,
-    // multi-select
-    selectedIds,
-    selectMode,
-    selectedJobs,
-    selectedCount,
-    toggleSelect,
-    selectAll,
-    selectNone,
-    toggleSelectMode,
-    removeSelected,
-    retrySelected,
-    setPrioritySelected,
-    // actions
     loadJobs,
     refreshStats,
     refreshPauseState,
@@ -309,14 +205,15 @@ export const useAiJobStore = defineStore('ai-job', () => {
     retry,
     cancel,
     retryAllFailed,
+    retryMany,
     remove,
+    removeMany,
     clearDone,
     clearByStatus,
     setPriority,
+    setPriorityMany,
     reorderPendingJobs,
     enqueueBatchJobs,
     drain,
-    setFilter,
-    resetFilter,
   }
 })

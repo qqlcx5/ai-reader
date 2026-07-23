@@ -11,6 +11,7 @@ import { DocumentRepository } from '../db/repositories/document.repository'
 import { toast } from '@/utils/toast'
 import type { FeedEntity, FeedItemEntity } from '@/types/feed'
 import type { AiJobEntity } from '@/types/ai-job'
+import { retryJob } from '@/services/ai-job/job-control'
 import type { ConversationEntity } from '@/types/chat'
 import { db } from '@/db/index'
 
@@ -194,12 +195,7 @@ export const useFeedStore = defineStore('feed', () => {
   async function retryAiJob(jobId: string) {
     const job = aiJobMap.value[jobId] ?? (await AiJobRepository.findById(jobId))
     if (!job || job.status !== 'failed') return
-    await AiJobRepository.save({
-      ...job,
-      status: 'pending',
-      error: undefined,
-      retries: job.retries + 1,
-    })
+    await retryJob(job)
     await loadAiJobs()
     // Trigger drain
     const { drainAll } = await import('../services/ai-job/processor')

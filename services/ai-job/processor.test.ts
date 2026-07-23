@@ -258,6 +258,24 @@ describe('ai-job processor', () => {
     expect(job?.status).toBe('pending')
   })
 
+  it('stops before the next job when the queue is paused mid-drain', async () => {
+    let calls = 0
+    chatMock.mockImplementation(async () => {
+      calls++
+      await db.settings.put({ id: 'app-settings', autoAnalysis: { queuePaused: true } } as any)
+      return { content: 'ok', usage: { totalTokens: 1 } }
+    })
+
+    await AiJobRepository.save({ id: 'job-first', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1', status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z' })
+    await AiJobRepository.save({ id: 'job-second', documentId: 'doc-1', modelId: 'm1', promptTemplateId: 'tpl-1', status: 'pending', retries: 0, createdAt: '2026-01-01T00:00:00Z' })
+
+    const r = await drainAll()
+    expect(r.processed).toBe(1)
+    expect(calls).toBe(1)
+    expect((await AiJobRepository.findById('job-first'))?.status).toBe('success')
+    expect((await AiJobRepository.findById('job-second'))?.status).toBe('pending')
+  })
+
   it('processes pending jobs sorted by priority (high first)', async () => {
     // Save settings (not paused)
     await db.settings.put({
