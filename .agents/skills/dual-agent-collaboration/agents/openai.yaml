@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex × Claude 双模型协作"
+  short_description: "让 Codex 与 Claude Code 对称协作并交叉校核到 ACK"
+  default_prompt: "Use $dual-agent-collaboration to run this task through Codex and Claude Code with enforced intent, plan, implementation, and final gates."
