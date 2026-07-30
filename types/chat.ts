@@ -33,6 +33,14 @@
   genMs?: number
 }
 
+export interface SteeringMessage {
+  id: string
+  content: string
+  modelConfigIds: string[]
+  createdAt: string
+  error?: string
+}
+
 export interface ConversationEntity {
   id: string
 
@@ -40,6 +48,12 @@ export interface ConversationEntity {
 
   title?: string
   messages: ChatMessage[]
+  /** Messages entered while another response was generating. */
+  steeringQueue?: SteeringMessage[]
+  /** The conversation this path was branched from, when applicable. */
+  parentConversationId?: string
+  /** Message boundary used to create this path. */
+  branchedAtMessageId?: string
 
   createdAt: string
   updatedAt: string

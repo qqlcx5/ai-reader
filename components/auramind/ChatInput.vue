@@ -1,6 +1,6 @@
 ﻿<script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X } from '@lucide/vue'
+import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X, List, Play } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useModelStore } from '@/stores/model.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -19,6 +19,7 @@ const promptTemplateStore = usePromptTemplateStore()
 
 // ── Template popover ─────────────────────────────────────
 const showTemplatePanel = ref(false)
+const showQueuePanel = ref(false)
 const showTemplateManager = ref(false)
 const newTemplateTitle = ref('')
 const newTemplateContent = ref('')
@@ -124,8 +125,8 @@ const sendLabel = computed(() => {
 const canSendMulti = computed(() => {
   const msg = chatStore.inputText.trim()
   if (!msg && !chatStore.canSendEmpty) return false
-  if (chatStore.isSending || chatStore.isStreaming) return false
   if (multiModelIds.value.length === 0) return false
+  if (chatStore.isSending || chatStore.isStreaming) return !!msg
 
   // Single-model: delegate to store canSend (handleModelChange already
   // keeps multiModelIds and modelStore.currentModelId in sync).
@@ -162,9 +163,13 @@ function submit() {
     ? multiModelIds.value
     : modelStore.currentModelId ? [modelStore.currentModelId] : []
 
-  chatStore.sendMessage(msg, modelIds).catch((e: Error) => {
-    chatStore.lastError = e.message || '发送失败，请重试'
-  })
+  if (chatStore.isSending || chatStore.isStreaming) {
+    chatStore.enqueueMessage(msg, modelIds)
+  } else {
+    chatStore.sendMessage(msg, modelIds).catch((e: Error) => {
+      chatStore.lastError = e.message || '发送失败，请重试'
+    })
+  }
   chatStore.setInputText('')
 }
 
@@ -337,6 +342,27 @@ function handleStop() {
       </div>
     </div>
 
+    <div
+      v-if="showQueuePanel && chatStore.steeringQueue.length > 0"
+      class="absolute bottom-full right-3 mb-2 w-72 max-h-64 bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden z-30"
+    >
+      <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100">
+        <span class="text-[12px] font-semibold text-zinc-700">待处理消息 {{ chatStore.steeringQueue.length }}</span>
+        <button class="text-zinc-400 hover:text-zinc-700" title="关闭队列" @click="showQueuePanel = false"><X class="w-3.5 h-3.5" /></button>
+      </div>
+      <div class="max-h-48 overflow-y-auto p-1">
+        <div v-for="item in chatStore.steeringQueue" :key="item.id" class="flex items-start gap-2 px-2 py-2 text-[12px] hover:bg-zinc-50">
+          <span class="flex-1 min-w-0 break-words text-zinc-700">{{ item.content }}</span>
+          <button class="shrink-0 text-zinc-400 hover:text-red-500" title="移除排队消息" @click="chatStore.removeQueuedMessage(item.id)"><X class="w-3 h-3" /></button>
+        </div>
+      </div>
+      <button
+        v-if="chatStore.queuePaused"
+        class="w-full flex items-center justify-center gap-1 border-t border-zinc-100 py-2 text-[11px] text-brand hover:bg-brand/5"
+        @click="chatStore.resumeQueue()"
+      ><Play class="w-3 h-3" />继续处理队列</button>
+    </div>
+
     <div class="bg-white border border-zinc-200 rounded-2xl shadow-lg overflow-hidden">
       <div class="flex items-center justify-between px-3 pt-2">
         <div class="flex items-center gap-1">
@@ -362,6 +388,15 @@ function handleStop() {
             <Cpu class="w-3 h-3" />
             No model
           </UButton>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <button
+            v-if="chatStore.steeringQueue.length > 0"
+            class="flex items-center gap-1 px-1.5 py-0.5 rounded border border-brand/20 bg-brand/5 text-brand text-[11px]"
+            :title="chatStore.queuePaused ? '队列已暂停' : '查看待处理消息'"
+            @click="showQueuePanel = !showQueuePanel"
+          ><List class="w-3 h-3" />{{ chatStore.steeringQueue.length }}</button>
         </div>
 
         <div
@@ -401,22 +436,24 @@ function handleStop() {
           @update:model-value="chatStore.setInputText($event)"
           @keydown="handleKeydown"
         />
-        <!-- Send button -->
+        <!-- Send or enqueue button -->
         <UButton
-          v-if="!chatStore.isStreaming"
           variant="primary"
-          class="absolute right-2 bottom-2 p-1.5 !rounded-lg"
+          class="absolute right-10 bottom-2 p-1.5 !rounded-lg"
           :disabled="!canSendMulti"
+          :title="chatStore.isStreaming || chatStore.isSending ? '加入生成队列' : '发送消息'"
           @click="submit"
         >
-          <Send class="w-3.5 h-3.5" />
-          <span v-if="sendLabel" class="ml-1 text-[11px]">{{ sendLabel }}</span>
+          <List v-if="chatStore.isStreaming || chatStore.isSending" class="w-3.5 h-3.5" />
+          <Send v-else class="w-3.5 h-3.5" />
+          <span v-if="sendLabel && !chatStore.isStreaming && !chatStore.isSending" class="ml-1 text-[11px]">{{ sendLabel }}</span>
         </UButton>
         <!-- Stop button during streaming -->
         <UButton
-          v-else
+          v-if="chatStore.isStreaming"
           variant="ghost"
           class="absolute right-2 bottom-2 p-1.5 !rounded-lg text-red-500"
+          title="停止生成"
           @click="handleStop"
         >
           <Square class="w-3.5 h-3.5" />

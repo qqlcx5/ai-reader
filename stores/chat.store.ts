@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { defineStore } from 'pinia'
-import { ref, computed, toRaw, watch } from 'vue'
-import type { ConversationEntity, ChatMessage } from '../types/chat'
+import { ref, computed, toRaw, watch, nextTick } from 'vue'
+import type { ConversationEntity, ChatMessage, SteeringMessage } from '../types/chat'
 import { ChatRepository } from '../db/repositories/chat.repository'
 import { useModelStore } from './model.store'
 import { useSettingsStore } from './settings.store'
@@ -28,6 +28,8 @@ export const useChatStore = defineStore('chat', () => {
    * "naked" question without the page markdown appended as context.
    */
   const includeContext = ref(true)
+  const steeringQueue = ref<SteeringMessage[]>([])
+  const queuePaused = ref(false)
 
   /** Per-conversation stream state. Key = conversationId. */
   interface StreamState {
@@ -127,6 +129,61 @@ export const useChatStore = defineStore('chat', () => {
 
   function setIncludeContext(value: boolean) {
     includeContext.value = value
+  }
+
+  function syncQueueFromConversation(conv?: ConversationEntity) {
+    steeringQueue.value = conv?.steeringQueue ? cloneSteeringQueue(conv.steeringQueue) : []
+    queuePaused.value = false
+  }
+
+  async function persistQueue(): Promise<void> {
+    const cid = currentConversationId.value
+    if (!cid) return
+    const conv = await ChatRepository.findById(cid)
+    if (!conv) return
+    conv.steeringQueue = cloneSteeringQueue(steeringQueue.value)
+    await ChatRepository.save(conv)
+    const idx = conversations.value.findIndex((item) => item.id === cid)
+    if (idx !== -1) conversations.value[idx] = { ...conversations.value[idx], steeringQueue: cloneSteeringQueue(steeringQueue.value) }
+  }
+
+  function enqueueMessage(content: string, modelConfigIds: string[]): void {
+    const text = content.trim()
+    if (!text || !currentConversationId.value) return
+    steeringQueue.value.push({
+      id: crypto.randomUUID(),
+      content: text,
+      modelConfigIds: [...modelConfigIds],
+      createdAt: dayjs().toISOString(),
+    })
+    void persistQueue()
+  }
+
+  async function removeQueuedMessage(id: string): Promise<void> {
+    steeringQueue.value = steeringQueue.value.filter((item) => item.id !== id)
+    await persistQueue()
+  }
+
+  async function resumeQueue(): Promise<void> {
+    queuePaused.value = false
+    await drainQueue()
+  }
+
+  async function drainQueue(): Promise<void> {
+    await nextTick()
+    if (queuePaused.value || isSending.value || isStreaming.value) return
+    const next = steeringQueue.value[0]
+    if (!next) return
+    steeringQueue.value.shift()
+    await persistQueue()
+    try {
+      await sendMessage(next.content, next.modelConfigIds)
+    } catch (err) {
+      next.error = err instanceof Error ? err.message : String(err)
+      steeringQueue.value.unshift(next)
+      queuePaused.value = true
+      await persistQueue()
+    }
   }
 
   function clearError() {
@@ -356,6 +413,13 @@ export const useChatStore = defineStore('chat', () => {
       streamStates.value.delete(cid)
       if (!controller.signal.aborted) {
         await persistConversationForId(cid, capturedMessages)
+        const failed = capturedMessages.some((message) => message.role === 'assistant' && message.status === 'failed')
+        if (failed && cid === currentConversationId.value) {
+          queuePaused.value = true
+          await persistQueue()
+        } else if (!failed && cid === currentConversationId.value) {
+          await drainQueue()
+        }
       }
     }
   }
@@ -365,6 +429,8 @@ export const useChatStore = defineStore('chat', () => {
     if (conv) {
       messages.value = [...conv.messages]
       currentConversationId.value = conv.id
+      currentDocumentId.value = conv.documentId
+      syncQueueFromConversation(conv)
     }
   }
 
@@ -384,9 +450,11 @@ export const useChatStore = defineStore('chat', () => {
       const mostRecent = conversations.value[0]
       messages.value = [...mostRecent.messages]
       currentConversationId.value = mostRecent.id
+      syncQueueFromConversation(mostRecent)
     } else {
       messages.value = []
       currentConversationId.value = null
+      syncQueueFromConversation()
     }
   }
 
@@ -415,6 +483,7 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = []
     currentConversationId.value = conv.id
     currentDocumentId.value = documentId
+    syncQueueFromConversation(conv)
 
     // Add to conversations list
     conversations.value.unshift(conv)
@@ -439,6 +508,8 @@ export const useChatStore = defineStore('chat', () => {
       id: crypto.randomUUID(),
       documentId: source.documentId,
       title: `${source.title || '新对话'} 分支`,
+      parentConversationId: source.id,
+      branchedAtMessageId: messageId,
       messages: cloneMessages(messages.value.slice(0, index + 1)),
       createdAt: now,
       updatedAt: now,
@@ -452,6 +523,43 @@ export const useChatStore = defineStore('chat', () => {
     return branch
   }
 
+  async function restoreConversationAt(messageId: string): Promise<ConversationEntity> {
+    const sourceId = currentConversationId.value
+    if (!sourceId) throw new Error('No active conversation to restore.')
+    const index = messages.value.findIndex((message) => message.id === messageId)
+    if (index === -1) throw new Error('Message not found.')
+
+    await persistConversation()
+    const source = await ChatRepository.findById(sourceId)
+    if (!source) throw new Error('Conversation not found.')
+
+    const now = dayjs().toISOString()
+    const snapshot: ConversationEntity = {
+      id: crypto.randomUUID(),
+      documentId: source.documentId,
+      title: `${source.title || '新对话'} 恢复前`,
+      parentConversationId: source.id,
+      branchedAtMessageId: messageId,
+      messages: cloneMessages(messages.value),
+      steeringQueue: cloneSteeringQueue(steeringQueue.value),
+      createdAt: now,
+      updatedAt: now,
+    }
+    await ChatRepository.save(snapshot)
+    conversations.value.unshift(snapshot)
+
+    messages.value = cloneMessages(messages.value.slice(0, index + 1))
+    steeringQueue.value = []
+    queuePaused.value = false
+    source.messages = cloneMessages(messages.value)
+    source.steeringQueue = []
+    source.updatedAt = now
+    await ChatRepository.save(source)
+    const sourceIndex = conversations.value.findIndex((item) => item.id === source.id)
+    if (sourceIndex !== -1) conversations.value[sourceIndex] = { ...source }
+    return source
+  }
+
   async function switchConversation(conversationId: string): Promise<void> {
     // Persist current before switching
     await persistConversation()
@@ -463,6 +571,8 @@ export const useChatStore = defineStore('chat', () => {
     if (activeStream) {
       messages.value = activeStream.messages
       currentConversationId.value = conversationId
+      const activeConv = conversations.value.find((item) => item.id === conversationId)
+      syncQueueFromConversation(activeConv)
       return
     }
 
@@ -470,6 +580,8 @@ export const useChatStore = defineStore('chat', () => {
     if (conv) {
       messages.value = [...conv.messages]
       currentConversationId.value = conv.id
+      currentDocumentId.value = conv.documentId
+      syncQueueFromConversation(conv)
     }
   }
 
@@ -484,6 +596,8 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = []
     currentConversationId.value = null
     currentDocumentId.value = null
+    steeringQueue.value = []
+    queuePaused.value = false
     streamStates.value.clear()
   }
 
@@ -635,6 +749,13 @@ export const useChatStore = defineStore('chat', () => {
       if (!signal.aborted) {
         streamStates.value.delete(cid)
         await persistConversationForId(cid, capturedMessages)
+        const failed = capturedMessages.some((message) => message.role === 'assistant' && message.status === 'failed')
+        if (failed && cid === currentConversationId.value) {
+          queuePaused.value = true
+          await persistQueue()
+        } else if (!failed && cid === currentConversationId.value) {
+          await drainQueue()
+        }
       } else {
         streamStates.value.delete(cid)
       }
@@ -800,6 +921,10 @@ export const useChatStore = defineStore('chat', () => {
    * fall back to JSON round-trip which naturally strips functions, Symbols,
    * and undefined values.
    */
+  function cloneSteeringQueue(items: SteeringMessage[]): SteeringMessage[] {
+    return items.map((item) => ({ ...item, modelConfigIds: [...item.modelConfigIds] }))
+  }
+
   function cloneMessages(msgs: ChatMessage[]): ChatMessage[] {
     const raw = toRaw(msgs)
     try {
@@ -953,12 +1078,17 @@ export const useChatStore = defineStore('chat', () => {
     isSending,
     lastError,
     includeContext,
+    steeringQueue,
+    queuePaused,
     // computed
     canSend,
     canSendEmpty,
     // actions
     setInputText,
     setIncludeContext,
+    enqueueMessage,
+    removeQueuedMessage,
+    resumeQueue,
     clearError,
     sendMessage,
     stopGeneration,
@@ -969,6 +1099,7 @@ export const useChatStore = defineStore('chat', () => {
     loadConversations,
     createConversation,
     branchConversationAt,
+    restoreConversationAt,
     switchConversation,
     updateConversationTitle,
     deleteConversation,

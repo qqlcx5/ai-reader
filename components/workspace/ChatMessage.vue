@@ -27,12 +27,21 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
   (e: 'edit', id: string, content: string): void
   (e: 'branch', id: string): void
+  (e: 'restore', id: string): void
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
 const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
+const statusLabel = computed(() => {
+  if (isFailed.value) return '失败'
+  if (isAborted.value) return '已停止'
+  if (isStreaming.value && props.message.reasoningContent && !props.message.content) return '思考中'
+  if (isStreaming.value) return '生成中'
+  if (props.message.status === 'pending' || props.message.status === 'sending') return '准备中'
+  return '已完成'
+})
 
 const isHovered = ref(false)
 const thinkingExpanded = ref(false)
@@ -190,6 +199,7 @@ onUnmounted(() => {
         >{{ modelName }}</span>
       </template>
       <span v-else class="text-[12px]">AuraMind</span>
+      <span class="text-[10px] font-normal text-zinc-400">{{ statusLabel }}</span>
       <!-- Action buttons (appear on hover, right side of header) -->
       <div
         v-show="isHovered"
@@ -216,6 +226,13 @@ onUnmounted(() => {
           @click.stop="emit('branch', message.id)"
         >
           <GitBranch class="w-3 h-3" />
+        </button>
+        <button
+          class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-brand hover:bg-brand/5 transition-colors"
+          title="恢复到此处"
+          @click.stop="emit('restore', message.id)"
+        >
+          <ChevronDown class="w-3 h-3 rotate-90" />
         </button>
         <button
           class="w-6 flex items-center justify-center rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 transition-colors"

@@ -192,6 +192,15 @@ async function handleBranch(id: string) {
   }
 }
 
+async function handleRestore(id: string) {
+  try {
+    await chatStore.restoreConversationAt(id)
+    appStore.showToast('已恢复到历史节点，原路径已保存', 'success')
+  } catch {
+    appStore.showToast('恢复历史节点失败', 'error')
+  }
+}
+
 function handleDetachContext() {
   // Detach the current page context from the chat dialog. The document
   // itself stays in the library; we just clear the in-memory refs so
@@ -272,6 +281,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         @delete="handleDeleteMessage"
         @edit="handleEdit"
         @branch="handleBranch"
+        @restore="handleRestore"
       />
 
       <!-- Single assistant: normal flow -->
@@ -285,6 +295,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
         @copy="handleCopy"
         @delete="handleDeleteMessage"
         @branch="handleBranch"
+        @restore="handleRestore"
       />
 
       <!-- Multi-assistant: side-by-side card layout -->
@@ -304,6 +315,7 @@ const lastAssistantMsgId = computed<string | null>(() => {
           @copy="handleCopy"
           @delete="handleDeleteMessage"
           @branch="handleBranch"
+          @restore="handleRestore"
         />
       </div>
     </template>
