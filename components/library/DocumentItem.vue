@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
 import { formatRelative } from '@/utils/date'
-import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus, Check } from '@lucide/vue'
+import { MessageSquare, Trash2, Globe, ExternalLink, FolderPlus, Check, Zap, AlertCircle, Loader2 } from '@lucide/vue'
 import type { DocumentEntity } from '@/types/document'
 import { getReadStatus } from '@/types/document'
+
+export type AnalysisStatus = 'success' | 'failed' | 'pending' | 'none'
 
 const props = defineProps<{
   document: DocumentEntity
   hasConversation?: boolean
+  analysisStatus?: AnalysisStatus
   selectionMode?: boolean
   selected?: boolean
 }>()
@@ -108,6 +111,24 @@ const excerpt = computed(() => {
           <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
           <span class="inline-flex items-center gap-0.5 text-brand shrink-0">
             <MessageSquare class="w-3 h-3" />已对话
+          </span>
+        </template>
+        <template v-if="analysisStatus === 'success'">
+          <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+          <span class="inline-flex items-center gap-0.5 text-emerald-600 shrink-0" title="AI 分析完成">
+            <Zap class="w-3 h-3" />已分析
+          </span>
+        </template>
+        <template v-else-if="analysisStatus === 'failed'">
+          <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+          <span class="inline-flex items-center gap-0.5 text-red-500 shrink-0" title="AI 分析失败">
+            <AlertCircle class="w-3 h-3" />分析失败
+          </span>
+        </template>
+        <template v-else-if="analysisStatus === 'pending'">
+          <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+          <span class="inline-flex items-center gap-0.5 text-amber-500 shrink-0" title="AI 分析排队中">
+            <Loader2 class="w-3 h-3 animate-spin" />分析中
           </span>
         </template>
       </div>

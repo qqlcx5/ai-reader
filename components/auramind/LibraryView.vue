@@ -9,9 +9,11 @@ import { useChatStore } from '@/stores/chat.store'
 import { useCollectionStore } from '@/stores/collection.store'
 import { searchDocuments } from '@/services/search'
 import { ChatRepository } from '@/db/repositories/chat.repository'
+import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import type { DocumentEntity } from '@/types/document'
 import type { LibrarySortKey } from '@/types/document'
 import { getReadStatus } from '@/types/document'
+import type { AnalysisStatus } from '@/components/library/DocumentItem.vue'
 import SearchBar from '@/components/library/SearchBar.vue'
 import { exportDocumentsToZip, downloadBlob } from '@/utils/export'
 import DocumentItem from '@/components/library/DocumentItem.vue'
@@ -37,6 +39,7 @@ const statusFilter = ref<'all' | 'unread' | 'reading' | 'read' | 'conversation'>
 const siteFilter = ref<string | null>(null)
 const tagFilter = ref<string | null>(null)
 const conversationDocIds = ref<Set<string>>(new Set())
+const analysisStatusMap = ref<Map<string, AnalysisStatus>>(new Map())
 
 // ── Multi-select mode ──
 const multiSelectActive = ref(false)
@@ -245,8 +248,32 @@ async function loadConversationIndex() {
   }
 }
 
+async function loadAnalysisStatusIndex() {
+  try {
+    const jobs = await AiJobRepository.findAll()
+    const map = new Map<string, AnalysisStatus>()
+    for (const job of jobs) {
+      const existing = map.get(job.documentId)
+      // Priority: success > processing > pending > failed > none
+      if (job.status === 'success') {
+        map.set(job.documentId, 'success')
+      } else if (job.status === 'processing' && existing !== 'success') {
+        map.set(job.documentId, 'pending')
+      } else if (job.status === 'pending' && !existing) {
+        map.set(job.documentId, 'pending')
+      } else if (job.status === 'failed' && !existing) {
+        map.set(job.documentId, 'failed')
+      }
+    }
+    analysisStatusMap.value = map
+  } catch {
+    // non-critical
+  }
+}
+
 onMounted(() => {
   loadConversationIndex()
+  loadAnalysisStatusIndex()
   collectionStore.loadCollections()
   nextTick(setupLoadMore)
 })
@@ -255,6 +282,7 @@ watch(
   () => documentStore.documents.length,
   () => {
     loadConversationIndex()
+    loadAnalysisStatusIndex()
   },
 )
 
@@ -582,6 +610,7 @@ function cancelDelete() {
           :key="doc.id"
           :document="doc"
           :has-conversation="conversationDocIds.has(doc.id)"
+          :analysis-status="analysisStatusMap.get(doc.id) || 'none'"
           :selection-mode="multiSelectActive"
           :selected="documentStore.selectedIds.has(doc.id)"
           @select="handleDocumentClick"

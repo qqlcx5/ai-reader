@@ -1,5 +1,6 @@
 import { setupFeedAlarm, onFeedAlarm } from '@/services/feed/bg-refresh'
 import { reclaimStaleJobs } from '@/services/ai-job/processor'
+import { bgDrain } from '@/services/ai-job/bg-drain'
 import { runSchedules } from '@/services/schedule/runner'
 
 export default defineBackground(() => {
@@ -129,9 +130,15 @@ export default defineBackground(() => {
   setupFeedAlarm()
   setupScheduleAlarm()
   b.alarms?.onAlarm?.addListener((alarm: any) => {
-    if (alarm?.name === FEED_ALARM) onFeedAlarm()
+    if (alarm?.name === FEED_ALARM) {
+      onFeedAlarm()
+      // After feed refresh may have enqueued new jobs, try a lightweight drain.
+      bgDrain().catch((e: any) => console.warn('[bg] post-feed drain failed:', e))
+    }
     if (alarm?.name === SCHEDULE_ALARM) {
       runSchedules().catch((e: any) => console.warn('[bg] schedule tick failed:', e))
+      // Schedule runs may also enqueue jobs; give them a chance to process.
+      bgDrain().catch((e: any) => console.warn('[bg] post-schedule drain failed:', e))
     }
   })
 

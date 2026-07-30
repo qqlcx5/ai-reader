@@ -11,6 +11,27 @@ function uuid(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
+const browser: any = (globalThis as any).browser ?? (globalThis as any).chrome
+
+/** Track enqueue skips for batch notification. Reset on each refresh cycle. */
+let enqueueSkips = { noModel: 0, total: 0 }
+
+/** Flush a notification to the panel (if open) about skipped auto-analyses. */
+export function notifyEnqueueSkips() {
+  if (enqueueSkips.noModel === 0) return
+  try {
+    browser?.runtime?.sendMessage?.({
+      type: 'AI_JOB_SKIPPED',
+      payload: {
+        reason: 'no_model',
+        count: enqueueSkips.noModel,
+        message: `RSS 自动收集了 ${enqueueSkips.total} 篇文章，但未配置默认模型，已跳过自动分析`,
+      },
+    })
+  } catch { /* panel may not be open */ }
+  enqueueSkips = { noModel: 0, total: 0 }
+}
+
 /**
  * Enqueue an auto-analysis job for a document. No-op when unconfigured
  * (no usable model) or a job already exists for the document — enforcing
@@ -33,7 +54,12 @@ export async function enqueueForDocument(
   // Rule match overrides default model/template/priority.
   const matchedRule = await findMatchingRule(doc)
   const modelId = matchedRule?.modelId || (await ModelRepository.findDefault())?.id
-  if (!modelId) return
+  if (!modelId) {
+    enqueueSkips.noModel++
+    enqueueSkips.total++
+    return
+  }
+  enqueueSkips.total++
 
   // A matching rule may intentionally use only the system prompt; the default
   // auto-analysis path does too (system prompt only).
