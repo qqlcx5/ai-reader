@@ -40,6 +40,11 @@ const MAX_CONCURRENCY = 5
 const MAX_COLLECT_PER_RUN = 10
 const MAX_RETRIES = 2
 
+/** How long before a failed collect item gets an automatic retry.
+ *  24h: covers transient issues (rate-limits, temporary outages) without
+ *  re-hammering permanently broken URLs every 30 min. */
+const COLLECT_ERROR_TTL_MS = 24 * 60 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -176,6 +181,9 @@ export async function refreshOneFeed(feed: FeedEntity): Promise<BgRefreshResult>
 }
 
 // ---------------------------------------------------------------------------
+// Flush enqueue-skip notifications after a full refresh cycle.
+
+// ---------------------------------------------------------------------------
 // Collect all uncollected items for a single feed (panel-requested)
 // ---------------------------------------------------------------------------
 
@@ -215,7 +223,13 @@ export async function collectFeedItems(feedId: string): Promise<CollectResult> {
 export async function refreshAllFeeds(): Promise<BgRefreshResult[]> {
   const feeds = await FeedRepository.findAll()
   // Process feeds in parallel (fetch is I/O-bound)
-  return Promise.all(feeds.map(refreshOneFeed))
+  const results = await Promise.all(feeds.map(refreshOneFeed))
+  // After all feeds are refreshed, flush any pending enqueue-skip notification.
+  try {
+    const { notifyEnqueueSkips } = await import('@/services/ai-job/queue')
+    notifyEnqueueSkips()
+  } catch { /* best-effort */ }
+  return results
 }
 
 // ---------------------------------------------------------------------------
@@ -237,12 +251,25 @@ export async function collectBatch(
   origin: 'manual' | 'auto',
   minWords: number = DEFAULT_MIN_WORDS,
 ): Promise<CollectResult> {
-  // Skip items that already have a failure marker. They were given a fair
-  // shot (3 internal retries); the next auto-run shouldn't waste a worker
-  // slot on them. The panel "collect" button clears the marker first so
-  // a user-initiated retry actually retries.
+  // Skip items that already have a document. For items with a collectError,
+  // only skip if the error is still within the TTL window — expired errors
+  // get cleared so the item gets a fresh automatic retry.
+  const now = Date.now()
   const toCollect = items
-    .filter((i) => !i.documentId && !i.collectError)
+    .filter((i) => {
+      if (i.documentId) return false
+      if (!i.collectError) return true
+      // Error exists — check TTL
+      const errorAge = i.collectErrorAt
+        ? now - new Date(i.collectErrorAt).getTime()
+        : Infinity
+      if (errorAge >= COLLECT_ERROR_TTL_MS) {
+        // TTL expired — clear the error so this item gets retried
+        FeedItemRepository.clearCollectError(i.id)?.catch?.(() => {})
+        return true
+      }
+      return false
+    })
     .slice(0, MAX_COLLECT_PER_RUN)
 
   if (!toCollect.length) return { total: 0, collected: 0, failed: 0, items: [] }

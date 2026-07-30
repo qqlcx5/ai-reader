@@ -39,11 +39,18 @@ const windowMode = isWindowMode()
 useBackNavigation()
 
 function handleBackgroundMessage(
-  message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload> | { type: string; payload?: { tabId?: number } },
+  message: MessageEnvelope<TabActivatedPayload | TabUpdatedPayload> | { type: string; payload?: { tabId?: number; message?: string; count?: number } },
 ) {
   if (message.type === 'FLOATING_CAPTURE') {
     const tabId = message.payload?.tabId
     if (tabId) triggerAutoExtract(tabId)
+    return
+  }
+  if (message.type === 'AI_JOB_SKIPPED') {
+    const payload = message.payload
+    if (payload?.message) {
+      appStore.showToast(payload.message, 'warning')
+    }
     return
   }
   if (message.type === 'TAB_ACTIVATED' || message.type === 'TAB_UPDATED') {

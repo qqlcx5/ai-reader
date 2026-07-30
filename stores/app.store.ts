@@ -36,7 +36,7 @@ export const useAppStore = defineStore('app', () => {
     return true
   }
 
-  function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  function showToast(message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') {
     toastService[type](message)
   }
 

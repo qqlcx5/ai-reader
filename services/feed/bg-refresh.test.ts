@@ -67,12 +67,13 @@ describe('collectBatch — collectError filter', () => {
     vi.clearAllMocks()
   })
 
-  it('skips items that have a collectError marker', async () => {
+  it('skips items that have a recent collectError marker (within TTL)', async () => {
+    const recentError = new Date(Date.now() - 60 * 60 * 1000).toISOString() // 1h ago
     const items = [
-      makeItem('a', { collectError: 'previous failure' }),
-      makeItem('b', { collectError: 'previous failure' }),
+      makeItem('a', { collectError: 'previous failure', collectErrorAt: recentError }),
+      makeItem('b', { collectError: 'previous failure', collectErrorAt: recentError }),
     ]
-    // collectBatch should filter out all items with collectError → empty result
+    // collectBatch should filter out items with recent collectError → empty result
     const result = await collectBatch(items, 'auto', 200)
     expect(result.total).toBe(0)
     expect(result.collected).toBe(0)
@@ -80,6 +81,20 @@ describe('collectBatch — collectError filter', () => {
     // Should not attempt to collect any items
     expect(FeedItemRepository.setCollectError).not.toHaveBeenCalled()
     expect(FeedItemRepository.setDocument).not.toHaveBeenCalled()
+  })
+
+  it('retries items whose collectError has expired beyond TTL', async () => {
+    const oldError = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() // 25h ago
+    const items = [
+      makeItem('a', { collectError: 'previous failure', collectErrorAt: oldError }),
+    ]
+    // collectBatch should retry expired errors
+    const result = await collectBatch(items, 'auto', 200)
+    expect(result.total).toBe(1) // item 'a' is eligible (error expired)
+    expect(result.collected).toBe(0) // extraction fails in test env
+    expect(result.failed).toBe(1) // 'a' fails after retries
+    // Should have cleared the stale error
+    expect(FeedItemRepository.clearCollectError).toHaveBeenCalledWith('a')
   })
 
   it('includes items without collectError', async () => {
