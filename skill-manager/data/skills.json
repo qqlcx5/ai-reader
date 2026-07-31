@@ -1,0 +1,4155 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-31T12:40:41.046Z",
+  "skills": [
+    {
+      "id": "api-and-interface-design",
+      "slug": "api-and-interface-design",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/api-and-interface-design/SKILL.md",
+        "localPath": "../.agents/skills/api-and-interface-design/SKILL.md",
+        "hash": "3cf54553433e55875c664baf78f9c769820bdfac155f09bf2989d70e20e6e147"
+      },
+      "rawContent": {
+        "path": "content/api-and-interface-design.md",
+        "hash": "293db2903b41316a5109a1e0ce3e1740eeafae31735bc1f9143dafbfd1187363",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "api-and-interface-design",
+        "summary": "Guides stable API and interface design. Use when designing APIs, module boundaries, or any public interface. Use when creating REST or GraphQL endpoints, defining type contracts between modules, or establishing boundaries between frontend and backend.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "ask-matt",
+      "slug": "ask-matt",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/ask-matt/SKILL.md",
+        "localPath": "../.agents/skills/ask-matt/SKILL.md",
+        "hash": "0f843160e34a24f5bd12cdc7de7d40951e77fbdc05ce8f891b37ca32eac2c44d"
+      },
+      "rawContent": {
+        "path": "content/ask-matt.md",
+        "hash": "b1a134ada29cbfded84bc9a7f93356ab7a3d7f800edf1f541a2a964118ad45a7",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "ask-matt",
+        "summary": "Ask which skill or flow fits your situation. A router over the skills in this repo.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "auto-task",
+      "slug": "auto-task",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "auto-task/SKILL.md",
+        "localPath": "../.agents/skills/auto-task/SKILL.md",
+        "hash": "1c9ebc9b117bfeacadee9f59b250859b9b9da4a542662f654c29beebe4ad0219"
+      },
+      "rawContent": {
+        "path": "content/auto-task.md",
+        "hash": "bfd25c3908db5c64420f273c9537cbe789f960c8ffeafa6d719a1231348cbc1c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "auto-task",
+        "summary": "复杂长程任务的自主执行流程。当用户有一个复杂或模糊的任务（\"帮我搞清楚 X / 帮我评估 Y / 帮我把这堆东西整理出来 / 帮我对比 N 个方案 / 帮我跑一次调研\"），希望 AI 自己拆解、自己执行、自己校验、只在关键时刻找用户的场景。通过\"任务确认 → 任务队列 → 分批执行 → 周期校验队列 → 触发式汇报\"实现 1-2 小时无人值守的自主执行。当用户说\"帮我搞清楚 / 评估一下 / 整理一下 / 对比一下 / 跑一次调研 / 你自己跑别打扰我 / 长程任务 / 自主跑\"时触发。**不适用于**：UI 设计（用 design-exploration）、待办优先级（用 priority-judge）、文章写作（用 writing-assistant）、需求池管理（用 backlog-manager）、终局发散（用 vision-exploration）、起名（用 product-naming）、有明确 spec 的实现编码任务（直接编码）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "backlog-manager",
+      "slug": "backlog-manager",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "backlog-manager/SKILL.md",
+        "localPath": "../.agents/skills/backlog-manager/SKILL.md",
+        "hash": "b0774939caba2d9cbb1cda7fbbd11db5c3fb9e8795d134731c37c934ffe590c7"
+      },
+      "rawContent": {
+        "path": "content/backlog-manager.md",
+        "hash": "0742dcef3e2a2dec0e5e03c7bbb66642303e460f0e73f7a1aa4020e54b6cbbd6",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "backlog-manager",
+        "summary": "需求池管理。用户随时抛出想法/痛点，AI 负责追问、整理、合并、归档到需求池文件。用户准备开新版本时，协助从池中筛选。痛点驱动，不做提前排期。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-article-illustrator",
+      "slug": "baoyu-article-illustrator",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-article-illustrator/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-article-illustrator/SKILL.md",
+        "hash": "eb75713fa4ba1d1f3cd7b5462dc869848ded250eb406b6618fd65aaeaaaf7b5e"
+      },
+      "rawContent": {
+        "path": "content/baoyu-article-illustrator.md",
+        "hash": "ce1c7bfe9b93e5afac1dbeac95a03f8abf8c102aeecc34a33d8f13dc10e64acd",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-article-illustrator",
+        "summary": "Analyzes article structure, identifies positions requiring visual aids, generates illustrations with Type × Style × Palette three-dimension approach. Use when user asks to \"illustrate article\", \"add images\", \"generate images for article\", or \"为文章配图\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-comic",
+      "slug": "baoyu-comic",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-comic/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-comic/SKILL.md",
+        "hash": "e55622735e6c6d43a5d718429e5ec7d122a93189c666be475ffac8fe0e40e070"
+      },
+      "rawContent": {
+        "path": "content/baoyu-comic.md",
+        "hash": "98d5de8650a3401c1ee97b3f78ebacef72f3f570ef7fe7290b192ac7d24330bc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-comic",
+        "summary": "Knowledge comic creator supporting multiple art styles and tones. Creates original educational comics with detailed panel layouts and batch-capable image generation. Use when user asks to create \"知识漫画\", \"教育漫画\", \"biography comic\", \"tutorial comic\", or \"Logicomix-style comic\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-compress-image",
+      "slug": "baoyu-compress-image",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-compress-image/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-compress-image/SKILL.md",
+        "hash": "30bc37968d803621e7833a469b722da6349665d7e80efb9a43d2f38b4928c570"
+      },
+      "rawContent": {
+        "path": "content/baoyu-compress-image.md",
+        "hash": "b14b2ac50b798aa7cdac1ba489a5963312b0faf538fdb3f88e69733045c3f9dc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-compress-image",
+        "summary": "Compresses images to WebP (default) or PNG with automatic tool selection. Use when user asks to \"compress image\", \"optimize image\", \"convert to webp\", or reduce image file size.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-cover-image",
+      "slug": "baoyu-cover-image",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-cover-image/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-cover-image/SKILL.md",
+        "hash": "578199513c1b92a3c27daa9df4b6f0030a3c1f8955c153ce93354ea8c99d2f6b"
+      },
+      "rawContent": {
+        "path": "content/baoyu-cover-image.md",
+        "hash": "36804fce98bcb9ebe4a51c26f6f276a807805aab980ca4a0718daa40a5cc7fda",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-cover-image",
+        "summary": "Generates article cover images with 5 dimensions (type, palette, rendering, text, mood) combining 11 color palettes and 7 rendering styles. Supports cinematic (2.35:1), widescreen (16:9), and square (1:1) aspects. Use when user asks to \"generate cover image\", \"create article cover\", or \"make cover\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-danger-gemini-web",
+      "slug": "baoyu-danger-gemini-web",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-danger-gemini-web/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-danger-gemini-web/SKILL.md",
+        "hash": "f065ddc74401fc5fde04dc94f0b4ba30d4840f0be665350ef2f74e3c1858d90b"
+      },
+      "rawContent": {
+        "path": "content/baoyu-danger-gemini-web.md",
+        "hash": "290c0f8b3957a21de068f8732f324aa6c05a72bc2bf23f962fe9fa874b2c0271",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-danger-gemini-web",
+        "summary": "Generates images and text via reverse-engineered Gemini Web API. Supports text generation, image generation from prompts, reference images for vision input, and multi-turn conversations. Use when other skills need image generation backend, or when user requests \"generate image with Gemini\", \"Gemini text generation\", or needs vision-capable AI generation.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-danger-x-to-markdown",
+      "slug": "baoyu-danger-x-to-markdown",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-danger-x-to-markdown/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-danger-x-to-markdown/SKILL.md",
+        "hash": "b786800bd291f647eaef5a3d42102e0a050620a1df95a65e7f0f239af53d8680"
+      },
+      "rawContent": {
+        "path": "content/baoyu-danger-x-to-markdown.md",
+        "hash": "2b34a2e4d50cd201f5a7bbb856c9c04e2b04f0e0f28fca21f165270fec957cef",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-danger-x-to-markdown",
+        "summary": "Converts X (Twitter) tweets and articles to markdown with YAML front matter. Uses reverse-engineered API requiring user consent. Use when user mentions \"X to markdown\", \"tweet to markdown\", \"save tweet\", or provides x.com/twitter.com URLs for conversion.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-diagram",
+      "slug": "baoyu-diagram",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-diagram/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-diagram/SKILL.md",
+        "hash": "6c588a89cd5aae21f8053aaed688517c1e00921db9219401abe058e879324b87"
+      },
+      "rawContent": {
+        "path": "content/baoyu-diagram.md",
+        "hash": "55a2d050c3a2faea8721d1cec31749dfafa7e7d346a586e99e757f77a3526860",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-diagram",
+        "summary": "Create professional, dark-themed SVG diagrams of any type — architecture diagrams, flowcharts, sequence diagrams, structural diagrams, mind maps, timelines, illustrative/conceptual diagrams, and more. Use this skill whenever the user asks for any kind of technical or conceptual diagram, visualization of a system, process flow, data flow, component relationship, network topology, decision tree, org chart, state machine, or any visual representation of structure/logic/process. Also trigger when the user says \"画个图\" \"画一个架构图\" \"diagram\" \"flowchart\" \"sequence diagram\" \"draw me a ...\" or uploads content and asks to visualize it. Output is always a standalone .svg file.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-electron-extract",
+      "slug": "baoyu-electron-extract",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-electron-extract/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-electron-extract/SKILL.md",
+        "hash": "09c26b04539b4f375764d9a88e3448e34ef0586fdf22d97846a283681844feb2"
+      },
+      "rawContent": {
+        "path": "content/baoyu-electron-extract.md",
+        "hash": "3f8714f3030dd12e2b11a60ed5e561c0b2297de5b31251b40f6da081e06ae4ee",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-electron-extract",
+        "summary": "Extracts resources and JavaScript from any installed Electron app (`.asar` bundle), restoring original sources from `.js.map` files when available or formatting minified code with Prettier otherwise. Use when user wants to \"extract Electron app\", \"decompile Electron\", \"get the source code of <app>\", \"inspect app.asar\", \"看 Electron 应用源码\", \"提取 .asar\", or asks how a desktop Electron app is built. Skips `node_modules` and supports both macOS and Windows.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-format-markdown",
+      "slug": "baoyu-format-markdown",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-format-markdown/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-format-markdown/SKILL.md",
+        "hash": "48ebaa7378f4c38f56d05d9b32038476ecc74732c4110160e13840c405cc7082"
+      },
+      "rawContent": {
+        "path": "content/baoyu-format-markdown.md",
+        "hash": "39bd9eeb5373365c84ac139b85a11311eab57710707e54b101e41085636b56bb",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-format-markdown",
+        "summary": "Formats plain text or markdown files with frontmatter, titles, summaries, headings, bold, lists, and code blocks. Use when user asks to \"format markdown\", \"beautify article\", \"add formatting\", or improve article layout. Outputs to {filename}-formatted.md.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-image-gen",
+      "slug": "baoyu-image-gen",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-image-gen/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-image-gen/SKILL.md",
+        "hash": "388a4e2ae4e1953476dcbda56f446a9f6896fd4423cad2f9ba66ad9c06cbc044"
+      },
+      "rawContent": {
+        "path": "content/baoyu-image-gen.md",
+        "hash": "de09b723bdc7b19d74e508d0b63e2306f03b4e48ab2b83c90ac6c99c0b7de4d0",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-image-gen",
+        "summary": "AI image generation with OpenAI GPT Image 2, Azure OpenAI, Google, OpenRouter, DashScope, Z.AI GLM-Image, MiniMax, Jimeng, Seedream, Replicate and Agnes APIs. Supports text-to-image, reference images, aspect ratios, and batch generation from saved prompt files. Sequential by default; use batch parallel generation when the user already has multiple prompts or wants stable multi-image throughput. Use when user asks to generate, create, or draw images.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-infographic",
+      "slug": "baoyu-infographic",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-infographic/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-infographic/SKILL.md",
+        "hash": "69a4a411476de945f9bc52c76799540aa6e84948ac981033706cacd0d53b62f5"
+      },
+      "rawContent": {
+        "path": "content/baoyu-infographic.md",
+        "hash": "1572aaa294c5f7547889f520b6efeed979aeaaf58b4e7c4bcaaa26ace2ee3564",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-infographic",
+        "summary": "Generate professional infographics with 21 layout types and 22 visual styles. Analyzes content, recommends layout×style combinations, and generates publication-ready infographics. Use when user asks to create \"infographic\", \"信息图\", \"visual summary\", \"可视化\", or \"高密度信息大图\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-markdown-to-html",
+      "slug": "baoyu-markdown-to-html",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-markdown-to-html/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-markdown-to-html/SKILL.md",
+        "hash": "146d2a2811343b8dbdf6eb9cffb74518a9ed373b92b5b8fc4bc7d43a7e3c096c"
+      },
+      "rawContent": {
+        "path": "content/baoyu-markdown-to-html.md",
+        "hash": "f4a5bb1697f9387557897a9c58b6406765728089a8d84cfbb6c40a93c3d136f7",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-markdown-to-html",
+        "summary": "Converts Markdown to styled HTML with WeChat-compatible themes. Supports code highlighting, math, Mermaid (rendered to PNG via headless Chrome), PlantUML, footnotes, alerts, infographics, and optional bottom citations for external links. Use when user asks for \"markdown to html\", \"convert md to html\", \"md 转 html\", \"微信外链转底部引用\", or needs styled HTML output from markdown.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-post-to-wechat",
+      "slug": "baoyu-post-to-wechat",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-post-to-wechat/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-post-to-wechat/SKILL.md",
+        "hash": "dd55c4674589436293e610f0bd3083cd6926cd05b6c9d30bb8bab446709fd02a"
+      },
+      "rawContent": {
+        "path": "content/baoyu-post-to-wechat.md",
+        "hash": "e15f1b5a51b8443ef1c8191c036301fd9b3e028069b82b625f327b0344cbc9d8",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-post-to-wechat",
+        "summary": "Posts content to WeChat Official Account (微信公众号) via API or Chrome CDP. Supports article posting (文章) with HTML, markdown, or plain text input, and image-text posting (贴图, formerly 图文) with multiple images. Markdown article workflows default to converting ordinary external links into bottom citations for WeChat-friendly output. Use when user mentions \"发布公众号\", \"post to wechat\", \"微信公众号\", or \"贴图/图文/文章\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-post-to-weibo",
+      "slug": "baoyu-post-to-weibo",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-post-to-weibo/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-post-to-weibo/SKILL.md",
+        "hash": "b2c276c86d6945bb8a0f946ec377b999abb646800e1d6f49d1443d5210e081c4"
+      },
+      "rawContent": {
+        "path": "content/baoyu-post-to-weibo.md",
+        "hash": "afc5eb6d748f8d4ff521a3bec024e51fc77d35344a502555486f029871d262d0",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-post-to-weibo",
+        "summary": "Posts content to Weibo (微博). Supports regular posts with text, images, and videos, and headline articles (头条文章) with Markdown input via Chrome CDP. Use when user asks to \"post to Weibo\", \"发微博\", \"发布微博\", \"publish to Weibo\", \"share on Weibo\", \"写微博\", or \"微博头条文章\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-post-to-x",
+      "slug": "baoyu-post-to-x",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-post-to-x/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-post-to-x/SKILL.md",
+        "hash": "9502c5351e2cfd2aee6be9cac64fab07fd5e5df04b770c28c6397376622ed988"
+      },
+      "rawContent": {
+        "path": "content/baoyu-post-to-x.md",
+        "hash": "6eca9de552dd0b7bebfbbab9192a915f73ac40396ca89501dfcfbb94efb141fc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-post-to-x",
+        "summary": "Posts content and articles to X (Twitter). Supports regular posts with images/videos and X Articles (long-form Markdown). In Codex, honor explicit requests for the Codex Chrome plugin/@chrome by using the Chrome Extension workflow; otherwise use Chrome Computer Use when available and fall back to real Chrome CDP scripts only when allowed. Use when user asks to \"post to X\", \"tweet\", \"publish to Twitter\", or \"share on X\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": true
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-slide-deck",
+      "slug": "baoyu-slide-deck",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-slide-deck/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-slide-deck/SKILL.md",
+        "hash": "ebccd43adb8bf92b172a740a455d4c88b5499e7dd1dc3f645d6087f6e76f03d0"
+      },
+      "rawContent": {
+        "path": "content/baoyu-slide-deck.md",
+        "hash": "0e988f065a1886224a501614d059e90019360ccce9fc5f5417e8719e5777efd8",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-slide-deck",
+        "summary": "Generates professional slide deck images from content. Creates outlines with style instructions, then generates individual slide images. Use when user asks to \"create slides\", \"make a presentation\", \"generate deck\", \"slide deck\", or \"PPT\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-translate",
+      "slug": "baoyu-translate",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-translate/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-translate/SKILL.md",
+        "hash": "d3bffacb1bb184ba41cbafa0ab0e70d23bf350f875f32d5b5326f40e80247487"
+      },
+      "rawContent": {
+        "path": "content/baoyu-translate.md",
+        "hash": "772f7170a61f1246d7505c97539579bb4d055f21653462e8cfaaddc65a3a5b31",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-translate",
+        "summary": ">-",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-url-to-markdown",
+      "slug": "baoyu-url-to-markdown",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-url-to-markdown/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-url-to-markdown/SKILL.md",
+        "hash": "b55b97dd2489018ab25588a7c4450eb24ea37bce501aebcb8cee9c294660d21c"
+      },
+      "rawContent": {
+        "path": "content/baoyu-url-to-markdown.md",
+        "hash": "40913749b0e95165b02771bdf17bb8ed9fa0a72787d3e09571341ab7148359d0",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-url-to-markdown",
+        "summary": "Fetch any URL and convert to markdown using baoyu-fetch CLI (Chrome CDP with site-specific adapters). Built-in adapters for X/Twitter, YouTube transcripts, Hacker News threads, and generic pages via Defuddle. Handles login/CAPTCHA via interaction wait modes. Use when user wants to save a webpage as markdown.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-wechat-summary",
+      "slug": "baoyu-wechat-summary",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-wechat-summary/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-wechat-summary/SKILL.md",
+        "hash": "0961ea87a46e714c6354d752b00927bb266bb3c9cec6b9007bbfb2c65af26f46"
+      },
+      "rawContent": {
+        "path": "content/baoyu-wechat-summary.md",
+        "hash": "6fe746670aedb1955dac6f74b096253f1935f916cc74a9709006205152c0bb86",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-wechat-summary",
+        "summary": "Summarizes WeChat group chat highlights into a structured digest using the local wx-cli binary (https://github.com/jackwener/wx-cli). Generates a normal digest by default; a roast (毒舌) version is opt-in. Maintains per-group history (history.json + history-digests.jsonl), per-user profiles, and per-group fact memory (memory.md) across runs, with privacy guardrails baked in. Use when the user asks to \"总结群聊\", \"群聊精华\", \"群聊摘要\", \"summarize group chat\", \"group chat digest\", mentions a WeChat group name with a time range, says \"帮我看看 XX 群最近聊了什么\", \"XX 群有什么值得看的\", or asks to \"回溯画像\" / \"初始化画像\" / \"backfill profiles\". Adds the roast version when the user says \"毒舌版\", \"roast 版\", \"再来个毒舌的\", or similar.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-xhs-images",
+      "slug": "baoyu-xhs-images",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-xhs-images/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-xhs-images/SKILL.md",
+        "hash": "e72f5920b91ded0902b83fd867497ba15aad072e38d3f78e032397e3170d72bb"
+      },
+      "rawContent": {
+        "path": "content/baoyu-xhs-images.md",
+        "hash": "17bf5498641cc60cb98f0cc15fbea27fd42777d119a39fb54fd6418840442bba",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-xhs-images",
+        "summary": "Generates infographic image card series with 12 visual styles, 8 layouts, and 3 color palettes. Breaks content into 1-10 cartoon-style image cards optimized for social media engagement. Use when user mentions \"小红书图片\", \"小红书种草\", \"小绿书\", \"微信图文\", \"微信贴图\", \"image cards\", \"图片卡片\", baoyu-xhs-images, or wants social media infographic series.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "baoyu-youtube-transcript",
+      "slug": "baoyu-youtube-transcript",
+      "source": {
+        "type": "github",
+        "repository": "jimliu/baoyu-skills",
+        "path": "skills/baoyu-youtube-transcript/SKILL.md",
+        "localPath": "../.agents/skills/baoyu-youtube-transcript/SKILL.md",
+        "hash": "27582028cbdd9c81232fba1aafbfa609e4dc1167bff4f2e89ca48a3ecd07049b"
+      },
+      "rawContent": {
+        "path": "content/baoyu-youtube-transcript.md",
+        "hash": "b7085574c6bf72e07c578db14316682b9ebf1e841d9db62916d284efd84c96cc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "baoyu-youtube-transcript",
+        "summary": "Downloads YouTube video transcripts/subtitles and cover images by URL or video ID. Supports multiple languages, translation, chapters, and speaker identification. Caches raw data for fast re-formatting. Use when user asks to \"get YouTube transcript\", \"download subtitles\", \"get captions\", \"YouTube字幕\", \"YouTube封面\", \"视频封面\", \"video thumbnail\", \"video cover image\", or provides a YouTube URL and wants the transcript/subtitle text or cover image extracted.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "browser-testing-with-devtools",
+      "slug": "browser-testing-with-devtools",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/browser-testing-with-devtools/SKILL.md",
+        "localPath": "../.agents/skills/browser-testing-with-devtools/SKILL.md",
+        "hash": "639950ea71851d9c4919608cba8b6276cd1ba30cd82acdc4949c701537eed661"
+      },
+      "rawContent": {
+        "path": "content/browser-testing-with-devtools.md",
+        "hash": "4e3aacd6a380cd25bc6c2d67fdd1c926a9b22535b8a62109ecd33cefd909e3d9",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "browser-testing-with-devtools",
+        "summary": "Tests in real browsers via Chrome DevTools MCP. Use when building or debugging anything that runs in a browser. Use when you need to inspect the DOM, capture console errors, analyze network requests, profile performance, or verify visual output with real runtime data. Requires the chrome-devtools MCP server to be configured.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "case-radar",
+      "slug": "case-radar",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "case-radar/SKILL.md",
+        "localPath": "../.agents/skills/case-radar/SKILL.md",
+        "hash": "6a04f551fe32eff837a97fb11385d1e8b8ad044fde8a54ba5acdbebc116005e7"
+      },
+      "rawContent": {
+        "path": "content/case-radar.md",
+        "hash": "e861bdf40f69e8f8a3d99b7f34000dbe3c42097f107565ccffdcdcb8994573d8",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "case-radar",
+        "summary": "案例雷达。给一个新东西（新工具/新概念/新生态），扫一遍生态找好玩的真实案例，重点是抓\"真物\"（截图/源码/演示）而不是 GitHub 主页，输出可浏览的 HTML 案例集。当用户说\"看看大家用 X 做了什么\"、\"扫一下 X 生态\"、\"市面上 X 有什么新玩法\"、\"给我看 X 的真物案例\"、\"/case-radar\"时触发。不适合：① 已有明确目标的深度调研（用 long-research）② 写文章/出 PRD（用 writing-assistant / prd-doc-writer）③ 单纯求知不需要 HTML（直接问就好）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "chat-profile-analysis",
+      "slug": "chat-profile-analysis",
+      "source": {
+        "type": "github",
+        "repository": "duckytan/claude-skills",
+        "path": "chat-profile-analysis/SKILL.md",
+        "localPath": "../.agents/skills/chat-profile-analysis/SKILL.md",
+        "version": "main",
+        "hash": "1cc0b099e3c07064a1b505d2d15d75986370353325f8a668559938b135b5d4b5"
+      },
+      "rawContent": {
+        "path": "content/chat-profile-analysis.md",
+        "hash": "bc2e577d97438a023dae0ac736ea161e9c79b0477bc52e35ca456427334c538f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "chat-profile-analysis",
+        "summary": "通过AI分析聊天历史生成个性化用户画像报告。支持多种AI编程工具的聊天记录分析，包括Claude Code、OpenCode等。本技能强调AI驱动的灵活分析，而非死板模板。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "ci-cd-and-automation",
+      "slug": "ci-cd-and-automation",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/ci-cd-and-automation/SKILL.md",
+        "localPath": "../.agents/skills/ci-cd-and-automation/SKILL.md",
+        "hash": "578b098a7d2352ccdac8b8abdc40eb6803538e81cf8382f138da6188a655087c"
+      },
+      "rawContent": {
+        "path": "content/ci-cd-and-automation.md",
+        "hash": "a6ed8ed56456b01ff8314c44eefc69897d9905ae4e06bb2b7036286efb79b5f0",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "ci-cd-and-automation",
+        "summary": "Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines. Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "claudeception",
+      "slug": "claudeception",
+      "source": {
+        "type": "github",
+        "repository": "blader/claudeception",
+        "path": "SKILL.md",
+        "localPath": "../.agents/skills/claudeception/SKILL.md",
+        "hash": "7864b602f7ee7f74f7fd9265238e0b7afdf5da20e0296902eaa90486de9626aa"
+      },
+      "rawContent": {
+        "path": "content/claudeception.md",
+        "hash": "a2b636da2fc3464bf1cc7078a8753416188d6d5c798f540e81620a6e634b0067",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "claudeception",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "code-review",
+      "slug": "code-review",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/code-review/SKILL.md",
+        "localPath": "../.agents/skills/code-review/SKILL.md",
+        "hash": "31d149a480eaa68c11e32f5ee77f0fd0b98a906834d531d881d502352edd0b8e"
+      },
+      "rawContent": {
+        "path": "content/code-review.md",
+        "hash": "6a65cc61114f96db07ec41e3920e67c9c5bf70dd6e0901eb9460ebcb2bdc209f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "code-review",
+        "summary": "Review the changes since a fixed point (commit, branch, tag, or merge-base) along two axes — Standards (does the code follow this repo's documented coding standards?) and Spec (does the code match what the originating issue/PRD asked for?). Runs both reviews in parallel sub-agents and reports them side by side. Use when the user wants to review a branch, a PR, work-in-progress changes, or asks to \"review since X\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "code-review-and-quality",
+      "slug": "code-review-and-quality",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/code-review-and-quality/SKILL.md",
+        "localPath": "../.agents/skills/code-review-and-quality/SKILL.md",
+        "hash": "ae7a873053c84dd5a76f70c05a21efc4095017e95b8f5db778eb826809859cac"
+      },
+      "rawContent": {
+        "path": "content/code-review-and-quality.md",
+        "hash": "bec431b759ff389e47b8d2c9d74e1981ff93cf5f3c36b4a3b6a71a75c250be2c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "code-review-and-quality",
+        "summary": "Conducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "code-simplification",
+      "slug": "code-simplification",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/code-simplification/SKILL.md",
+        "localPath": "../.agents/skills/code-simplification/SKILL.md",
+        "hash": "7973e746e8e2ea5004d520da970c15a106824b8d6be1bcff48908aec021f3677"
+      },
+      "rawContent": {
+        "path": "content/code-simplification.md",
+        "hash": "f0c5ed754057eb0c1e027e2587f59de816651feb5e837242296c43ea21cf621d",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "code-simplification",
+        "summary": "Simplifies code for clarity. Use when refactoring code for clarity without changing behavior. Use when code works but is harder to read, maintain, or extend than it should be. Use when reviewing code that has accumulated unnecessary complexity.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "codebase-design",
+      "slug": "codebase-design",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/codebase-design/SKILL.md",
+        "localPath": "../.agents/skills/codebase-design/SKILL.md",
+        "hash": "6d9d51d8caa01633fd00cf87089c5618c982321f942ac69f62565dc001c6b22f"
+      },
+      "rawContent": {
+        "path": "content/codebase-design.md",
+        "hash": "a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "codebase-design",
+        "summary": "Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "context-engineering",
+      "slug": "context-engineering",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/context-engineering/SKILL.md",
+        "localPath": "../.agents/skills/context-engineering/SKILL.md",
+        "hash": "bb8864454c5a24636cab86c4b3c4b29e7e7431c80485bfd7c9c0a19a01936510"
+      },
+      "rawContent": {
+        "path": "content/context-engineering.md",
+        "hash": "ff9d4e5706bdd2eb7de1bfed569f1f42d28e478979ce6fcc32e617e7861b491d",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "context-engineering",
+        "summary": "Optimizes agent context setup. Use when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "continuous-learning",
+      "slug": "continuous-learning",
+      "rawContent": {
+        "path": "content/continuous-learning.md",
+        "hash": "360329e6c37dfcf6fb93752c61c38580e7e054312632c89f5160594fe2eed426",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "continuous-learning",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "debugging-and-error-recovery",
+      "slug": "debugging-and-error-recovery",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/debugging-and-error-recovery/SKILL.md",
+        "localPath": "../.agents/skills/debugging-and-error-recovery/SKILL.md",
+        "hash": "1a119d27e8f1d27ed6317adf3115826336491346780dcb7d7a7a7f79fe3ffe10"
+      },
+      "rawContent": {
+        "path": "content/debugging-and-error-recovery.md",
+        "hash": "67ce2c9442da0c5a6e3515617fc9c4003cfe232ef7c7210da342f40f508f9958",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "debugging-and-error-recovery",
+        "summary": "Guides systematic root-cause debugging. Use when tests fail, builds break, behavior doesn't match expectations, or you encounter any unexpected error. Use when you need a systematic approach to finding and fixing the root cause rather than guessing.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "defuddle",
+      "slug": "defuddle",
+      "source": {
+        "type": "unknown",
+        "repository": "git@github.com:kepano/obsidian-skills.git",
+        "path": "skills/defuddle/SKILL.md",
+        "localPath": "../.agents/skills/defuddle/SKILL.md",
+        "hash": "0ed68bc3e818ba0e6b8d192357ea3daaf552a3893f8854e7fd43c06831f91323"
+      },
+      "rawContent": {
+        "path": "content/defuddle.md",
+        "hash": "10673a4dc70a0a057612d443243ab7a5aa4abdd4a0fadc3f6eec5fd71ad5a971",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "defuddle",
+        "summary": "Extract clean markdown content from web pages using Defuddle CLI, removing clutter and navigation to save tokens. Use instead of WebFetch when the user provides a URL to read or analyze, for online documentation, articles, blog posts, or any standard web page. Do NOT use for URLs ending in .md — those are already markdown, use WebFetch directly.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "deprecation-and-migration",
+      "slug": "deprecation-and-migration",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/deprecation-and-migration/SKILL.md",
+        "localPath": "../.agents/skills/deprecation-and-migration/SKILL.md",
+        "hash": "55a559781ae92cacd6b75acd509e61b577c2660212d1808da2fbb8dbadc90196"
+      },
+      "rawContent": {
+        "path": "content/deprecation-and-migration.md",
+        "hash": "92d9846321fab624eded7ac55d19a7738cfd2321c2be2e35eb153dcacf7359de",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "deprecation-and-migration",
+        "summary": "Manages deprecation and migration. Use when removing old systems, APIs, or features. Use when migrating users from one implementation to another. Use when deciding whether to maintain or sunset existing code.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "design-exploration",
+      "slug": "design-exploration",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "design-exploration/SKILL.md",
+        "localPath": "../.agents/skills/design-exploration/SKILL.md",
+        "hash": "9078d0ce201cada21f49a99b47eb57362d545262e428a39a30a5a0a663e2f644"
+      },
+      "rawContent": {
+        "path": "content/design-exploration.md",
+        "hash": "28b7486c398d6b41d5936fbec82fcb689d12ed276a1296411ab67df4375f28d9",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "design-exploration",
+        "summary": "界面设计探索（开发范式 v1 · 仅限有 UI 的模块）。触发前两个硬条件必须同时成立：①这个东西有用户能看见的界面 ②界面尚不存在。通过\"需求收敛 → 技术调研 → ASCII 批量出 5-8 个方案 → HTML 设计稿 → 全状态覆盖 → 需求总结\"，产出 3 个交付文件：需求总结.md + {模块}-设计稿.html + {模块}-全状态设计参考.html，作为 PRD 阶段的输入。不适用于：无界面的流程/架构/数据结构/接口/方案设计——\"设计\"二字不等于本 skill（用 issue-pool 讨论拆解）、界面已经在代码里跑着要改样式（用 ui-design）、照着现成设计图或截图复刻（用 design-replica）、写 PRD 时给单个故事配线框图（用 prd-test-writer，它自带 ASCII 线框能力）、还没决定要不要做的模糊想法（先用 issue-pool 入池）、纯发散不收敛的终局愿景（用 vision-exploration）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "diagnosing-bugs",
+      "slug": "diagnosing-bugs",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/diagnosing-bugs/SKILL.md",
+        "localPath": "../.agents/skills/diagnosing-bugs/SKILL.md",
+        "hash": "fd6c99466b7ba43be624e6e66ed6d7af2796ded7218f24c83820823977819e22"
+      },
+      "rawContent": {
+        "path": "content/diagnosing-bugs.md",
+        "hash": "7a0779480f323a66d109404646bcc1a14bf0232b45b3e3ea93b652a035718acb",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "diagnosing-bugs",
+        "summary": "Diagnosis loop for hard bugs and performance regressions. Use when the user says \"diagnose\"/\"debug this\", or reports something broken/throwing/failing/slow.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "documentation-and-adrs",
+      "slug": "documentation-and-adrs",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/documentation-and-adrs/SKILL.md",
+        "localPath": "../.agents/skills/documentation-and-adrs/SKILL.md",
+        "hash": "7464fd2950b99fb00bbf65cab27653e0a049eef00c98927713ffdfe232a9daa9"
+      },
+      "rawContent": {
+        "path": "content/documentation-and-adrs.md",
+        "hash": "b867bb80fb681257c7625ae59a0dfd849b1fc0f0a2f0338e7923f38030df9793",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "documentation-and-adrs",
+        "summary": "Records decisions and documentation. Use when making architectural decisions, changing public APIs, shipping features, or when you need to record context that future engineers and agents will need to understand the codebase.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "domain-modeling",
+      "slug": "domain-modeling",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/domain-modeling/SKILL.md",
+        "localPath": "../.agents/skills/domain-modeling/SKILL.md",
+        "hash": "363cb0f53b0b431e7c00086ad1f823500b7e1b70b5616ee969c979f0934e9e6e"
+      },
+      "rawContent": {
+        "path": "content/domain-modeling.md",
+        "hash": "152e2c97239affb12a60c5f4a7e74ab546a49ae169688c81f4e2ccc42dafa579",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "domain-modeling",
+        "summary": "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "doubt-driven-development",
+      "slug": "doubt-driven-development",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/doubt-driven-development/SKILL.md",
+        "localPath": "../.agents/skills/doubt-driven-development/SKILL.md",
+        "hash": "f6094460ebc9512285c85790e49f612081b9dd6a2b77d874fe2d960ef50a9ef1"
+      },
+      "rawContent": {
+        "path": "content/doubt-driven-development.md",
+        "hash": "59aef769adeae40aad67a1d54474aaf914ea7ecdfc2a4752a54840a8d29f80de",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "doubt-driven-development",
+        "summary": "Subjects every non-trivial decision to a fresh-context adversarial review before it stands. Use when correctness matters more than speed, when working in unfamiliar code, when stakes are high (production, security-sensitive logic, irreversible operations), or any time a confident output would be cheaper to verify now than to debug later.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "dual-agent-collaboration",
+      "slug": "dual-agent-collaboration",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "dual-agent-collaboration/SKILL.md",
+        "localPath": "../.agents/skills/dual-agent-collaboration/SKILL.md",
+        "hash": "1977254f9f9e8724bc3948f0769b48c93e167ad57188de6ced7d571816cdea1e"
+      },
+      "rawContent": {
+        "path": "content/dual-agent-collaboration.md",
+        "hash": "8f1075668abfd2ca305f081096a2335b94feb58e53f1d74b2958a50c31eab807",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "dual-agent-collaboration",
+        "summary": "让 Codex 与 Claude Code 通过本机 CLI 组成“主执行者 + 独立审查者”的对称协作闭环。用于用户要求两个模型一起完成、交叉校核、独立审查、修到 ACK，或任务涉及产品需求收敛、复杂方案、跨模块开发、迁移、安全、重要重构和高质量交付时；无论从 Codex 还是 Claude Code 启动，都由当前模型主持，并完整调用另一方完成需求挑战、方案门禁、实现冷审和最终验收。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "excalidraw-diagram",
+      "slug": "excalidraw-diagram",
+      "source": {
+        "type": "github",
+        "repository": "axtonliu/axton-obsidian-visual-skills",
+        "path": "excalidraw-diagram/SKILL.md",
+        "localPath": "../.agents/skills/excalidraw-diagram/SKILL.md",
+        "hash": "9c9592ccce8ec78626088714ca35f164d0dd2a79235e130e52f43f308ee83315"
+      },
+      "rawContent": {
+        "path": "content/excalidraw-diagram.md",
+        "hash": "54bd1cd5cc9935f3729fa18dad25c71400e041f0a4c37bb808296eb766d4372d",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "excalidraw-diagram",
+        "summary": "Generate Excalidraw diagrams from text content. Supports three output modes - Obsidian (.md), Standard (.excalidraw), and Animated (.excalidraw with animation order). Triggers on \"Excalidraw\", \"画图\", \"流程图\", \"思维导图\", \"可视化\", \"diagram\", \"标准Excalidraw\", \"standard excalidraw\", \"Excalidraw动画\", \"动画图\", \"animate\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "find-top-three",
+      "slug": "find-top-three",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "find-top-three/SKILL.md",
+        "localPath": "../.agents/skills/find-top-three/SKILL.md",
+        "hash": "2ebd33f9105baf01879f6675fd030b0848a30cb3754a1b48c1a0380863999020"
+      },
+      "rawContent": {
+        "path": "content/find-top-three.md",
+        "hash": "f4678d89521d6d7331799e5fafeaf232cccd5fd2d0af2616adcce5ba0a5c484c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "find-top-three",
+        "summary": "通过自适应获取上下文、读取证据、建立可修正的用户模型和进行战略判断，帮助用户找出当前阶段最重要的三件事。适用于用户询问“最重要的三件事”“我现在应该先做什么”，需要梳理人生或职业优先级，在多个目标之间犹豫，思考自由、收入、个人业务、内容创作或创业重点，或者希望模型持续了解自己后再给建议；不用于简单待办排序，也不用于目标已经确定的项目计划。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "frontend-ui-engineering",
+      "slug": "frontend-ui-engineering",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/frontend-ui-engineering/SKILL.md",
+        "localPath": "../.agents/skills/frontend-ui-engineering/SKILL.md",
+        "hash": "3a5d4a84e52710f2d724ff68813fba0d61db4f2a232a9d0b0050a8fec08b3e82"
+      },
+      "rawContent": {
+        "path": "content/frontend-ui-engineering.md",
+        "hash": "9c284b1f06d617b289c0d250004af5cbaedd5135071e1b17c0211a0aa03a73a4",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "frontend-ui-engineering",
+        "summary": "Builds production-quality, accessible, responsive user-facing UIs. Use when building or modifying interfaces and pages, creating components, implementing layouts, meeting WCAG accessibility requirements, managing state, or when the output needs to look and feel production-quality rather than AI-generated.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "git-push",
+      "slug": "git-push",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "git-push/SKILL.md",
+        "localPath": "../.agents/skills/git-push/SKILL.md",
+        "hash": "e2d5863a70cbd916961d3a6641060d5945bab5f945dc2aca12602cc18c807d11"
+      },
+      "rawContent": {
+        "path": "content/git-push.md",
+        "hash": "74ea7f32371c30743531791a9db680351082e3648cdb1726303c824086c595fe",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "git-push",
+        "summary": "把项目推送到 GitHub，三种模式自动判断：**首次推送**（大文件扫描 → 生成 .gitignore → git init → gh 建仓 → 推送）、**日常更新**（commit + push）、**版本发布**（打 tag + 建 Release，可附下载文件）。核心原则是安全第一：推之前必扫大文件和敏感文件，宁可多问一句也不把不该推的东西推上去。当用户说\"推到GitHub\"\"推送到GitHub\"\"git push\"\"上传到GitHub\"\"提交并推送\"\"发版本\"\"打release\"\"打tag\"\"/git-push\"时触发。不适用于：规划哪些功能进哪个版本号（用 issue-pool——本 skill 只负责把已经定好的版本号打成 tag）、复杂 git 操作如 rebase/cherry-pick/解冲突/改历史/回滚（直接用 git 命令，本 skill 不覆盖）、代码写完前的自测和验收。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "git-workflow-and-versioning",
+      "slug": "git-workflow-and-versioning",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/git-workflow-and-versioning/SKILL.md",
+        "localPath": "../.agents/skills/git-workflow-and-versioning/SKILL.md",
+        "hash": "8b53153892a21c3a486831bf608970b040ad0e9da698505af58c659242cf835c"
+      },
+      "rawContent": {
+        "path": "content/git-workflow-and-versioning.md",
+        "hash": "51677cf03845dd29d08ea4d3125665057b720aea3dccc572f25d8b172409ece6",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "git-workflow-and-versioning",
+        "summary": "Structures git workflow practices. Use when making any code change. Use when committing, branching, resolving conflicts, or when you need to organize work across multiple parallel streams. Use when cutting a release, choosing a semantic version bump, tagging, or writing a changelog.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "github-repo-search",
+      "slug": "github-repo-search",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "github-repo-search/SKILL.md",
+        "localPath": "../.agents/skills/github-repo-search/SKILL.md",
+        "hash": "bb2ef3205f5d656f30bcb474d409cb809353e1b469a4e74ac5b97fa8b4adad33"
+      },
+      "rawContent": {
+        "path": "content/github-repo-search.md",
+        "hash": "61693206df371173776ed1082701e0d16ab70170d21294c15c579dfcaca9d905",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "github-repo-search",
+        "summary": "帮助用户搜索和筛选 GitHub 开源项目，输出结构化推荐报告。当用户说\"帮我找开源项目\"、\"搜一下GitHub上有什么\"、\"找找XX方向的仓库\"、\"开源项目推荐\"、\"github搜索\"、\"/github-search\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "goal-setter",
+      "slug": "goal-setter",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "goal-setter/SKILL.md",
+        "localPath": "../.agents/skills/goal-setter/SKILL.md",
+        "hash": "d386cf8b33f3df61d52da7ad2cbdcab913590359e1dc91555311fd9094627661"
+      },
+      "rawContent": {
+        "path": "content/goal-setter.md",
+        "hash": "11ea1daa3d4493ef3b0903c2bbbab0db214a568c1dbda76fdd95904aab474fd6",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "goal-setter",
+        "summary": "把模糊诉求收敛成另一个 AI 能自主执行且可验收的 goal contract（scope / non-goals / success criteria / verification / stop conditions）。本 skill 只写目标契约，**绝不替用户执行任务**。触发硬条件：这份 goal 是要交给别人跑的——subagent、Codex、另一个 AI 会话或另一个人。用于写 goal、优化 goal、改 handoff prompt，或把\"今天做完、尽量优化、帮我研究并执行\"这类请求变成执行方不会乱猜、不会越界的任务契约。不适用于：自己团队的需求管理和版本拆解（用 issue-pool——它产出的是给人开工的 task，不是给 AI 的契约）、界面设计探索（用 design-exploration）、PRD/验收标准/测试用例文档（用 prd-test-writer）、框架计划和版本路线（用 issue-pool）、以及用户其实是想让你**直接把这件事做了**的情况——那就直接做，不要走本 skill 把活变成一份文档。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "grill-me",
+      "slug": "grill-me",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/productivity/grill-me/SKILL.md",
+        "localPath": "../.agents/skills/grill-me/SKILL.md",
+        "hash": "f361db4e15e6bfd562a9282b1dccda513910a50061f9e838ce017be9c69dde3f"
+      },
+      "rawContent": {
+        "path": "content/grill-me.md",
+        "hash": "6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "grill-me",
+        "summary": "A relentless interview to sharpen a plan or design.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "grill-with-docs",
+      "slug": "grill-with-docs",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/grill-with-docs/SKILL.md",
+        "localPath": "../.agents/skills/grill-with-docs/SKILL.md",
+        "hash": "9c460cbd94fd3c63cdef967dbdb6e66ca687103cdc380cd37834e4d10b738f78"
+      },
+      "rawContent": {
+        "path": "content/grill-with-docs.md",
+        "hash": "610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "grill-with-docs",
+        "summary": "A relentless interview to sharpen a plan or design, which also creates docs (ADR's and glossary) as we go.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "grilling",
+      "slug": "grilling",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/productivity/grilling/SKILL.md",
+        "localPath": "../.agents/skills/grilling/SKILL.md",
+        "hash": "368d3dd7251247c69f3656d93dc83c8f1577792eacac2111f1e7981db2ece49b"
+      },
+      "rawContent": {
+        "path": "content/grilling.md",
+        "hash": "44331dda57f461db4fec3f2efb6ddabe7aaaa0a57ae0f88a883bc61aed8a0587",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "grilling",
+        "summary": "Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "handoff",
+      "slug": "handoff",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/productivity/handoff/SKILL.md",
+        "localPath": "../.agents/skills/handoff/SKILL.md",
+        "hash": "ad03e8d4ea3cbbff66420eb7ba3cc375b5cbe1821a2449b53e863256cf5b5cde"
+      },
+      "rawContent": {
+        "path": "content/handoff.md",
+        "hash": "57c9f1f392d7352cdc85b1e39ca49eddc70ce1dc278bd9653fb4f23dfc2560fc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "handoff",
+        "summary": "Compact the current conversation into a handoff document for another agent to pick up.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "hermes-persona-builder",
+      "slug": "hermes-persona-builder",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "hermes-persona-builder/SKILL.md",
+        "localPath": "../.agents/skills/hermes-persona-builder/SKILL.md",
+        "hash": "d7a73121614f9488c007bafae0c32bedc8db598e327e845d759819f34b9c684e"
+      },
+      "rawContent": {
+        "path": "content/hermes-persona-builder.md",
+        "hash": "ae078e1b39704c53ea146e5b29c50ba6819cee72ed0335a61a66f5ba9e3c0b72",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "hermes-persona-builder",
+        "summary": "陪伴型 AI 人设生成与优化流程。当用户想给 Hermes Agent（或任意 AI 陪伴角色）做一个\"有感情、聊久不掉、像真人\"的人设时使用。通过\"定调子 → 名字 → 外形 → 性格 → 背景 → 关系 → 说话节奏 → 生成 SOUL.md → 迭代\"的结构化对话，从一句模糊想法（如\"我想要个JK女友\"\"年上男友\"\"高冷御姐\"）产出可直接贴进 Hermes SOUL.md 的第一人称人设文本。支持女友/男友/各种气质的陪伴角色，并让用户选择\"一句一句发\"还是\"整段说\"的输出风格。当用户说\"做个人设/捏个AI女友男友/给Hermes弄个角色/优化人设/换个人设\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "humanizer-zh",
+      "slug": "humanizer-zh",
+      "source": {
+        "type": "github",
+        "repository": "op7418/Humanizer-zh",
+        "path": "SKILL.md",
+        "localPath": "../.agents/skills/humanizer-zh/SKILL.md",
+        "hash": "7bd195e3bcdcc24f078dfd4e3b3e37e8ac321c36f410a41241fc4175eab1825a"
+      },
+      "rawContent": {
+        "path": "content/humanizer-zh.md",
+        "hash": "e0edbdbc9008644263d5573fb59beac95794e188fd99c35012bfd79e9ae4beeb",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "humanizer-zh",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "idea-refine",
+      "slug": "idea-refine",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/idea-refine/SKILL.md",
+        "localPath": "../.agents/skills/idea-refine/SKILL.md",
+        "hash": "9fc0ae5d8a074872a636d22f9c6fe71e041b86cddc9fe5af90ef654f5032ec5d"
+      },
+      "rawContent": {
+        "path": "content/idea-refine.md",
+        "hash": "79e773058963adc7646b0115b4f8a4afc974c5ff95843e4ef1cafff3cb51899e",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "idea-refine",
+        "summary": "Refines raw ideas into sharp, actionable concepts through structured divergent and convergent thinking. Use when an idea is still vague, when you need to stress-test assumptions before committing to a plan, or when you want to expand options before converging on one. Triggers on \"ideate\", \"refine this idea\", or \"stress-test my plan\".",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "image-assistant",
+      "slug": "image-assistant",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "image-assistant/SKILL.md",
+        "localPath": "../.agents/skills/image-assistant/SKILL.md",
+        "hash": "72ba25365396cda60399bde0431164cb70486d2954a818c27cc6fda80aff5fc6"
+      },
+      "rawContent": {
+        "path": "content/image-assistant.md",
+        "hash": "9eb9fdb31ef34b78f8fb540e9e2d577cb980f554e19f079bbaee29eafb55fce9",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "image-assistant",
+        "summary": "配图助手 - 把文章/模块内容转成统一风格、少字高可读的 16:9 信息图提示词；先定“需要几张图+每张讲什么”，再压缩文案与隐喻，最后输出可直接复制的生图提示词并迭代。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "implement",
+      "slug": "implement",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/implement/SKILL.md",
+        "localPath": "../.agents/skills/implement/SKILL.md",
+        "hash": "2139cfedf24791adbc839aaab6019cff158af1e28bfead020ec6e0ce01b3e74d"
+      },
+      "rawContent": {
+        "path": "content/implement.md",
+        "hash": "6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "implement",
+        "summary": "Implement a piece of work based on a spec or set of tickets.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "improve-codebase-architecture",
+      "slug": "improve-codebase-architecture",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/improve-codebase-architecture/SKILL.md",
+        "localPath": "../.agents/skills/improve-codebase-architecture/SKILL.md",
+        "hash": "66e8a50c83c3c724fcfe0769701b665c56cec220cc4f49cc1aee8bdfc07de94a"
+      },
+      "rawContent": {
+        "path": "content/improve-codebase-architecture.md",
+        "hash": "4b4cb798c3863d5b6f5c0b4604af1ecb5beb6df82553c972898a91ba38bcf289",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "improve-codebase-architecture",
+        "summary": "Scan a codebase for deepening opportunities, present them as a visual HTML report, then grill through whichever one you pick.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "incremental-implementation",
+      "slug": "incremental-implementation",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/incremental-implementation/SKILL.md",
+        "localPath": "../.agents/skills/incremental-implementation/SKILL.md",
+        "hash": "d83e705bd54b0a4b02a75cdda0a3f2a28b935286e31eb945e13aafe079c87b59"
+      },
+      "rawContent": {
+        "path": "content/incremental-implementation.md",
+        "hash": "f3336e581a5247d9a6a58096f0015dbbfb7673a35e71aebd39491c55662a1906",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "incremental-implementation",
+        "summary": "Delivers changes incrementally. Use when implementing any feature or change that touches more than one file. Use when you're about to write a large amount of code at once, or when a task feels too big to land in one step.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "interview-me",
+      "slug": "interview-me",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/interview-me/SKILL.md",
+        "localPath": "../.agents/skills/interview-me/SKILL.md",
+        "hash": "efded91ac7f7626239b338ce8622afeb557151b86532b632f3c9eb5b2ff9048f"
+      },
+      "rawContent": {
+        "path": "content/interview-me.md",
+        "hash": "1d94741d10d2c826cd0c191aea3981ee94c8abb27ef2a166f6a372117d06448f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "interview-me",
+        "summary": "Extracts what the user actually wants instead of what they think they should want. Achieves this through one-question-at-a-time interview until ~95% confidence about the underlying intent. Use when an ask is underspecified (\"build me X\" without \"for whom\" or \"why now\"), when the user explicitly invokes (\"interview me\", \"grill me\", \"are we sure?\", \"stress-test my thinking\"), or when you catch yourself silently filling in ambiguous requirements before any plan, spec, or code exists.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "issue-pool",
+      "slug": "issue-pool",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "issue-pool/SKILL.md",
+        "localPath": "../.agents/skills/issue-pool/SKILL.md",
+        "hash": "9107acc0c4c60b5018400db2c40e41b460a98cdeac56643b7f0b0de0a152f5a1"
+      },
+      "rawContent": {
+        "path": "content/issue-pool.md",
+        "hash": "8e381dbd297c413629f5d658cb89f06d3c0cf2b66bf8d26587a46c62e29f7534",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "issue-pool",
+        "summary": "Issue 池全生命周期管理（开发范式 v1 规划段）。核心是一条 issue 驱动的流程：用户随手丢想法，你把糊的 issue 变成能开工的 task——产出的是\"问题定义\"，不是\"解决方案实现\"；载体就是仓库根的 ISSUES.md 一个 markdown 文件，不引入看板或新格式。五个动作：记（原话入池 + 关联检查）、并（合并同源需求）、拆（讨论拆解，引导用户讲出方案背后的真需求）、转（落产出）、pending（聊两轮还糊就记下卡点放回池子，禁止编假 plan 交差）。转的判型标准只有一条\"一个版本能不能交付完\"：能 → 简单 task，一段话 + 3~5 条验收点写在池子条目下；不能 → 复杂 plan，落 docs/plan/ 并按 references/plan-writing.md 七步写框架计划正文（讲\"为什么做 / 做到什么程度算完 / 分几步走\"，不掺字段接口），尾巴必须留糊，交付一批回来再拆下一批。当用户说\"记个 issue\"\"新增/汇总 issue\"\"拆 issue / 拆解 #N\"\"过一遍池子\"\"需求池\"\"这个 issue 怎么做\"\"写计划报告\"\"框架计划\"\"项目计划\"\"v1.0 计划\"\"版本路线\"\"阶段方案\"时触发。不负责：界面长什么样（用 design-exploration）、PRD/测试用例（用 prd-test-writer）、改一个已经上线跑着的功能（用 req-change-workflow）、写给别的 AI 自主执行的 goal contract（用 goal-setter）、非计划类的 HTML 长文/复盘/教程（用 readable-output）、写代码、开分支、发版打 tag（用 git-push）、定优先级。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "issue-triage",
+      "slug": "issue-triage",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "issue-triage/SKILL.md",
+        "localPath": "../.agents/skills/issue-triage/SKILL.md",
+        "hash": "198e454dfb9dff4c5271f7e74a0984e13aa3ea7dd1a0d7d2babd56bab2b6138f"
+      },
+      "rawContent": {
+        "path": "content/issue-triage.md",
+        "hash": "36b7f9d1feab0cdc35b80669cab7ccaebf77a25adb7962f42012e7532e325016",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "issue-triage",
+        "summary": "GitHub Issue 处理协作流程。当用户收到 issue 需要分析和回复时使用。通过\"诊断 → 定性 → 决策 → 回复\"四步法，从一个 issue 产出准确的根因分析和得体的用户回复，避免误判问题类型或回复不专业。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "json-canvas",
+      "slug": "json-canvas",
+      "source": {
+        "type": "unknown",
+        "repository": "git@github.com:kepano/obsidian-skills.git",
+        "path": "skills/json-canvas/SKILL.md",
+        "localPath": "../.agents/skills/json-canvas/SKILL.md",
+        "hash": "56cbac74a93e4fba97f4d44bccfdeaae89e545b223f47df392c7705e01e6c543"
+      },
+      "rawContent": {
+        "path": "content/json-canvas.md",
+        "hash": "97d1ae0728955c4203922753d5656890e5e4dd371b8306ea11884f9b510f1b85",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "json-canvas",
+        "summary": "Create and edit JSON Canvas files (.canvas) with nodes, edges, groups, and connections. Use when working with .canvas files, creating visual canvases, mind maps, flowcharts, or when the user mentions Canvas files in Obsidian.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "lesson-builder",
+      "slug": "lesson-builder",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "lesson-builder/SKILL.md",
+        "localPath": "../.agents/skills/lesson-builder/SKILL.md",
+        "hash": "4504258f95b520e11a937cbc3bf23789710fcc1f23ef9fe04315b30d7e9ce82a"
+      },
+      "rawContent": {
+        "path": "content/lesson-builder.md",
+        "hash": "3efe50fed7abe435d4aa5fc825f74885d177ea039257f425ecf3e77eb76d6bc8",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "lesson-builder",
+        "summary": "帮助用户通过讨论完成课程大纲和课件。当用户说\"备课\"、\"做课件\"、\"准备课程\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "macos-product-design",
+      "slug": "macos-product-design",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "macos-product-design/SKILL.md",
+        "localPath": "../.agents/skills/macos-product-design/SKILL.md",
+        "hash": "f5a7b926fd3407762542c82bb8099035804b82555eac963514610c594bcb776f"
+      },
+      "rawContent": {
+        "path": "content/macos-product-design.md",
+        "hash": "67c58ae320aea97dd6ca04b3e1ac7c49df3dd63464b437fa96265b4846170a24",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "macos-product-design",
+        "summary": "macOS 产品设计专家。根据需求描述，输出符合 macOS 原生风格的 HTML/CSS 设计稿。当用户说\"帮我设计一个界面\"、\"做个页面\"、\"产品设计\"、\"UI 设计\"、\"画个原型\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "memory-init",
+      "slug": "memory-init",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "memory-init/SKILL.md",
+        "localPath": "../.agents/skills/memory-init/SKILL.md",
+        "hash": "2bc951c00600d7e33d739120c31afdeb7f3f63915b50385a7b0fddc5da9b18fe"
+      },
+      "rawContent": {
+        "path": "content/memory-init.md",
+        "hash": "9a4f67c02075fb21f623f8afacf8d59efb12dff60df4fff3863046ce248be525",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "memory-init",
+        "summary": "在当前目录下初始化记忆系统，生成 CLAUDE.md（可选 AGENT.md 给 Cursor 用）、MEMORY.md 和 memory/ 目录。当用户说\"初始化记忆\"、\"搭建记忆\"、\"memory init\"、\"/memory-init\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "multi-perspective-analysis",
+      "slug": "multi-perspective-analysis",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "multi-perspective-analysis/SKILL.md",
+        "localPath": "../.agents/skills/multi-perspective-analysis/SKILL.md",
+        "hash": "da1875ab89e51f6522aba7c1e21ca2d76015fe1ef2f1b0b060551a4681e0552f"
+      },
+      "rawContent": {
+        "path": "content/multi-perspective-analysis.md",
+        "hash": "fc770d58e0e04e42a9a6964d1372afd15c50a530ce418937efe2f52369d680d0",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "multi-perspective-analysis",
+        "summary": "多视角深度分析。用多个 Sub-agent 分别扮演不同思维框架的顾问，对同一份素材做独立分析，然后交叉汇总共识与分歧，产出结构化诊断报告。当用户说\"帮我多视角分析\"、\"多维分析\"、\"用多个视角看看\"、\"帮我诊断一下\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "nextjs-server-side-error-debugging",
+      "slug": "nextjs-server-side-error-debugging",
+      "rawContent": {
+        "path": "content/nextjs-server-side-error-debugging.md",
+        "hash": "3e317bc7eb1c701a0187cbbeeaaad939ce758afb7447bd1502a8e33e228c4ff4",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "nextjs-server-side-error-debugging",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "observability-and-instrumentation",
+      "slug": "observability-and-instrumentation",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/observability-and-instrumentation/SKILL.md",
+        "localPath": "../.agents/skills/observability-and-instrumentation/SKILL.md",
+        "hash": "9bfc314353e4a55d691faca5b1a894e38a9897d88aabff34ea2c6a039d86bf8d"
+      },
+      "rawContent": {
+        "path": "content/observability-and-instrumentation.md",
+        "hash": "40c59a0c3ba28f5697600add521e38f81f880f986317628cdc0df9bdb8acf126",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "observability-and-instrumentation",
+        "summary": "Instruments code so production behavior is visible and diagnosable. Use when adding logging, metrics, tracing, or alerting. Use when shipping any feature that runs in production and you need evidence it works. Use when production issues are reported but you can't tell what happened from the available data.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "obsidian-bases",
+      "slug": "obsidian-bases",
+      "source": {
+        "type": "unknown",
+        "repository": "git@github.com:kepano/obsidian-skills.git",
+        "path": "skills/obsidian-bases/SKILL.md",
+        "localPath": "../.agents/skills/obsidian-bases/SKILL.md",
+        "hash": "65db029661f38daadc8b8eb755bd7b96011336f49bdc11e966ec7fd157d8f125"
+      },
+      "rawContent": {
+        "path": "content/obsidian-bases.md",
+        "hash": "c0037f20926c7d8591cdd040365e4c0e4c0c4146386a506f28f241faee9a27d9",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "obsidian-bases",
+        "summary": "Create and edit Obsidian Bases (.base files) with views, filters, formulas, and summaries. Use when working with .base files, creating database-like views of notes, or when the user mentions Bases, table views, card views, filters, or formulas in Obsidian.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "obsidian-cli",
+      "slug": "obsidian-cli",
+      "source": {
+        "type": "unknown",
+        "repository": "git@github.com:kepano/obsidian-skills.git",
+        "path": "skills/obsidian-cli/SKILL.md",
+        "localPath": "../.agents/skills/obsidian-cli/SKILL.md",
+        "hash": "f46ae626875f7e47c410c2ee93896c4526024ebe127719e8fb430261b5677edc"
+      },
+      "rawContent": {
+        "path": "content/obsidian-cli.md",
+        "hash": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "obsidian-cli",
+        "summary": "Interact with Obsidian vaults using the Obsidian CLI to read, create, search, and manage notes, tasks, properties, and more. Also supports plugin and theme development with commands to reload plugins, run JavaScript, capture errors, take screenshots, and inspect the DOM. Use when the user asks to interact with their Obsidian vault, manage notes, search vault content, perform vault operations from the command line, or develop and debug Obsidian plugins and themes.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "obsidian-markdown",
+      "slug": "obsidian-markdown",
+      "source": {
+        "type": "unknown",
+        "repository": "git@github.com:kepano/obsidian-skills.git",
+        "path": "skills/obsidian-markdown/SKILL.md",
+        "localPath": "../.agents/skills/obsidian-markdown/SKILL.md",
+        "hash": "0f47297035d7824e7bf0f1984e8145a59a123e2258b5d54c9ac9642f9f77e177"
+      },
+      "rawContent": {
+        "path": "content/obsidian-markdown.md",
+        "hash": "7ad72e1f0a9081ed325e76b6402ad5de50a00e63e2341fd403a92f147234a007",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "obsidian-markdown",
+        "summary": "Create and edit Obsidian Flavored Markdown with wikilinks, embeds, callouts, properties, and other Obsidian-specific syntax. Use when working with .md files in Obsidian, or when the user mentions wikilinks, callouts, frontmatter, tags, embeds, or Obsidian notes.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "organize",
+      "slug": "organize",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "organize/SKILL.md",
+        "localPath": "../.agents/skills/organize/SKILL.md",
+        "hash": "3aea0cd8b85f926437de745f6e85534c0c4eb951d03fa8a2e98c8cf69c29c3b3"
+      },
+      "rawContent": {
+        "path": "content/organize.md",
+        "hash": "bbd513b9b67468251c32cba55574b2736389a2a6ae8d19eb5c11e74aed1c33e5",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "organize",
+        "summary": "帮助用户整理文件夹结构。扫描目录、分类归档、清理冗余，输出整理方案并执行。当用户说\"整理文件\"、\"文件夹好乱\"、\"归档\"、\"清理目录\"、\"/organize\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "performance-optimization",
+      "slug": "performance-optimization",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/performance-optimization/SKILL.md",
+        "localPath": "../.agents/skills/performance-optimization/SKILL.md",
+        "hash": "3881a49f910607b36f4fb1f9f17b4ef703293c6073986bcfa9f7839d44680aba"
+      },
+      "rawContent": {
+        "path": "content/performance-optimization.md",
+        "hash": "64f4f4105b66d155f0a6654dd8d542a58329d282c4e07bc82881bb755230fb29",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "performance-optimization",
+        "summary": "Optimizes application performance across frontend, backend, queries, and databases. Use when performance requirements exist, when you suspect performance regressions, when Core Web Vitals or load times need improvement, when N+1 query patterns need fixing, or when profiling reveals bottlenecks.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "plan-report",
+      "slug": "plan-report",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "plan-report/SKILL.md",
+        "localPath": "../.agents/skills/plan-report/SKILL.md",
+        "hash": "b29b5f774d893ce3c66028b3e867a0eb57fecb347b174742aa29c93a89059de8"
+      },
+      "rawContent": {
+        "path": "content/plan-report.md",
+        "hash": "e38ec1bf1976b218a477fdbdb8a8cd9ea0c1d6dbaf00af874573598972577bbd",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "plan-report",
+        "summary": "【已于 2026-07-27 退役，请勿触发本 skill】全部能力已并入 issue-pool——框架计划七步流程见 issue-pool/references/plan-writing.md。任何\"写计划报告 / 框架计划 / 项目计划 / v1.0 计划 / 版本路线 / 阶段方案\"的需求，一律改用 issue-pool。本目录仅作历史存档保留，不再推送到任何目标。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "planning-and-task-breakdown",
+      "slug": "planning-and-task-breakdown",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/planning-and-task-breakdown/SKILL.md",
+        "localPath": "../.agents/skills/planning-and-task-breakdown/SKILL.md",
+        "hash": "ecc29e854ff27b26a2e6b3e4f15ec5b9bd74f65c7e434515eb0e4ac23cc6cdee"
+      },
+      "rawContent": {
+        "path": "content/planning-and-task-breakdown.md",
+        "hash": "1fd1c06f06042d60123ec7144fd7f16655993b6cbc152e76eb5fcdd1a4805a6c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "planning-and-task-breakdown",
+        "summary": "Breaks work into ordered tasks. Use when you have a spec or clear requirements and need to break work into implementable tasks. Use when a task feels too large to start, when you need to estimate scope, or when parallel work is possible.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "prd-auto-test-loop",
+      "slug": "prd-auto-test-loop",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "prd-auto-test-loop/SKILL.md",
+        "localPath": "../.agents/skills/prd-auto-test-loop/SKILL.md",
+        "hash": "637596eb20c72d358c8bbaf3b61f4b356d3d5b583bf506e1b5c4c5aba04c0f5d"
+      },
+      "rawContent": {
+        "path": "content/prd-auto-test-loop.md",
+        "hash": "2e1bca54dfb8b679cb64bfe702bd841f7912380e4c0bc67e0058c2866ecbc133",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "prd-auto-test-loop",
+        "summary": "PRD 驱动的自动化测试编排技能。用于把每版 PRD 的测试计划、AI 自测与自修复、测试报告标准化落地；适用于按验收标准拆分 Unit/Integration/E2E、划分自动化与人工边界、生成版本化 TEST_PLAN/TEST_REPORT 的场景。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "prd-doc-writer",
+      "slug": "prd-doc-writer",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "prd-doc-writer/SKILL.md",
+        "localPath": "../.agents/skills/prd-doc-writer/SKILL.md",
+        "hash": "ef844e54fcf94a6e35126fbf6676fe0d4ea392343f8cb5309191f8a8b1a7ba3b"
+      },
+      "rawContent": {
+        "path": "content/prd-doc-writer.md",
+        "hash": "cd4685f35cf34ddd87dc697a67490da0be06eb1508d6e40937ed26c434c77a65",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "prd-doc-writer",
+        "summary": "Write and iteratively refine PRD/需求文档 with a story-driven structure and strict staged confirmations (journey map alignment, per-story single-point confirmation, final generation gate). Use when the user asks to 梳理/撰写/完善 PRD、需求文档、用户故事、验收标准，并希望用 ASCII 线框图与 Mermaid（流程图/状态图/时序图）来减少歧义、共同完成文档。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "prd-test-writer",
+      "slug": "prd-test-writer",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "prd-test-writer/SKILL.md",
+        "localPath": "../.agents/skills/prd-test-writer/SKILL.md",
+        "hash": "80375d522f50f36c06b01c6a74afb16c46cd70bb7cf1d078728e24b247f51181"
+      },
+      "rawContent": {
+        "path": "content/prd-test-writer.md",
+        "hash": "a8e60511fea4c14c65e18afdc7a4983d705411ca8590cd48ef37e0f87e651b44",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "prd-test-writer",
+        "summary": "PRD + 可执行测试用例双文档一体化协作（开发范式 v2 定义段）。输入是已经拆定型的 task/需求；产出 4 个文件：PRD-MD 与 测试用例-MD（给 AI 的事实源）+ 两份套模板的 review HTML（给人查阅，与 MD 严格 1:1）。与用户共同写并迭代：理解需求后自主读代码再写；故事驱动 + 分阶段单点确认；UI 故事内置 ASCII 线框图 + Mermaid 能力。触发：梳理/撰写/完善 PRD、需求文档、用户故事、验收标准、测试用例、测试基准、测试方案。不适用于：需求还糊、还没拆成 task（先用 issue-pool）、界面方案本身还没探索过（先用 design-exploration，它产出的需求总结.md 正是本 skill 的输入）、只是改一个已上线功能的小需求（用 req-change-workflow）、写给人读的 HTML 长文/复盘/报告（用 readable-output）、项目级的框架计划和版本路线（用 issue-pool）、写代码或跑测试（本 skill 只出文档，不实现、不执行用例）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "priority-judge",
+      "slug": "priority-judge",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "priority-judge/SKILL.md",
+        "localPath": "../.agents/skills/priority-judge/SKILL.md",
+        "hash": "3d28a284386e560303cc35c1a2a98e80f03301de6a5627b14e9e6b744fd5f8e8"
+      },
+      "rawContent": {
+        "path": "content/priority-judge.md",
+        "hash": "d6353ee55a8997937d84f101cad4e190aee4d4c9f6ed6973b3d83ad187069142",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "priority-judge",
+        "summary": "优先级判断助手 - 帮用户从混沌的待办事项中判断优先级，确定现在该做什么。当用户说\"我有很多事要做\"、\"帮我理一下\"、\"排个优先级\"、\"今天该做什么\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "prisma-connection-pool-exhaustion",
+      "slug": "prisma-connection-pool-exhaustion",
+      "rawContent": {
+        "path": "content/prisma-connection-pool-exhaustion.md",
+        "hash": "5d9610dfbbf1867832806f82431e7085661e98163168b93039463337dddae889",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "prisma-connection-pool-exhaustion",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "product-naming",
+      "slug": "product-naming",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "product-naming/SKILL.md",
+        "localPath": "../.agents/skills/product-naming/SKILL.md",
+        "hash": "7fd9de03880d59983bafa028a100b891f7ea77cdbb05e2e5dadd73ab283aa714"
+      },
+      "rawContent": {
+        "path": "content/product-naming.md",
+        "hash": "63b363fd7f38bcca1f8c5f0f79f53b48a939db98cc2afa7bbbf4789b8d9bf706",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "product-naming",
+        "summary": "产品命名协作流程。当用户想给产品/项目/模块起名字时使用。通过\"灵魂挖掘 → 约束提取 → 路线发散 → 方向选择 → 竞品验证 → 最终确认\"的结构化流程，从模糊想法产出有品牌生命力的名字，避免拍脑袋起名。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "project-map-builder",
+      "slug": "project-map-builder",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "project-map-builder/SKILL.md",
+        "localPath": "../.agents/skills/project-map-builder/SKILL.md",
+        "hash": "86a965ce9280bc4c794eeeae694da6f226ff3bdc2fbb53e18784281cae06af06"
+      },
+      "rawContent": {
+        "path": "content/project-map-builder.md",
+        "hash": "d3097b0ea14e5636fc441e2192c8a926be9699a53633a7fe1f974b445993d65f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "project-map-builder",
+        "summary": "生成或更新用户指定文件夹的 PROJECT_MAP.md。适用于用户要求目录地图/项目地图/代码仓概览/文件夹级说明/更新已有 PROJECT_MAP.md 的场景。必须先询问要扫描的文件夹范围，禁止默认全仓库扫描；支持单目录或多目录（合并或分别生成）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "prototype",
+      "slug": "prototype",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/prototype/SKILL.md",
+        "localPath": "../.agents/skills/prototype/SKILL.md",
+        "hash": "faba901c53a6ca245174c4ba5db3929d14253232b3050fdbd46539720adf1ab8"
+      },
+      "rawContent": {
+        "path": "content/prototype.md",
+        "hash": "03074862d4b6e4eaf472aa75146e1d193dd9e3bba0e4303a9b2425562d1d44cc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "prototype",
+        "summary": "Build a throwaway prototype to answer a design question. Use when the user wants to sanity-check whether a state model or logic feels right, or explore what a UI should look like.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "readable-output",
+      "slug": "readable-output",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "readable-output/SKILL.md",
+        "localPath": "../.agents/skills/readable-output/SKILL.md",
+        "hash": "9991a04ac3079fd8c02539ba6caf5fbfc449f79eb154f71cd9422ae2fc0c7962"
+      },
+      "rawContent": {
+        "path": "content/readable-output.md",
+        "hash": "8fcf0e52618e8fbae2ee96f4db03af03cec3c9a5ceea848976bdca305782267b",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "readable-output",
+        "summary": "产出给人读的 HTML 长文——把已有的素材、经历、资料想清楚再写出来。每次触发先用 AskUserQuestion 一次性问清「给谁看 / 读完拿什么 / 多长 / 风格 + 侧重」4 个关键参数，再按 6 阶段框架输出。**产出只有 HTML 一种格式**——用户要 markdown 或要在聊天里直接说，就不该用本 skill。当用户说\"做个复盘\"\"汇总一下\"\"总结这堆\"\"整理成 HTML\"\"做个教程/学习指南\"\"把 X 讲清楚\"等需要 >500 字结构化阅读内容时触发。不适用于：项目的计划报告/框架计划/版本路线（用 issue-pool，它自带 md2html）、PRD/需求文档/测试用例（用 prd-test-writer）、界面设计稿（用 design-exploration）、起名（用 product-naming）、写代码/修 bug/改文件、一两句话就能答完的问题。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "req-change-workflow",
+      "slug": "req-change-workflow",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "req-change-workflow/SKILL.md",
+        "localPath": "../.agents/skills/req-change-workflow/SKILL.md",
+        "hash": "f5d873d02515f7840b3995620b4d1aca5df23c36d4e61ab8d12bb01593a96099"
+      },
+      "rawContent": {
+        "path": "content/req-change-workflow.md",
+        "hash": "fc6cc5166d4fc0ae66ba39e5b005b35b49b4150c9192849be2a1722f589b76f4",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "req-change-workflow",
+        "summary": "已有功能的需求变更闭环（门禁式七步）。触发硬条件：要改的功能已经实现并跑起来了。当用户说\"改需求\"\"需求变更\"\"调整交互\"\"改功能\"\"重构流程\"，或改动容易散到多个文件、碰到鉴权/存储/配置/权限、需要可靠验证 + 回滚方案时使用。流程：锁 scope 写 change brief → 从代码确认当前行为（不靠记忆和假设）→ 影响面与风险评估 + 回滚计划 → 提出新设计等用户批准（**未获批准绝不动代码**）→ 小而局部的 diff → 跑固定回归清单 → 更新文档和决策日志。产出：change brief + 代码 diff + 回归记录 + decision log。不适用于：全新功能从零做（走 issue-pool → design-exploration → prd-test-writer）、只改视觉样式不动任何逻辑（用 ui-design）、新想法还没定要不要做（���用 issue-pool 入池）、写 PRD/测试用例（用 prd-test-writer）、提交推送发版（用 git-push）。注意：本 skill 的七步流程通用于任何项目，但 references/regression-checklist.md 和 scripts/impact_scan.sh 目前是 Chrome 扩展专用（manifest/service worker 等）——非扩展项目照流程走，但回归清单需按该项目实际重写，不要照搬。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "research",
+      "slug": "research",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/research/SKILL.md",
+        "localPath": "../.agents/skills/research/SKILL.md",
+        "hash": "bd3e2c6826671d82c86ed0da3dac3370ebcf63b0fe847f91bb444e1fb7dac21b"
+      },
+      "rawContent": {
+        "path": "content/research.md",
+        "hash": "af378829f015775a3bcd65ff466826722e99359017ae6bae227ca4c9bd14049c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "research",
+        "summary": "Investigate a question against high-trust primary sources and capture the findings as a Markdown file in the repo. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "resolving-merge-conflicts",
+      "slug": "resolving-merge-conflicts",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/resolving-merge-conflicts/SKILL.md",
+        "localPath": "../.agents/skills/resolving-merge-conflicts/SKILL.md",
+        "hash": "28aad6f8b1b7025abc8892fa8890f68fe1533499b28a565f416b159131d22fad"
+      },
+      "rawContent": {
+        "path": "content/resolving-merge-conflicts.md",
+        "hash": "c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "resolving-merge-conflicts",
+        "summary": "Use when you need to resolve an in-progress git merge/rebase conflict.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "security-and-hardening",
+      "slug": "security-and-hardening",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/security-and-hardening/SKILL.md",
+        "localPath": "../.agents/skills/security-and-hardening/SKILL.md",
+        "hash": "a0246e67cf8f8a18687a7736442738318b1997715fbdf53dfcf767082c51cca5"
+      },
+      "rawContent": {
+        "path": "content/security-and-hardening.md",
+        "hash": "266c60e073bc81651ad070a1427a93af4d062dc44470580eae31806b38561833",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "security-and-hardening",
+        "summary": "Hardens code against vulnerabilities. Use when handling user input, authentication, data storage, or external integrations. Use when building any feature that accepts untrusted data, manages user sessions, or interacts with third-party services.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "setup-matt-pocock-skills",
+      "slug": "setup-matt-pocock-skills",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
+        "localPath": "../.agents/skills/setup-matt-pocock-skills/SKILL.md",
+        "hash": "74e894a3509e2676d4cdb771c8eace087092430635e845e02a9cc2f757c552a4"
+      },
+      "rawContent": {
+        "path": "content/setup-matt-pocock-skills.md",
+        "hash": "def265a8b15ffb8afc3f335d69e175ba9a7fe3991218984b0e49e8345cde3b20",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "setup-matt-pocock-skills",
+        "summary": "Configure this repo for the engineering skills — set up its issue tracker, triage label vocabulary, and domain doc layout. Run once before first use of the other engineering skills.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "shipping-and-launch",
+      "slug": "shipping-and-launch",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/shipping-and-launch/SKILL.md",
+        "localPath": "../.agents/skills/shipping-and-launch/SKILL.md",
+        "hash": "005e89054a4bbe27e991c58aa2ddcede4285a7128eb452aaaae351832ebc8a88"
+      },
+      "rawContent": {
+        "path": "content/shipping-and-launch.md",
+        "hash": "f45d9bb9e96fd1a49f3231179acac9d3cd2bbe02f237f0e08fa86866cc57909a",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "shipping-and-launch",
+        "summary": "Prepares production launches. Use when preparing to deploy to production. Use when you need a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need a rollback strategy.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "source-driven-development",
+      "slug": "source-driven-development",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/source-driven-development/SKILL.md",
+        "localPath": "../.agents/skills/source-driven-development/SKILL.md",
+        "hash": "235fb43569e9b21ec5d209818ff1ad3da9682be33c4e464ffa89ed348e7094a0"
+      },
+      "rawContent": {
+        "path": "content/source-driven-development.md",
+        "hash": "b979e7531ea601ed14a090f32a5b135db517c48ab9821c5e8b09efd80f4ff4d8",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "source-driven-development",
+        "summary": "Grounds every implementation decision in official documentation. Use when you want authoritative, source-cited code free from outdated patterns. Use when building with any framework or library where correctness matters.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "spec-driven-development",
+      "slug": "spec-driven-development",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/spec-driven-development/SKILL.md",
+        "localPath": "../.agents/skills/spec-driven-development/SKILL.md",
+        "hash": "2dee9aa940633b7b5e0f45be34839ab31c0de98d482e16772c5cd350f4b91b4b"
+      },
+      "rawContent": {
+        "path": "content/spec-driven-development.md",
+        "hash": "af5b873414a8b45b96b0d30d5297400f55eb3a56425161a088e470c14260a1e5",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "spec-driven-development",
+        "summary": "Creates specs before coding. Use when starting a new project, feature, or significant change and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague idea.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "system-study",
+      "slug": "system-study",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "system-study/SKILL.md",
+        "localPath": "../.agents/skills/system-study/SKILL.md",
+        "hash": "57a6f34be4752c1f40be746d87b10a7f4f56a946dc3aa2f10c54a618856c053e"
+      },
+      "rawContent": {
+        "path": "content/system-study.md",
+        "hash": "466b647e01f2ee11bc24204d408cfb558cb7573d6f4e857d725f89773660c736",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "system-study",
+        "summary": "系统化学习材料生成器。给一个新领域/技术/概念，AI 自主调研、搭体系、产出 HTML 学习材料（含骨架/案例/工程化/争议+盲区）。当用户说\"我要学 X / 帮我系统拆解 X / 我想吃透 X 这个领域 / 给我整理 X 的全貌 / 深度调研 X 给我系统讲讲 / 把 X 搞透\"时触发。不适用于\"X 行不行/为什么 Y\"（用 long-research）、\"X 有哪些好玩案例\"（用 case-radar 给散点）、\"把这堆素材整理成 HTML\"（用 readable-output 处理已有素材）、文章写作（用 writing-assistant）、设计稿（用 design-exploration）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "tdd",
+      "slug": "tdd",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/tdd/SKILL.md",
+        "localPath": "../.agents/skills/tdd/SKILL.md",
+        "hash": "81eca2a5b53a63f481c0849be7a663a8cd43d5cf53f32b644ec0a2f50cf91aa2"
+      },
+      "rawContent": {
+        "path": "content/tdd.md",
+        "hash": "5363bb2775679fe9311fbb67947f95359169c6e7f1fac77c0f25e190bca6cf2f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "tdd",
+        "summary": "Test-driven development. Use when the user wants to build features or fix bugs test-first, mentions \"red-green-refactor\", or wants integration tests.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "teach",
+      "slug": "teach",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/productivity/teach/SKILL.md",
+        "localPath": "../.agents/skills/teach/SKILL.md",
+        "hash": "68999bb1a241384b2f921f3321d779b7d05eb6089077b70d88cee2aee3d75ccc"
+      },
+      "rawContent": {
+        "path": "content/teach.md",
+        "hash": "6d2dbe5e03084cf26fef66b535127b36cd1bcbe9478e26b0626029cd51dc2259",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "teach",
+        "summary": "Teach the user a new skill or concept, within this workspace.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "test-driven-development",
+      "slug": "test-driven-development",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/test-driven-development/SKILL.md",
+        "localPath": "../.agents/skills/test-driven-development/SKILL.md",
+        "hash": "133428ac28fa75cf6f8cf5dafea8d603022852ce59a0520620784c7e3dc7e519"
+      },
+      "rawContent": {
+        "path": "content/test-driven-development.md",
+        "hash": "71fdddb96c2c54041fcfbfdaef3c172b202fb9240b609e658d9d82edbed6cad1",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "test-driven-development",
+        "summary": "Drives development with tests. Use when implementing any logic, fixing any bug, or changing any behavior. Use when you need to prove that code works, when a bug report arrives, or when you're about to modify existing functionality.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "thinking-partner",
+      "slug": "thinking-partner",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "thinking-partner/SKILL.md",
+        "localPath": "../.agents/skills/thinking-partner/SKILL.md",
+        "hash": "2f9031756252d565b711a79cbdfe85985035d458ac596d6c1ea67892a42ea362"
+      },
+      "rawContent": {
+        "path": "content/thinking-partner.md",
+        "hash": "1aa694cc037022d12398f5192cfd64e14b7cd053b9f135c08da87177e2641512",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "thinking-partner",
+        "summary": "思考拍档 - 陪你从混沌中理清局面，锁定核心问题，拆解卡点，共创解法，落地行动",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "thought-mining",
+      "slug": "thought-mining",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "thought-mining/SKILL.md",
+        "localPath": "../.agents/skills/thought-mining/SKILL.md",
+        "hash": "64e34090951bf91c29d0ea91bbd6c9f46927cd7a75ec9582b2f7d95c0b90a299"
+      },
+      "rawContent": {
+        "path": "content/thought-mining.md",
+        "hash": "929dc0e954e47f1c088c1e177108cdaf684fe0cca926366f552faeaf3d64950f",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "thought-mining",
+        "summary": "思维挖掘助手 - 通过对话帮助用户把脑子里的零散想法倒出来、记录下来、整理成文章。覆盖从思维挖掘到成稿的完整流程。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "to-spec",
+      "slug": "to-spec",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/to-spec/SKILL.md",
+        "localPath": "../.agents/skills/to-spec/SKILL.md",
+        "hash": "0f544cd0c099c06f0dd0b7b9ee98b4237218e7e95fd3d3c02e791efbaf74bacb"
+      },
+      "rawContent": {
+        "path": "content/to-spec.md",
+        "hash": "267638edd513b5918de626ad5605d261952abb7428cb308869c663ca924e93e7",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "to-spec",
+        "summary": "Turn the current conversation into a spec and publish it to the project issue tracker — no interview, just synthesis of what you've already discussed.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "to-tickets",
+      "slug": "to-tickets",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/to-tickets/SKILL.md",
+        "localPath": "../.agents/skills/to-tickets/SKILL.md",
+        "hash": "0349eee265e7005e667b4543de849672106c46d545e998f37d3319300bb07751"
+      },
+      "rawContent": {
+        "path": "content/to-tickets.md",
+        "hash": "5ecdf1d4df8a360ed39df21a2347f97ba177afd449a577da4f6b6ea8e1ebb808",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "to-tickets",
+        "summary": "Break a plan, spec, or the current conversation into a set of tracer-bullet tickets, each declaring its blocking edges, published to the configured tracker — edges as text in one file per ticket locally, or native blocking links on a real tracker.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "triage",
+      "slug": "triage",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/triage/SKILL.md",
+        "localPath": "../.agents/skills/triage/SKILL.md",
+        "hash": "7c923b6a677cfe689500721f08307e2a4c46797ff169dc55ef6c34a431a0d533"
+      },
+      "rawContent": {
+        "path": "content/triage.md",
+        "hash": "d45827c299c021f77b0f146fefa3ee679b13f99e9a2ffdf48e8de2347adeefe1",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "triage",
+        "summary": "Move issues and external PRs through a state machine of triage roles — categorise, verify, grill if needed, and write agent-ready briefs.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "typescript-circular-dependency",
+      "slug": "typescript-circular-dependency",
+      "rawContent": {
+        "path": "content/typescript-circular-dependency.md",
+        "hash": "b05ad87becdc37c0d0d862770cd2fb038ec8ed4dc6e6506b1f663fcba762d53c",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "typescript-circular-dependency",
+        "summary": "|",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "ui-design",
+      "slug": "ui-design",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "ui-design/SKILL.md",
+        "localPath": "../.agents/skills/ui-design/SKILL.md",
+        "hash": "23b3895247b573b7fd4dd04ad9596d19d039b18b47d614f0fd0f485d49a1b41f"
+      },
+      "rawContent": {
+        "path": "content/ui-design.md",
+        "hash": "d70108ceec4748e1202924f3e6f0839d1eb313cb5feef5fc184b15d466e5ce98",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "ui-design",
+        "summary": "UI 样式修改协作流程（已有界面的视觉层微调）。触发硬条件：页面已经在代码里跑着，改的只是它的视觉表现——布局、间距、颜色、字号、圆角、组件搭配。通过\"读代码 + ASCII 画出现状让用户确认 → 给 2-3 个 ASCII 方案 → 用户选定 → 最小改动 → 微调\"的流程，减少沟通偏差、避免浪费 token。产出：只动样式的代码 diff。硬边界：不动业务逻辑、不动数据流、不改交互行为、不顺手重构。不适用于：界面还不存在、要从零探索长什么样（用 design-exploration）、改的是功能或交互逻辑而不只是视觉（用 req-change-workflow）、照着设计图/截图复刻整页（用 design-replica）、给还没实现的需求画线框（用 design-exploration 或 prd-test-writer）。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "using-agent-skills",
+      "slug": "using-agent-skills",
+      "source": {
+        "type": "github",
+        "repository": "addyosmani/agent-skills",
+        "path": "skills/using-agent-skills/SKILL.md",
+        "localPath": "../.agents/skills/using-agent-skills/SKILL.md",
+        "hash": "531902008625dafa3710a5a4730766455273ad6ea9beca0b4129be9f358de61f"
+      },
+      "rawContent": {
+        "path": "content/using-agent-skills.md",
+        "hash": "a5bf05293cfb67af9c5e21e14023d723d2ac8ca42912cef4cee29fbb07e67d64",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "using-agent-skills",
+        "summary": "Discovers and invokes agent skills. Use when starting a session or when you need to discover which skill applies to the current task. This is the meta-skill that governs how all other skills are discovered and invoked.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "version-planner",
+      "slug": "version-planner",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "version-planner/SKILL.md",
+        "localPath": "../.agents/skills/version-planner/SKILL.md",
+        "hash": "ea697f658d7dab1aae1e40b678d4b0be880d59b941bfd27f7482211af13d9da7"
+      },
+      "rawContent": {
+        "path": "content/version-planner.md",
+        "hash": "edcfbc5583594c1de6f97678b55b33430f76e7005fc2037b0e1f0225dff98159",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "version-planner",
+        "summary": "帮助用户把产品需求拆解成渐进式版本规划。当用户说\"拆版本\"、\"版本规划\"、\"MVP怎么做\"、\"分阶段实现\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "vision-exploration",
+      "slug": "vision-exploration",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "vision-exploration/SKILL.md",
+        "localPath": "../.agents/skills/vision-exploration/SKILL.md",
+        "hash": "c89b692dae24a426d8ed51b35528949643a50e458c11ee58cb4d6516dbfdfda3"
+      },
+      "rawContent": {
+        "path": "content/vision-exploration.md",
+        "hash": "33db645c0593674d48969473ca5b3249afc456bdee5ddd757ae04a7f67a02146",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "vision-exploration",
+        "summary": "终局愿景探索。用户抛出一个模糊 idea，AI 主导引导，通过\"追问价值 → 挖掘动机 → 推导演化 → 画终局\"的链路，帮用户看到未来最远的可能性。不设限，不收敛，纯发散。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "vue-best-practices",
+      "slug": "vue-best-practices",
+      "source": {
+        "type": "github",
+        "repository": "vuejs-ai/skills",
+        "path": "skills/vue-best-practices/SKILL.md",
+        "localPath": "../.agents/skills/vue-best-practices/SKILL.md",
+        "hash": "3df585ad31aec78fe55c56c1411262737e6b231677a3153dec512a882fde80cd"
+      },
+      "rawContent": {
+        "path": "content/vue-best-practices.md",
+        "hash": "05b373713e6bbd216fb3ee9709289b68bcdeb9eac8ffea477e35bdbd8e0f9acd",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "vue-best-practices",
+        "summary": "MUST be used for Vue.js tasks. Strongly recommends Composition API with `<script setup>` and TypeScript as the standard approach. Covers Vue 3, SSR, Volar, vue-tsc. Load for any Vue, .vue files, Vue Router, Pinia, or Vite with Vue work. ALWAYS use Composition API unless the project explicitly requires Options API.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "wayfinder",
+      "slug": "wayfinder",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/engineering/wayfinder/SKILL.md",
+        "localPath": "../.agents/skills/wayfinder/SKILL.md",
+        "hash": "c9e18cefd77b6b5b0ee35f59ce2fd96359aa2d2f02e3479e12c873c5402d9d43"
+      },
+      "rawContent": {
+        "path": "content/wayfinder.md",
+        "hash": "257e40665b28ae959ffdcb97d7a72b074360f4a3d201bd84786505308546e434",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "wayfinder",
+        "summary": "Plan a huge chunk of work — more than one agent session can hold — as a shared map of decision tickets on your issue tracker, and resolve them one at a time until the way to the destination is clear.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "weekly-report",
+      "slug": "weekly-report",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "weekly-report/SKILL.md",
+        "localPath": "../.agents/skills/weekly-report/SKILL.md",
+        "hash": "3910bc6af6eb6af1539005541deb444998788f1607d214efa1d3498e471c93f2"
+      },
+      "rawContent": {
+        "path": "content/weekly-report.md",
+        "hash": "61001db99d861b968b8874bcf7961b29c9949ab12131f090e05b153a4b3bd7dc",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "weekly-report",
+        "summary": "帮助用户梳理周报，按照完整逻辑展示工作价值和边界。当用户说\"写周报\"、\"周报\"、\"梳理周报\"、\"整理工作\"时触发。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "writing-assistant",
+      "slug": "writing-assistant",
+      "source": {
+        "type": "github",
+        "repository": "yunshu0909/yunshu_skillshub",
+        "path": "writing-assistant/SKILL.md",
+        "localPath": "../.agents/skills/writing-assistant/SKILL.md",
+        "hash": "0826289091df7523740dd7018dcbae3cd4e0657de9b885210159d7fc067f5407"
+      },
+      "rawContent": {
+        "path": "content/writing-assistant.md",
+        "hash": "3036e00268487256f9d179e61795f75d7664b3bad3c4a6a96fff5a4d824d230d",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "writing-assistant",
+        "summary": "写作助手 - 当用户说\"我想写XX\"、\"帮我梳理选题\"、\"怎么形成框架\"、\"给我组织思路\"时触发。根据观点清晰度自动选择最优路线：清晰观点走\"框架→内容\"，模糊观点走\"挖掘→选题→框架→内容\"。",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    },
+    {
+      "id": "writing-great-skills",
+      "slug": "writing-great-skills",
+      "source": {
+        "type": "github",
+        "repository": "mattpocock/skills",
+        "path": "skills/productivity/writing-great-skills/SKILL.md",
+        "localPath": "../.agents/skills/writing-great-skills/SKILL.md",
+        "hash": "4deb21855fb4deeeb1b8217b041faff003fd0c915d24a22f636851c520bc9c5c"
+      },
+      "rawContent": {
+        "path": "content/writing-great-skills.md",
+        "hash": "4d6ccbc3760b1bd4107c495a79872286ea69494003f3b0a719fc95b147457061",
+        "lastSyncedAt": "2026-07-30T16:38:48.745Z"
+      },
+      "metadata": {
+        "name": "writing-great-skills",
+        "summary": "Reference for writing and editing skills well — the vocabulary and principles that make a skill predictable.",
+        "categories": [],
+        "useCases": [],
+        "usage": "",
+        "triggers": []
+      },
+      "metadataStatus": {
+        "generatedBy": "unknown",
+        "reviewed": false
+      },
+      "preferences": {
+        "enabled": true,
+        "favorite": false
+      },
+      "sync": {
+        "status": "up-to-date",
+        "lastCheckedAt": "2026-07-31T12:40:41.046Z"
+      }
+    }
+  ]
+}

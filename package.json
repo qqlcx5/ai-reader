@@ -12,6 +12,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "vue-tsc --noEmit",
+    "serve:web": "pnpm --dir skill-manager serve:web",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
