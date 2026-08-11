@@ -138,3 +138,111 @@ pi --offline                 # 全离线启动
 `/reload` 或 重启pi生效。
 
 若想更短(纯10秒内):把`maxRetries`降到`3`、`baseDelayMs`降到`500`。
+
+---
+
+
+够了。综合进阶玩法:
+
+## pi 进阶常用玩法
+
+### 一、上下文压缩(省token核心)
+- `/compact [指令]` — 手动压缩,可带指令聚焦:`/compact 重点保留数据库schema改动`
+- 自动压缩:接近上下文上限触发
+- 调参:
+```json
+{
+  "compaction": {
+    "enabled": true,
+    "keepRecentTokens": 20000,
+    "reserveTokens": 16384
+  }
+}
+```
+`keepRecentTokens`↑保留更多近期内容;压缩摘要会**累计追踪读/改文件**。
+
+### 二、分支探索(实验不怕丢)
+- `/tree` — 跳节点,旧分支可被总结注入新分支(上下文不丢)
+- `/fork` — 从旧消息开新会话,原会话不动(做实验首选)
+- `/clone` — 复制当前分支
+- 双击Escape → `tree`(可配`doubleEscapeAction`)
+
+### 三、Extensions(自定义工具/拦截)
+放 `~/.pi/agent/extensions/*.ts`,`/reload`热加载。实用场景:
+- **危险命令拦截**:`rm -rf`前弹确认
+- **保护文件**:禁止写`.env`/`node_modules`
+- **Git检查点**:每轮自动stash
+- **自定义工具**:注册LLM可调用的工具
+
+示例:
+```typescript
+pi.on("tool_call", async (event, ctx) => {
+  if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
+    const ok = await ctx.ui.confirm("危险!", "允许 rm -rf?");
+    if (!ok) return { block: true, reason: "用户拒绝" };
+  }
+});
+```
+详细见 `docs/extensions.md`。
+
+### 四、Skills(按需加载能力)
+省context——描述常驻,指令用时才载入:
+- 仓库:[Anthropic Skills](https://github.com/anthropics/skills)、[Pi Skills](https://github.com/badlogic/pi-skills)
+- `/skill:name` 强制加载
+- 自定义:`~/.pi/agent/skills/my/SKILL.md`
+- 混用Claude Code技能:`"skills":["~/.claude/skills"]`
+
+### 五、Prompt Templates(快捷命令)
+放`~/.pi/agent/prompts/*.md`,转成`/模板名`命令。复用复杂提示。
+
+### 六、模型循环 + thinking分级
+- Ctrl+P快速切模型,配`enabledModels`
+- `/settings`调thinking level(off→max),复杂任务用high/xhigh
+```json
+{ "enabledModels": ["claude-*", "gpt-4o", "glm-*"] }
+```
+
+### 七、外部编辑器(长提示利器)
+```json
+{ "externalEditor": "code --wait" }
+```
+Ctrl+G打开VS Code写,保存关闭即送入。适合写大段需求。
+
+### 八、会话导出/分享
+- `/export report.html` — 导HTML
+- `/share` — 传GitHub gist,带链接
+- `pi @prompt.md ...` — 文件当prompt
+
+### 九、CLI管道(脚本化)
+```bash
+cat error.log | pi -p "分析这个报错"        # 单次输出后退出
+pi -p "重构这个函数" --thinking high        # 非交互+高思考
+pi --mode json ... | jq ...                 # 结构化事件流
+```
+
+### 十、系统提示定制
+- `~/.pi/agent/SYSTEM.md` — 完全替换默认系统提示
+- `APPEND_SYSTEM.md` — 追加(不改默认)
+- `--system-prompt "..."` / `--append-system-prompt "..."` — 单次
+
+### 十一、子Agent/工具白名单
+```bash
+pi -t read,bash          # 只允许read+bash(安全/省token)
+pi --no-builtin-tools    # 禁内置,只留扩展工具
+pi --no-tools            # 全禁(纯对话)
+```
+
+### 十二、代理/离线
+```json
+{ "httpProxy": "http://127.0.0.1:7890" }
+```
+```bash
+pi --offline             # 全离线启动
+PI_SKIP_VERSION_CHECK=1  # 跳版本检查
+```
+
+### 最值得立刻用
+1. **`/compact` + 调keepRecentTokens** — 长会话省钱
+2. **Ctrl+G外编** — 写复杂需求
+3. **危险命令拦截扩展** — 防误删
+4. **`/fork`做实验** — 不破坏主线
