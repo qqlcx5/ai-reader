@@ -843,6 +843,39 @@ describe('stores/chat.store', () => {
   })
 
   // 17. sendMessage should fail when already sending
+  it('should enqueue steering messages and persist them with the conversation', async () => {
+    const store = useChatStore()
+    await store.createConversation('doc-queue')
+
+    store.enqueueMessage('Next question', ['m1'])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(store.steeringQueue).toHaveLength(1)
+    expect(store.steeringQueue[0].content).toBe('Next question')
+    expect(chatDb.get(store.currentConversationId!)?.steeringQueue?.[0].content).toBe('Next question')
+
+    await store.removeQueuedMessage(store.steeringQueue[0].id)
+    expect(store.steeringQueue).toHaveLength(0)
+  })
+
+  it('should preserve the old path when restoring to a message node', async () => {
+    const conv = makeConv('restore-source', 'doc-restore')
+    conv.messages = [
+      { id: 'u1', role: 'user', content: 'First', status: 'success', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a1', role: 'assistant', content: 'Answer', status: 'success', createdAt: '2026-01-01T00:01:00.000Z' },
+      { id: 'u2', role: 'user', content: 'Later', status: 'success', createdAt: '2026-01-01T00:02:00.000Z' },
+    ]
+    chatDb.set(conv.id, conv)
+
+    const store = useChatStore()
+    await store.loadConversation(conv.id)
+    await store.restoreConversationAt('a1')
+
+    expect(store.messages.map((message) => message.id)).toEqual(['u1', 'a1'])
+    expect(chatDb.get(conv.id)?.messages.map((message) => message.id)).toEqual(['u1', 'a1'])
+    expect(store.conversations.some((item) => item.parentConversationId === conv.id)).toBe(true)
+  })
+
   it('sendMessage should fail when another request is in progress', async () => {
     await seedModel()
     mockBuild.mockReturnValue({

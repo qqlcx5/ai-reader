@@ -27,3 +27,7 @@ web-ext.config.ts
 .tmp-tests/
 .env*
 reference/
+
+skill-manager/dist
+skill-manager/web-dist
+skill-manager/node_modules
