@@ -1,5 +1,0 @@
-{
-  "skillDirectories": ["../.agents/skills"],
-  "lockFile": "../skills-lock.json",
-  "dataDirectory": "data"
-}
