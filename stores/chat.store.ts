@@ -54,6 +54,8 @@ export const useChatStore = defineStore('chat', () => {
   const isSending = ref(false)
   /** Knowledge-QA mode: retrieve from the whole library before answering. */
   const knowledgeMode = ref(false)
+  /** Optional collection scope for knowledge QA (null = whole library). */
+  const knowledgeScope = ref<string | null>(null)
 
   watch(
     [currentConversationId, () => streamStates.value.size],
@@ -809,7 +811,9 @@ export const useChatStore = defineStore('chat', () => {
     if (knowledgeMode.value && userContent.trim()) {
       try {
         const { retrieveKnowledge } = await import('@/services/search/rag')
-        const retrieval = await retrieveKnowledge(userContent, 4)
+        const retrieval = await retrieveKnowledge(userContent, 4, {
+          collectionId: knowledgeScope.value ?? undefined,
+        })
         if (retrieval.context) {
           knowledgeContext = retrieval.context
           assistantMsg.sources = retrieval.sources
@@ -1097,6 +1101,7 @@ export const useChatStore = defineStore('chat', () => {
     isStreaming,
     isSending,
     knowledgeMode,
+    knowledgeScope,
     lastError,
     includeContext,
     steeringQueue,

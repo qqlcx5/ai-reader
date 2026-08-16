@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { retrieveKnowledge, PER_DOC_TOKENS } from './rag'
+import { retrieveKnowledge, rerankByBigram, PER_DOC_TOKENS } from './rag'
 import { db } from '../../db/index'
 import { initSearchIndex } from './index'
 import { estimateTokens } from '@/utils/token'
@@ -14,6 +14,23 @@ function makeDoc(id: string, title: string, markdown: string): DocumentEntity {
     capturedAt: now, updatedAt: now,
   } as DocumentEntity
 }
+
+describe('rerankByBigram', () => {
+  it('prefers candidates sharing rare bigrams with the query', () => {
+    const docs = [
+      makeDoc('a', '机器学习概论', '泛泛而谈的入门介绍。'),
+      makeDoc('b', 'Transformer 自注意力详解', '自注意力机制是 Transformer 的核心。'),
+    ]
+    const ranked = rerankByBigram('Transformer 自注意力机制', docs, 1)
+    expect(ranked[0].id).toBe('b')
+  })
+
+  it('falls back to input order on empty queries and caps at k', () => {
+    const docs = [makeDoc('a', 'A', 'x'), makeDoc('b', 'B', 'y')]
+    expect(rerankByBigram('', docs, 1)[0].id).toBe('a')
+    expect(rerankByBigram('任意词', docs, 1)).toHaveLength(1)
+  })
+})
 
 describe('retrieveKnowledge', () => {
   beforeEach(async () => {
@@ -67,5 +84,23 @@ describe('retrieveKnowledge', () => {
     const miss = await retrieveKnowledge('量子力学')
     expect(miss.sources).toEqual([])
     expect(miss.context).toBe('')
+  })
+
+  it('scopes retrieval to a collection', async () => {
+    await db.documents.bulkPut([
+      makeDoc('a', 'Rust 异步 指南', 'async await 状态机。'),
+      makeDoc('b', '红烧肉 烹饪 指南', '五花肉炖煮。'),
+    ])
+    await db.collections.put({ id: 'c1', name: '技术', createdAt: '', updatedAt: '' } as any)
+    await db.collectionItems.bulkPut([
+      { id: 'i1', collectionId: 'c1', documentId: 'a', order: 0 } as any,
+    ])
+    await initSearchIndex()
+
+    const all = await retrieveKnowledge('指南', 4)
+    expect(all.sources.map((s) => s.id).sort()).toEqual(['a', 'b'])
+
+    const scoped = await retrieveKnowledge('指南', 4, { collectionId: 'c1' })
+    expect(scoped.sources.map((s) => s.id)).toEqual(['a'])
   })
 })

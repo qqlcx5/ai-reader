@@ -8,7 +8,9 @@
  */
 import { searchIndex, initSearchIndex, searchDocuments } from './index'
 import { DocumentRepository } from '../../db/repositories/document.repository'
+import { CollectionRepository } from '../../db/repositories/collection.repository'
 import { truncateContext } from '../prompt/truncate'
+import { bigrams } from './related'
 import type { DocumentEntity } from '../../types/document'
 
 export interface RetrievedSource {
@@ -32,10 +34,35 @@ const HEADER = `以下是从用户个人知识库中检索到的相关文档片�
 - 片段中没有的信息就直说知识库里没有，不要编造
 - 用用户的语言回答`
 
+/**
+ * Second-stage rerank: bigram overlap between the query and each candidate's
+ * signature (title + excerpt + lead). Fixes MiniSearch's CJK tokenization
+ * blind spot — candidates that share rare character pairs with the query
+ * outrank generic keyword hits.
+ */
+export function rerankByBigram(
+  query: string,
+  docs: DocumentEntity[],
+  k: number,
+): DocumentEntity[] {
+  const q = bigrams(query)
+  if (q.size === 0) return docs.slice(0, k)
+  return docs
+    .map((doc) => {
+      const sig = bigrams([doc.title || '', doc.excerpt || '', (doc.markdown || '').slice(0, 600)].join(' '))
+      let overlap = 0
+      for (const g of q) if (sig.has(g)) overlap++
+      return { doc, score: overlap / Math.sqrt(q.size * Math.max(1, sig.size)) }
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k)
+    .map((x) => x.doc)
+}
+
 export async function retrieveKnowledge(
   query: string,
   k = 4,
-  opts: { perDocTokens?: number; excludeIds?: string[] } = {},
+  opts: { perDocTokens?: number; excludeIds?: string[]; collectionId?: string; candidatePool?: number } = {},
 ): Promise<RetrievalResult> {
   const q = query.trim()
   if (!q) return { context: '', sources: [] }
@@ -46,16 +73,25 @@ export async function retrieveKnowledge(
   }
 
   const exclude = new Set(opts.excludeIds ?? [])
-  const hits = (await searchDocuments(q))
-    .filter((h) => !exclude.has(h.id))
-    .slice(0, k)
+  let hits = (await searchDocuments(q)).filter((h) => !exclude.has(h.id))
 
-  const docs: DocumentEntity[] = []
-  for (const hit of hits) {
-    const doc = await DocumentRepository.findById(hit.id)
-    if (doc?.markdown?.trim()) docs.push(doc)
+  // Optional collection scope: restrict candidates to the collection's docs.
+  if (opts.collectionId) {
+    const inCollection = new Set(await CollectionRepository.getDocumentIds(opts.collectionId))
+    hits = hits.filter((h) => inCollection.has(h.id))
   }
-  if (docs.length === 0) return { context: '', sources: [] }
+
+  const pool = opts.candidatePool ?? 10
+  const candidateIds = hits.slice(0, pool)
+
+  const candidates: DocumentEntity[] = []
+  for (const hit of candidateIds) {
+    const doc = await DocumentRepository.findById(hit.id)
+    if (doc?.markdown?.trim()) candidates.push(doc)
+  }
+  if (candidates.length === 0) return { context: '', sources: [] }
+
+  const docs = rerankByBigram(q, candidates, k)
 
   const perDoc = opts.perDocTokens ?? PER_DOC_TOKENS
   const blocks = docs.map((doc, i) => {

@@ -9,10 +9,16 @@ import { usePromptTemplateStore } from '@/stores/prompt-template.store'
 import ModelSelect from '@/components/workspace/ModelSelect.vue'
 import UButton from '@/components/ui/UButton.vue'
 import UTextarea from '@/components/ui/UTextarea.vue'
+import { useCollectionStore } from '@/stores/collection.store'
 
 
 const chatStore = useChatStore()
 const modelStore = useModelStore()
+const collectionStore = useCollectionStore()
+// Collections for the knowledge-QA scope selector (best-effort lazy load).
+if (collectionStore.collections.length === 0) {
+  collectionStore.loadCollections?.().catch?.(() => {})
+}
 const documentStore = useDocumentStore()
 const settingsStore = useSettingsStore()
 const promptTemplateStore = usePromptTemplateStore()
@@ -462,20 +468,31 @@ function handleStop() {
         </div>
 
         <!-- Knowledge-QA (RAG) toggle: retrieve from the whole library -->
-        <div
-          class="flex items-center gap-1.5 text-[11px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer select-none"
-          :class="chatStore.knowledgeMode
-            ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
-            : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600 hover:border-zinc-300'"
-          :title="chatStore.knowledgeMode
-            ? '知识库问答已开启：每次提问前检索全库相关文档作答（带引用）'
-            : '开启知识库问答：检索全库相关文档作答'"
-          role="button"
-          :aria-pressed="chatStore.knowledgeMode"
-          @click="chatStore.knowledgeMode = !chatStore.knowledgeMode"
-        >
-          <BookOpen class="w-3 h-3" />
-          <span>知识库</span>
+        <div class="flex items-center">
+          <div
+            class="flex items-center gap-1.5 text-[11px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer select-none"
+            :class="chatStore.knowledgeMode
+              ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
+              : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600 hover:border-zinc-300'"
+            :title="chatStore.knowledgeMode
+              ? '知识库问答已开启：每次提问前检索相关文档作答（带引用）'
+              : '开启知识库问答：检索相关文档作答'"
+            role="button"
+            :aria-pressed="chatStore.knowledgeMode"
+            @click="chatStore.knowledgeMode = !chatStore.knowledgeMode"
+          >
+            <BookOpen class="w-3 h-3" />
+            <span>知识库</span>
+          </div>
+          <select
+            v-if="chatStore.knowledgeMode"
+            v-model="chatStore.knowledgeScope"
+            class="ml-1 bg-white border border-emerald-200 rounded text-[10px] text-emerald-700 px-1 py-0.5 outline-none max-w-28"
+            title="检索范围"
+          >
+            <option :value="null">全库</option>
+            <option v-for="c in collectionStore.collections" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
         </div>
 
         <!-- Voice input -->
