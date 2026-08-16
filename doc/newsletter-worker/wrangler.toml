@@ -1,0 +1,10 @@
+name = "auramind-newsletter-inbox"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+# 开启 Email Routing 后，Cloudflare 会把收到的邮件转给这个 Worker。
+# 部署步骤见 README.md。
+
+[[kv_namespaces]]
+binding = "MAILS"
+id = "<在此填入你的 KV namespace id>"
