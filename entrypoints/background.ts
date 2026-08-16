@@ -4,6 +4,8 @@ import { bgDrain } from '@/services/ai-job/bg-drain'
 import { runSchedules } from '@/services/schedule/runner'
 import { updateReviewBadge } from '@/services/review/badge'
 import { saveQuickNote } from '@/services/capture/quick-note'
+import { notify, setupNotificationClicks } from '@/services/notify/notify'
+import type { AppView } from '@/stores/app.store'
 
 export default defineBackground(() => {
   console.log('AuraMind background', { id: browser.runtime.id })
@@ -24,17 +26,26 @@ export default defineBackground(() => {
   // ── Pending panel actions ─────────────────────────────────────────────
   // Context menu / keyboard commands may fire while the side panel is not
   // open yet. The action is stashed here; the panel asks for it on mount.
-  let pendingAction: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW' | 'OMNIBOX_SEARCH'; tabId?: number; query?: string } | null = null
+  let pendingAction: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW' | 'OMNIBOX_SEARCH' | 'OPEN_VIEW'; tabId?: number; query?: string; view?: string } | null = null
 
-  function runPanelAction(action: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW'; tabId?: number }, tabId?: number) {
+  function runPanelAction(action: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW' | 'OMNIBOX_SEARCH' | 'OPEN_VIEW'; tabId?: number; query?: string; view?: string }, tabId?: number) {
     pendingAction = action
     const target = tabId ?? action.tabId
     if (target != null || b.sidebarAction) openSidebarPanel(target)
     // If the panel is already open it handles this directly.
-    b.runtime.sendMessage({ type: action.type, payload: { tabId: target } }).catch(() => {})
+    b.runtime.sendMessage({ type: action.type, payload: { tabId: target, query: action.query, view: action.view } }).catch(() => {})
   }
 
-  // ── Context menus ─────────────────────────────────────────────────────
+  // System notifications: clicking opens the panel on the relevant view.
+  setupNotificationClicks(
+    (tabId?: number) => openSidebarPanel(tabId),
+    (view: AppView) => { pendingAction = { type: 'OPEN_REVIEW' }; pendingAction = viewToAction(view) },
+  )
+  function viewToAction(view: AppView): any {
+    // Reuse the pending-action channel: any view is reachable via OMNIBOX-style
+    // pending + direct message; simplest is a generic VIEW action.
+    return { type: 'OPEN_VIEW', view } as any
+  }
   const MENU_CLIP_PAGE = 'auramind-clip-page'
   const MENU_CLIP_SELECTION = 'auramind-clip-selection'
 
@@ -248,9 +259,13 @@ export default defineBackground(() => {
       )
       // Daily digest piggybacks on the feed cycle too.
       import('@/services/digest/daily').then(({ maybeRunDailyDigest }) =>
-        maybeRunDailyDigest().catch((e: any) => console.warn('[bg] digest failed:', e)),
+        maybeRunDailyDigest()
+          .then((r) => {
+            if (r.ran) notify('digest', 'AuraMind 每日简报已生成', '在记忆库查看今日晨报', 'library')
+          })
+          .catch((e: any) => console.warn('[bg] digest failed:', e)),
       )
-      // Page-change watches piggyback as well; toast the panel on changes.
+      // Page-change watches piggyback as well; toast + system notification.
       import('@/services/watch/watch').then(({ checkAllWatches }) =>
         checkAllWatches()
           .then(async (changed) => {
@@ -259,6 +274,14 @@ export default defineBackground(() => {
                 type: 'WATCH_CHANGED',
                 payload: { count: changed.length, title: changed[0].title },
               }).catch(() => {})
+              notify(
+                `watch-${Date.now()}`,
+                'AuraMind 页面监控',
+                changed.length > 1
+                  ? `${changed.length} 个监控页面有更新：${changed[0].title} 等`
+                  : `「${changed[0].title}」有更新`,
+                'watch',
+              )
               // Best-effort AI summaries for the changes (async, non-blocking).
               const { annotateLatestChange } = await import('@/services/watch/summarize')
               for (const w of changed) {

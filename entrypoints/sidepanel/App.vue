@@ -64,6 +64,11 @@ function handleBackgroundMessage(
     window.dispatchEvent(new CustomEvent('auramind:omnibox', { detail: { query } }))
     return
   }
+  if (message.type === 'OPEN_VIEW') {
+    const view = (message.payload as any)?.view
+    if (view) appStore.setCurrentView(view, { resetHistory: true })
+    return
+  }
   if (message.type === 'CAPTURE_PAGE') {
     const tabId = message.payload?.tabId
     if (tabId) triggerAutoExtract(tabId)
@@ -244,6 +249,7 @@ onMounted(async () => {
         if (!action) return
         if (action.type === 'CAPTURE_PAGE' && action.tabId) triggerAutoExtract(action.tabId)
         if (action.type === 'OPEN_REVIEW') appStore.setCurrentView('review', { resetHistory: true })
+        if (action.type === 'OPEN_VIEW' && action.view) appStore.setCurrentView(action.view as any, { resetHistory: true })
         if (action.type === 'OMNIBOX_SEARCH') {
           window.dispatchEvent(new CustomEvent('auramind:omnibox', { detail: { query: action.query || '' } }))
         }

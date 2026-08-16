@@ -61,10 +61,23 @@ describe('buildSiteZip', () => {
     const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
     const names = Object.keys(files).sort()
     // Paths are URL-encoded for safe hosting; duplicates get a -2 suffix.
-    expect(names).toEqual(['docs/%E5%90%8C%E9%A2%98-2.html', 'docs/%E5%90%8C%E9%A2%98.html', 'index.html'])
+    expect(names).toEqual(['docs/%E5%90%8C%E9%A2%98-2.html', 'docs/%E5%90%8C%E9%A2%98.html', 'index.html', 'search.html'])
     const index = strFromU8(files['index.html'])
     expect(index).toContain('docs/%E5%90%8C%E9%A2%98-2.html')
     expect(index).toContain('docs/%E5%90%8C%E9%A2%98.html')
     expect(strFromU8(files['docs/%E5%90%8C%E9%A2%98.html'])).toContain('返回目录')
+  })
+
+  it('embeds a self-contained search page with the docs index', async () => {
+    const docs = [doc('a', '注意力机制详解', '2025-06-01T00:00:00Z', { excerpt: '自注意力是核心' })]
+    const blob = buildSiteZip(docs)
+    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
+    const search = strFromU8(files['search.html'])
+    expect(search).toContain('1 篇文档的本地全文索引')
+    expect(search).toContain('"t":"注意力机制详解"')
+    expect(search).toContain('自注意力是核心')
+    expect(search).toContain('DOCS')
+    // No unresolved placeholder
+    expect(search).not.toContain('__DOCS_INDEX__')
   })
 })

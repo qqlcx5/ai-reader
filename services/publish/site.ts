@@ -78,7 +78,7 @@ export function buildIndexHtml(docs: DocumentEntity[], files: Map<string, string
 <title>My AuraMind Library</title><style>${CSS}</style></head>
 <body><div class="wrap">
 <h1>📚 My AuraMind Library</h1>
-<p class="meta">${docs.length} 篇文档 · 生成于 ${generatedAt.slice(0, 10)} · AuraMind</p>
+<p class="meta">${docs.length} 篇文档 · 生成于 ${generatedAt.slice(0, 10)} · <a href="search.html">🔎 搜索</a></p>
 ${sections}
 <footer>由 AuraMind 生成 · 本地优先 · <a href="https://github.com">开源</a></footer>
 </div></body></html>`
@@ -103,6 +103,66 @@ ${tags ? `<div style="margin:8px 0">${tags}</div>` : ''}
 </div></body></html>`
 }
 
+/** Build the client-side search page: prebuilt index + vanilla JS (pure). */
+export function buildSearchHtml(docCount: number): string {
+  return `<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>搜索 · My AuraMind Library</title><style>${CSS}
+input[type=search] { width: 100%; padding: 10px 14px; border: 1px solid #e4e4e7; border-radius: 10px; font-size: 15px; outline: none; margin-bottom: 14px }
+input[type=search]:focus { border-color: #6366f1 }
+.result { background:#fff; border:1px solid #e4e4e7; border-radius:10px; padding:10px 14px; margin-bottom:8px }
+.result .t { font-weight:600; font-size:14px } .result .s { color:#71717a; font-size:12px; margin-top:2px }
+mark { background: #eef2ff; color: #4f46e5; padding: 0 1px }
+</style></head>
+<body><div class="wrap">
+<a class="back" href="index.html">← 目录</a>
+<h1>🔎 搜索</h1>
+<p class="meta">${docCount} 篇文档的本地全文索引，无需服务器</p>
+<input type="search" id="q" placeholder="输入关键词，实时搜索…" autofocus>
+<div id="results"></div>
+<script>
+// Prebuilt inverted index, injected by the generator.
+const DOCS = __DOCS_INDEX__
+const norm = (s) => s.toLowerCase()
+const tokenize = (s) => { // CJK bigrams + word tokens
+  const out = new Set()
+  const words = norm(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean)
+  for (const w of words) {
+    if (/[\u4e00-\u9fff\u3040-\u30ff]/.test(w)) { for (let i = 0; i < w.length - 1; i++) out.add(w.slice(i, i+2)) }
+    else if (w.length > 0) out.add(w)
+  }
+  return out
+}
+const docTokens = DOCS.map((d) => tokenize(d.t + ' ' + d.x))
+const q = document.getElementById('q'), results = document.getElementById('results')
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+function search() {
+  const terms = [...tokenize(q.value)]
+  results.innerHTML = ''
+  if (terms.length === 0) return
+  const scored = []
+  for (let i = 0; i < DOCS.length; i++) {
+    const tokens = docTokens[i]
+    let score = 0
+    for (const t of terms) if (tokens.has(t)) score++
+    if (score > 0) scored.push({ i, score })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  if (scored.length === 0) { results.innerHTML = '<p class="meta">没有匹配的文档</p>'; return }
+  for (const { i } of scored.slice(0, 30)) {
+    const d = DOCS[i]
+    const a = document.createElement('a')
+    a.className = 'result'
+    a.href = d.u
+    a.innerHTML = '<div class="t">' + escapeHtml(d.t) + '</div>' + (d.x ? '<div class="s">' + escapeHtml(d.x.slice(0, 90)) + '</div>' : '')
+    results.appendChild(a)
+  }
+}
+q.addEventListener('input', search)
+</script>
+</div></body></html>`
+}
+
 /** Build the whole site as a ZIP blob (pure aside from zipSync). */
 export function buildSiteZip(docs: DocumentEntity[], now: string = nowISO()): Blob {
   const used = new Set<string>()
@@ -115,6 +175,15 @@ export function buildSiteZip(docs: DocumentEntity[], now: string = nowISO()): Bl
     zipFiles[path] = strToU8(buildDocHtml(doc, '../index.html'))
   }
   zipFiles['index.html'] = strToU8(buildIndexHtml(docs, files, now))
+
+  // Search page: docs index (title + excerpt + href) + vanilla JS matcher.
+  const docsIndex = docs.map((doc) => ({
+    t: doc.title || '无标题',
+    x: (doc.excerpt || doc.markdown || '').replace(/[#*>`\[\]]/g, '').slice(0, 160),
+    u: files.get(doc.id)!,
+  }))
+  const searchHtml = buildSearchHtml(docs.length).replace('__DOCS_INDEX__', JSON.stringify(docsIndex))
+  zipFiles['search.html'] = strToU8(searchHtml)
 
   return new Blob([zipSync(zipFiles)], { type: 'application/zip' })
 }
