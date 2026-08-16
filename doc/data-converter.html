@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuraMind ⇄ Cherry Studio 数据转换器</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-elev: #171a21;
+    --bg-elev2: #1e222b;
+    --border: #2a2f3a;
+    --border-light: #3a4150;
+    --text: #e6e8eb;
+    --text-dim: #9aa0aa;
+    --text-mute: #6b7280;
+    --accent: #4f9cf9;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* ── Header ── */
+  header {
+    padding: 12px 20px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; white-space: nowrap; }
+  header h1 .sub { color: var(--text-dim); font-weight: 400; margin-left: 8px; font-size: 12px; }
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  select, button, label.btn {
+    background: var(--bg-elev2);
+    color: var(--text);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  select:hover, button:hover, label.btn:hover { border-color: var(--accent); background: #252a35; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  button.primary:hover { background: #3a8ae6; }
+  button:disabled, label.btn.disabled { opacity: .4; cursor: not-allowed; }
+  button.danger { color: var(--red); }
+  input[type=file] { display: none; }
+
+  /* ── Stats ── */
+  .stats-bar {
+    padding: 8px 20px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 40px;
+  }
+  .stat { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .stat .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .stat .n { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat.ok .dot { background: var(--green); } .stat.ok .n { color: var(--green); }
+  .stat.skip .dot { background: var(--yellow); } .stat.skip .n { color: var(--yellow); }
+  .stat.err .dot { background: var(--red); } .stat.err .n { color: var(--red); }
+  .stat.info .dot { background: var(--accent); } .stat.info .n { color: var(--accent); }
+  .stats-bar .hint { color: var(--text-mute); font-size: 12px; margin-left: auto; }
+
+  /* ── Dual pane ── */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+    min-height: 0;
+  }
+  .pane {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .pane-head {
+    padding: 10px 16px;
+    background: var(--bg-elev);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .pane-head h2 { font-size: 13px; margin: 0; font-weight: 600; }
+  .pane-head .badge { font-size: 11px; color: var(--text-dim); }
+  .pane-head .actions { margin-left: auto; display: flex; gap: 6px; }
+  .pane-head button { padding: 3px 8px; font-size: 11px; }
+  .pane-body { flex: 1; overflow: auto; padding: 8px 0; }
+  .pane-body::-webkit-scrollbar { width: 10px; height: 10px; }
+  .pane-body::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 5px; }
+  .pane-body::-webkit-scrollbar-track { background: transparent; }
+
+  .empty { padding: 40px 20px; text-align: center; color: var(--text-mute); font-size: 13px; }
+  .empty .big { font-size: 32px; margin-bottom: 8px; opacity: .4; }
+
+  /* ── Tree ── */
+  .tree { font-family: var(--mono); font-size: 12.5px; }
+  .node { }
+  .node-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 1px 0;
+    cursor: default;
+    line-height: 1.7;
+  }
+  .node-row.toggle { cursor: pointer; }
+  .node-row.toggle:hover { background: rgba(79,156,249,.08); }
+  .node-toggle {
+    width: 14px; flex-shrink: 0; color: var(--text-mute);
+    text-align: center; user-select: none; cursor: pointer;
+  }
+  .node-row.toggle .node-toggle { cursor: pointer; }
+  .node-toggle.empty { cursor: default; }
+  .node-key { color: #7dd3fc; flex-shrink: 0; }
+  .node-key.dim { color: var(--text-dim); }
+  .node-colon { color: var(--text-mute); margin: 0 2px; flex-shrink: 0; }
+  .node-type {
+    font-size: 10px; padding: 0 5px; border-radius: 3px;
+    background: var(--bg-elev2); color: var(--text-mute);
+    flex-shrink: 0; align-self: center; line-height: 1.6;
+    border: 1px solid var(--border);
+  }
+  .node-type.arr { color: #f9a8d4; border-color: #5b2333; }
+  .node-type.obj { color: #c4b5fd; border-color: #3a2d5b; }
+  .node-type.str { color: #86efac; }
+  .node-type.num { color: #fcd34d; }
+  .node-type.bool { color: #fca5a5; }
+  .node-type.null { color: var(--text-mute); }
+  .node-summary { color: var(--text-dim); flex-shrink: 0; }
+  .node-value {
+    color: #86efac; word-break: break-all; white-space: pre-wrap;
+    max-height: 14em; overflow: hidden;
+  }
+  .node-value.long { cursor: pointer; }
+  .node-value.collapsed { max-height: 3.2em; }
+  .node-value.expanded { max-height: none; }
+  .node-children { padding-left: 18px; border-left: 1px dashed var(--border); margin-left: 6px; }
+  .node-children.hidden { display: none; }
+  .node-more {
+    color: var(--accent); cursor: pointer; font-size: 11px;
+    padding: 1px 0 1px 18px; margin-left: 6px;
+  }
+  .node-more:hover { text-decoration: underline; }
+
+  /* tag pills on result */
+  .tag { font-size: 10px; padding: 0 5px; border-radius: 3px; margin-left: 6px; font-family: sans-serif; align-self: center; }
+  .tag.ok { background: rgba(52,211,153,.15); color: var(--green); }
+  .tag.skip { background: rgba(251,191,36,.15); color: var(--yellow); }
+  .tag.err { background: rgba(248,113,113,.15); color: var(--red); }
+
+  /* error list */
+  .err-item {
+    margin: 6px 16px; padding: 8px 10px; background: rgba(248,113,113,.06);
+    border: 1px solid rgba(248,113,113,.25); border-radius: 6px; font-size: 12px;
+  }
+  .err-item .msg { color: var(--red); font-weight: 500; word-break: break-all; }
+  .err-item .where { color: var(--text-dim); margin-top: 2px; }
+
+  .section-label {
+    padding: 8px 16px 4px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--text-mute); font-family: sans-serif;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label .line { flex: 1; height: 1px; background: var(--border); }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-elev2); border: 1px solid var(--border-light);
+    padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .toast.ok { border-color: var(--green); }
+  .toast.err { border-color: var(--red); }
+.warn-bar { margin: 0 16px 8px; padding: 8px 10px; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.35); border-radius: 6px; font-size: 12px; color: var(--yellow); line-height: 1.6; }
+.warn-bar b { color: #fde68a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔄 数据转换器 <span class="sub">AuraMind ⇄ Cherry Studio</span></h1>
+  <div class="controls">
+    <select id="direction">
+      <option value="c2a">Cherry Studio → AuraMind</option>
+      <option value="a2c">AuraMind → Cherry Studio</option>
+    </select>
+    <label class="btn" id="upload-label">
+      📂 上传源文件
+      <input type="file" id="file-input" accept=".json,application/json">
+    </label>
+    <button id="convert-btn" class="primary" disabled>⚡ 执行转换</button>
+    <button id="download-btn" disabled>⬇ 下载结果</button>
+    <button id="sample-btn" title="加载一份源文件示例结构用于预览">🧪 载入示例</button>
+  </div>
+</header>
+
+<div class="stats-bar" id="stats-bar">
+  <span class="hint">提示：选择方向 → 上传 JSON → 执行转换 → 下载。所有数据均会列出，未映射数据原样保留。</span>
+</div>
+
+<main>
+  <section class="pane">
+    <div class="pane-head">
+      <h2>📥 源数据</h2>
+      <span class="badge" id="source-badge"></span>
+      <div class="actions">
+        <button id="src-expand">全部展开</button>
+        <button id="src-collapse">全部折叠</button>
+      </div>
+    </div>
+    <div class="pane-body" id="source-body">
+      <div class="empty"><div class="big">📋</div>上传文件后在此查看完整源数据<br>（按模块折叠，支持懒展开）</div>
+    </div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head">
+      <h2>📤 转换结果</h2>
+      <span class="badge" id="result-badge"></span>
+      <div class="actions">
+        <button id="res-expand">全部展开</button>
+        <button id="res-collapse">全部折叠</button>
+      </div>
+    </div>
+    <div class="pane-body" id="result-body">
+      <div class="empty"><div class="big">⚙️</div>执行转换后在此查看结果<br>（成功 / 未转 / 报错 三类分别列出）</div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ════════════════════════════════════════════════════════════════
+ *  工具函数
+ * ════════════════════════════════════════════════════════════════ */
+
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0; return (c==='x'?r:(r&0x3|0x8)).toString(16); }));
+const nowISO = () => new Date().toISOString();
+const nowMs = () => Date.now();
+function hashStr(s){ let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h)+s.charCodeAt(i); h|=0; } return (h>>>0).toString(36); }
+
+let _toastT = null;
+function toast(msg, kind='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show ' + kind;
+  clearTimeout(_toastT); _toastT = setTimeout(()=>{ el.className='toast '+kind; }, 2600);
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* 估算 token：粗略 1 token ≈ 4 字符（中英混合近似） */
+function estTokens(text){ if(!text) return 0; return Math.ceil((text.length)/4); }
+function estWords(text){ if(!text) return 0; const cjk=(text.match(/[\u4e00-\u9fff]/g)||[]).length; const en=(text.replace(/[\u4e00-\u9fff]/g,' ').match(/[a-zA-Z0-9]+/g)||[]).length; return cjk+en; }
+
+/* 安全读取嵌套路径 */
+function getPath(obj, path, dflt){ try{ let o=obj; for(const k of path){ if(o==null) return dflt; o=o[k]; } return o==null?dflt:o; }catch{ return dflt; } }
+
+/* 格式归一化：兼容 redux-persist 的字符串化 / 字符索引对象形态。
+ * doc/data.json 是已 parse 的对象；但用户真实文件可能把 persist:cherry-studio
+ * 存成 JSON 字符串，甚至逐字符展开成 {"0":"x","1":"y",...} 对象。
+ * 这里还原成标准对象，以便按 data-schema.md 处理。 */
+function isCharIndexObj(v){
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const keys = Object.keys(v).filter(k => k !== 'length');
+  if (keys.length < 16) return false; // 太短不判，避免误伤正常小对象
+  for (let i = 0; i < keys.length; i++) { if (keys[i] !== String(i)) return false; }
+  let single = 0;
+  for (let i = 0; i < keys.length; i++) { const c = v[String(i)]; if (typeof c === 'string' && c.length <= 2) single++; }
+  return single / keys.length > 0.7;
+}
+function charObjToStr(v){
+  const keys = Object.keys(v).filter(k => k !== 'length');
+  let s = '';
+  for (let i = 0; i < keys.length; i++) s += v[String(i)] != null ? v[String(i)] : '';
+  return s;
+}
+/** 把"字符对象或 JSON 字符串"还原成对象/基本值（最多一层 charObj + 一层 parse） */
+function unwrapOne(v){
+  if (isCharIndexObj(v)) v = charObjToStr(v);
+  if (typeof v === 'string') {
+    const t = v.trim();
+    if ((t[0] === '{' && t[t.length-1] === '}') || (t[0] === '[' && t[t.length-1] === ']')) {
+      try { return JSON.parse(t); } catch { return v; }
+    }
+  }
+  return v;
+}
+/** 归一化容器：顶层解包 + 每个直接子键解包（redux-persist 每个模块值也可能被 stringify） */
+function normalizeContainer(raw){
+  let v = unwrapOne(raw);
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    for (const k of Object.keys(v)) v[k] = unwrapOne(v[k]);
+  }
+  return (v && typeof v === 'object') ? v : {};
+}
+
+/* 格式自动检测：上传后自动判断 Cherry v5 / AuraMind v1 / 未识别 */
+function detectFormat(data){
+  if (!data || typeof data !== 'object') return 'unknown';
+  // Cherry v5：version/time + localStorage 或 indexedDB
+  if ((data.version === 5 || data.time) && (data.localStorage || data.indexedDB)) return 'cherry-v5';
+  if (data['persist:cherry-studio']) return 'cherry-v5';
+  if (data.localStorage && data.localStorage['persist:cherry-studio']) return 'cherry-v5';
+  // AuraMind v1：{version:1, data:{documents|conversations|models|feeds}}
+  if (data.data && typeof data.data === 'object' && !Array.isArray(data.data)
+      && (Array.isArray(data.data.documents) || Array.isArray(data.data.conversations) || Array.isArray(data.data.models) || Array.isArray(data.data.feeds))) return 'auramind-v1';
+  // AuraMind 裸：顶层直接是 documents/conversations/feeds 数组
+  if (Array.isArray(data.documents) || Array.isArray(data.conversations) || Array.isArray(data.feeds)) return 'auramind-v1';
+  return 'unknown';
+}
+function fmtLabel(fmt){ return ({'cherry-v5':'Cherry Studio (v5)','auramind-v1':'AuraMind (v1)','unknown':'未识别格式'})[fmt] || '未识别格式'; }
+function dirForFormat(fmt){ return fmt==='cherry-v5' ? 'c2a' : (fmt==='auramind-v1' ? 'a2c' : null); }
+function dirLabel(dir){ return dir==='c2a' ? 'Cherry→AuraMind' : 'AuraMind→Cherry'; }
+function dirMatches(dir, fmt){ const d = dirForFormat(fmt); return d==null ? false : d===dir; }
+
+/* ════════════════════════════════════════════════════════════════
+ *  转换引擎
+ * ════════════════════════════════════════════════════════════════ */
+
+/**
+ * Cherry Studio data.json → AuraMind SyncedDataset
+ * @returns { ok, output, stats:{ok,skip,err}, unconverted, errors, meta }
+ */
+function cherryToAuraMind(cherry) {
+  const errors = [];
+  const stats = { ok: 0, skip: 0, err: 0 };
+  const out = { documents: [], conversations: [], models: [], settings: [], collections: [], collectionItems: [], feeds: [], promptTemplates: [], webdavConfig: [], s3Config: [] };
+  const unconverted = {}; // 未映射数据原样保留
+
+  if (!cherry || typeof cherry !== 'object') { errors.push({where:'顶层', msg:'根节点不是对象'}); stats.err++; return {ok:false, output:out, stats, unconverted, errors}; }
+  // 版本检查（警告但继续）
+  if (cherry.version !== 5) errors.push({where:'顶层.version', msg:'Cherry version='+cherry.version+'，工具按 version=5 编写，可能字段不匹配'});
+
+  const ls = cherry.localStorage || {};
+  const persist = normalizeContainer(ls['persist:cherry-studio']);
+  const idb = normalizeContainer(cherry.indexedDB);
+
+  /* ── 1. 模型 providers + models → AuraMind models[] ── */
+  const llm = persist.llm || {};
+  const providers = Array.isArray(llm.providers) ? llm.providers : [];
+  const defaultModel = llm.defaultModel;
+  let providerCount = 0, modelTotal = 0;
+  for (const p of providers) {
+    providerCount++;
+    try {
+      if (!p || !Array.isArray(p.models)) { errors.push({where:`provider[${p&&p.id}]`, msg:'provider 缺少 models 数组，跳过'}); stats.err++; continue; }
+      const providerType = mapProviderType(p.type, p.id, p.name);
+      for (const m of p.models) {
+        try {
+          const isDef = defaultModel && defaultModel.id === m.id && defaultModel.provider === p.id;
+          const cfg = {
+            id: 'cherry_' + hashStr(p.id + '/' + m.id),
+            name: m.name || m.id,
+            provider: providerType,
+            modelId: m.id,
+            baseUrl: normalizeHost(p.apiHost),
+            apiKey: p.apiKey || '',
+            enabled: p.enabled !== false,
+            isDefault: !!isDef,
+            createdAt: nowISO(),
+            updatedAt: nowISO(),
+          };
+          out.models.push(cfg);
+          modelTotal++; stats.ok++;
+        } catch(e) { errors.push({where:`provider[${p.id}].model[${m&&m.id}]`, msg:String(e.message||e)}); stats.err++; }
+      }
+    } catch(e) { errors.push({where:`provider[${p.id}]`, msg:String(e.message||e)}); stats.err++; }
+  }
+
+  /* ── 2. WebDAV 设置 ── */
+  const s = persist.settings || {};
+  try {
+    if (s.webdavHost || s.webdavUser) {
+      out.webdavConfig.push({
+        id: 'webdav-config',
+        value: {
+          url: s.webdavHost || '',
+          username: s.webdavUser || '',
+          password: s.webdavPass || '',
+          basePath: s.webdavPath || '/',
+          enabled: s.webdavAutoSync === true,
+          maxBackups: typeof s.webdavMaxBackups === 'number' ? s.webdavMaxBackups : 10,
+        },
+        updatedAt: nowISO(),
+      });
+      stats.ok++;
+    } else { stats.skip++; unconverted.__webdav_note = 'Cherry 侧未配置 webdav'; }
+  } catch(e) { errors.push({where:'settings.webdav*', msg:String(e.message||e)}); stats.err++; }
+
+  /* ── 3. S3 设置 ── */
+  try {
+    const s3 = s.s3;
+    if (s3 && (s3.endpoint || s3.bucket)) {
+      out.s3Config.push({
+        id: 's3-config',
+        value: {
+          endpoint: s3.endpoint || '',
+          bucket: s3.bucket || '',
+          region: s3.region || '',
+          accessKeyId: s3.accessKeyId || '',
+          secretAccessKey: s3.secretAccessKey || '',
+          basePath: s3.root || '',
+          enabled: s3.autoSync === true,
+          forcePathStyle: !/^https:\/\/s3[.-].*amazonaws\.com/.test(s3.endpoint||''),
+          maxBackups: typeof s3.maxBackups === 'number' ? s3.maxBackups : 10,
+        },
+        updatedAt: nowISO(),
+      });
+      stats.ok++;
+    } else { stats.skip++; unconverted.__s3_note = 'Cherry 侧未配置 s3'; }
+  } catch(e) { errors.push({where:'settings.s3', msg:String(e.message||e)}); stats.err++; }
+
+  /* ── 4. AppSettings 占位（让导入后扩展可直接运行） ── */
+  try {
+    out.settings.push({
+      id: 'app-settings',
+      globalSystemPrompt: '',
+      context: {
+        maxContextTokens: 8000,
+        includeMetadataInPrompt: true, includeUrlInPrompt: true,
+        includeTitleInPrompt: true, includeCapturedAtInPrompt: false,
+        includeConversationHistory: true, maxHistoryMessages: 10,
+      },
+      capture: { autoExtractOnOpen: false, autoExtractOnTabChange: false, preferCache: true, saveRawHtml: false, compressRawHtml: false },
+      autoAnalysis: { queuePaused: false },
+      createdAt: nowISO(), updatedAt: nowISO(),
+    });
+  } catch(e) { errors.push({where:'settings(app)', msg:String(e.message||e)}); stats.err++; }
+
+  /* ── 5. 对话 assistants/agents + topics + messages + message_blocks ── */
+  // 建 message_blocks 索引
+  const blockMap = new Map();
+  const blocks = Array.isArray(idb.message_blocks) ? idb.message_blocks : [];
+  for (const b of blocks) { if (b && b.id) blockMap.set(b.id, b); }
+  // 建 indexedDB.topics 索引（topicId → messages[]）
+  const topicMsgMap = new Map();
+  for (const t of (Array.isArray(idb.topics) ? idb.topics : [])) { if (t && t.id) topicMsgMap.set(t.id, Array.isArray(t.messages)?t.messages:[]); }
+
+  const assistantLists = [];
+  if (persist.assistants) {
+    if (persist.assistants.defaultAssistant) assistantLists.push({kind:'assistant', items:[persist.assistants.defaultAssistant]});
+    if (Array.isArray(persist.assistants.assistants)) assistantLists.push({kind:'assistant', items:persist.assistants.assistants});
+  }
+  if (persist.agents && Array.isArray(persist.agents.agents)) assistantLists.push({kind:'agent', items:persist.agents.agents});
+
+  let topicConverted = 0, msgConverted = 0, topicSkipped = 0;
+  for (const grp of assistantLists) {
+    for (const a of grp.items) {
+      const topics = Array.isArray(a.topics) ? a.topics : [];
+      for (const tp of topics) {
+        try {
+          const dbMsgs = topicMsgMap.get(tp.id) || [];
+          if (dbMsgs.length === 0) { topicSkipped++; stats.skip++; continue; }
+          // 拼 markdown
+          const parts = [];
+          const amMessages = [];
+          for (const dm of dbMsgs) {
+            try {
+              const bs = (dm.blocks||[]).map(bid=>blockMap.get(bid)).filter(Boolean);
+              const mainText = bs.filter(b=>b.type==='main_text').map(b=>b.content||'').join('\n\n');
+              const think = bs.filter(b=>b.type==='thinking').map(b=>b.content||'').join('\n\n');
+              if (mainText) parts.push(`### ${dm.role==='user'?'🧑 用户':'🤖 助手'}\n\n${mainText}`);
+              const msg = {
+                id: dm.id || uuid(),
+                role: dm.role === 'assistant' ? 'assistant' : 'user',
+                content: mainText || '',
+                reasoningContent: think || undefined,
+                modelId: dm.model ? dm.model.id : dm.modelId,
+                status: mapStatusToAM(dm.status),
+                createdAt: dm.createdAt || tp.createdAt || nowISO(),
+                updatedAt: dm.updatedAt,
+              };
+              if (dm.usage) msg.tokenUsage = { promptTokens: dm.usage.prompt_tokens, completionTokens: dm.usage.completion_tokens, totalTokens: dm.usage.total_tokens };
+              if (dm.metrics) { if (dm.metrics.time_completion_millsec!=null) msg.durationMs = dm.metrics.time_completion_millsec; if (dm.metrics.time_first_token_millsec!=null) msg.firstTokenMs = dm.metrics.time_first_token_millsec; }
+              amMessages.push(msg); msgConverted++;
+            } catch(e) { errors.push({where:`topic[${tp.id}].message[${dm&&dm.id}]`, msg:String(e.message||e)}); stats.err++; }
+          }
+          const markdown = parts.join('\n\n---\n\n');
+          const docId = uuid();
+          const ts0 = tp.createdAt || nowISO();
+          out.documents.push({
+            id: docId,
+            url: `cherry://topic/${tp.id}`,
+            title: (tp.name || a.name || '导入的对话').slice(0, 120),
+            markdown,
+            wordCount: estWords(markdown),
+            tokenCount: estTokens(markdown),
+            contentHash: hashStr(markdown).padStart(8,'0'),
+            extractionMethod: 'manual',
+            source: 'library',
+            capturedAt: ts0,
+            updatedAt: tp.updatedAt || ts0,
+            tags: ['cherry-import', grp.kind],
+          });
+          out.conversations.push({
+            id: uuid(),
+            documentId: docId,
+            title: tp.name || a.name,
+            messages: amMessages,
+            createdAt: ts0,
+            updatedAt: tp.updatedAt || ts0,
+          });
+          topicConverted++; stats.ok++;
+        } catch(e) { errors.push({where:`topic[${tp.id}]`, msg:String(e.message||e)}); stats.err++; }
+      }
+    }
+  }
+
+  /* ── 6. 未转数据原样保留（参考 webdav 原样保留精神） ── */
+  // persist 下除 llm/assistants/agents/settings 之外的模块
+  const persistKeep = {};
+  for (const k of Object.keys(persist)) {
+    if (!['llm','assistants','agents','settings'].includes(k)) persistKeep[k] = persist[k];
+  }
+  // settings 下除 webdav*/s3 外的字段
+  const settingsKeep = {};
+  for (const k of Object.keys(s)) {
+    if (!/^webdav/.test(k) && k !== 's3') settingsKeep[k] = s[k];
+  }
+  // indexedDB 下未映射的表
+  const idbKeep = {};
+  for (const k of Object.keys(idb)) {
+    if (!['topics','message_blocks'].includes(k)) idbKeep[k] = idb[k];
+  }
+  // localStorage 其他键
+  const lsKeep = {};
+  for (const k of Object.keys(ls)) { if (k !== 'persist:cherry-studio') lsKeep[k] = ls[k]; }
+  Object.assign(unconverted, {
+    _note: '以下 Cherry Studio 数据 AuraMind 无对应字段，按原样保留',
+    localStorage: lsKeep,
+    persist_cherry_studio: persistKeep,
+    settings: settingsKeep,
+    indexedDB: idbKeep,
+  });
+  stats.skip += countLeaves(persistKeep) + countLeaves(settingsKeep) + countLeaves(idbKeep) + countLeaves(lsKeep);
+
+  const meta = {
+    providerCount, modelTotal, topicConverted, topicSkipped, msgConverted,
+    cherryTime: cherry.time, cherryVersion: cherry.version,
+  };
+  return { ok: true, output: out, stats, unconverted, errors, meta };
+}
+
+function mapProviderType(cherryType, id, name) {
+  if (cherryType === 'anthropic') return 'anthropic';
+  const hint = ((id||'')+' '+(name||'')+' '+(cherryType||'')).toLowerCase();
+  if (hint.includes('ollama')) return 'ollama';
+  return 'openai-compatible';
+}
+function normalizeHost(h){ if(!h) return undefined; return h.replace(/#.*$/,'').trim(); }
+function mapStatusToAM(st){
+  return ({success:'success',pending:'pending',error:'failed'})[st] || 'success';
+}
+function mapStatusFromAM(st){
+  return ({success:'success',pending:'pending',sending:'pending',streaming:'pending',failed:'error',aborted:'error'})[st] || 'success';
+}
+function countLeaves(o){
+  if (o==null) return 0;
+  if (Array.isArray(o)) { let n=0; for(const v of o) n += (v&&typeof v==='object')?countLeaves(v):1; return n; }
+  if (typeof o==='object'){ let n=0; for(const k of Object.keys(o)) n+=countLeaves(o[k]); return n; }
+  return 1;
+}
+
+/**
+ * AuraMind SyncedDataset → Cherry Studio data.json
+ */
+function auraMindToCherry(amRaw) {
+  const errors = [];
+  const stats = { ok: 0, skip: 0, err: 0 };
+  // 自动解包 {version, data:{...}}
+  let am = amRaw;
+  if (am && typeof am.data === 'object' && !Array.isArray(am.data)) am = am.data;
+  if (!am || typeof am !== 'object') { errors.push({where:'顶层', msg:'根节点不是对象'}); stats.err++; return {ok:false, output:{}, stats, unconverted:{}, errors}; }
+
+  const data = {
+    time: nowMs(),
+    version: 5,
+    localStorage: { language: 'zh-CN', 'persist:cherry-studio': { llm:{providers:[], defaultModel:null, topicNamingModel:null, translateModel:null, quickAssistantModel:null, quickModel:null, quickAssistantId:'', settings:{}}, settings:{}, assistants:{defaultAssistant:defaultCherryAssistant(), assistants:[]}, agents:{agents:[]} } },
+    indexedDB: { files:[], topics:[], settings:[], knowledge_notes:[], translate_history:[], quick_phrases:[], message_blocks:[], translate_languages:[], notes_tree:[] },
+  };
+  const persist = data.localStorage['persist:cherry-studio'];
+  const unconverted = {};
+
+  /* ── 1. models[] → 反推 providers ── */
+  const models = Array.isArray(am.models) ? am.models : [];
+  const groups = new Map(); // key=baseUrl|apiKey → {provider fields, models[]}
+  for (const m of models) {
+    try {
+      const key = (m.baseUrl||'') + '|' + (m.apiKey||'');
+      let g = groups.get(key);
+      if (!g) { g = { baseUrl:m.baseUrl, apiKey:m.apiKey, type: m.provider, models:[], enabledAny:false, sampleName:m.name }; groups.set(key, g); }
+      if (m.provider === 'anthropic') g.type = 'anthropic';
+      g.models.push(m); if (m.enabled) g.enabledAny = true;
+    } catch(e) { errors.push({where:`model[${m&&m.id}]`, msg:String(e.message||e)}); stats.err++; }
+  }
+  const providers = [];
+  let defaultModel = null;
+  for (const [, g] of groups) {
+    const pid = 'imp_' + hashStr((g.baseUrl||'') + (g.sampleName||'') + Math.random());
+    const cType = g.type === 'anthropic' ? 'anthropic' : 'openai';
+    providers.push({
+      id: pid, name: guessProviderName(g.baseUrl, g.sampleName) || 'Imported',
+      type: cType, apiKey: g.apiKey || '', apiHost: g.baseUrl || '',
+      enabled: g.enabledAny, isSystem: false,
+      models: g.models.map(m => ({ id: m.modelId, provider: pid, name: m.name, group: '', supported_text_delta: true })),
+    });
+    const def = g.models.find(m=>m.isDefault);
+    if (def && !defaultModel) defaultModel = { id: def.modelId, provider: pid, name: def.name, group: '' };
+    stats.ok++;
+  }
+  persist.llm.providers = providers;
+  persist.llm.defaultModel = defaultModel;
+
+  /* ── 2. WebDAV config ── */
+  const wdArr = Array.isArray(am.webdavConfig) ? am.webdavConfig : [];
+  const wdRow = wdArr.find(r=>r && r.id==='webdav-config');
+  const wd = wdRow ? (wdRow.value||{}) : {};
+  persist.settings.webdavHost = wd.url || '';
+  persist.settings.webdavUser = wd.username || '';
+  persist.settings.webdavPass = wd.password || '';
+  persist.settings.webdavPath = wd.basePath || '/cherry-studio';
+  persist.settings.webdavAutoSync = wd.enabled === true;
+  persist.settings.webdavSyncInterval = '1440';
+  persist.settings.webdavMaxBackups = typeof wd.maxBackups==='number'?wd.maxBackups:10;
+  persist.settings.webdavSkipBackupFile = false;
+  persist.settings.webdavDisableStream = false;
+  wdRow ? stats.ok++ : stats.skip++;
+
+  /* ── 3. S3 config ── */
+  const s3Arr = Array.isArray(am.s3Config) ? am.s3Config : [];
+  const s3Row = s3Arr.find(r=>r && r.id==='s3-config');
+  const s3 = s3Row ? (s3Row.value||{}) : {};
+  persist.settings.s3 = {
+    endpoint: s3.endpoint || '', region: s3.region || '', bucket: s3.bucket || '',
+    accessKeyId: s3.accessKeyId || '', secretAccessKey: s3.secretAccessKey || '',
+    root: s3.basePath || '', autoSync: s3.enabled === true,
+    syncInterval: 0, maxBackups: typeof s3.maxBackups==='number'?s3.maxBackups:5, skipBackupFile: false,
+  };
+  s3Row ? stats.ok++ : stats.skip++;
+
+  /* ── 4. documents + conversations → 合并成 Cherry 对话（文档作上下文 + 问答跟随） ──
+   * 符合 cherry studio 数据规则：每个 document 生成一个 assistant+topic，
+   * 文档内容作为首条 user 消息，关联 conversation 的问答跟在后面；
+   * 孤儿 conversation（无 document）各自一个 topic。所有对象字段补全置空。 */
+  const convs = Array.isArray(am.conversations) ? am.conversations : [];
+  const docs = Array.isArray(am.documents) ? am.documents : [];
+  const docMap = new Map(docs.map(d=>[d.id, d]));
+  const convsByDoc = new Map();       // documentId → conversations[]
+  const orphanConvs = [];             // 无关联 document 的 conversation
+  for (const c of convs) {
+    if (c.documentId && docMap.has(c.documentId)) {
+      if (!convsByDoc.has(c.documentId)) convsByDoc.set(c.documentId, []);
+      convsByDoc.get(c.documentId).push(c);
+    } else { orphanConvs.push(c); }
+  }
+  let topicCount = 0, blkCount = 0;
+
+  // 单条消息 → DBMessage + message_blocks（闭包，访问 data/errors/stats）
+  const convertMsg = (msg, tid, aid, askId) => {
+    try {
+      const blockIds = [];
+      const created = msg.createdAt || nowISO();
+      if (msg.content) { const bid=uuid(); data.indexedDB.message_blocks.push(fullMainTextBlock(bid, msg.id, msg.content, created, msg.updatedAt)); blockIds.push(bid); }
+      if (msg.reasoningContent) { const bid=uuid(); data.indexedDB.message_blocks.push(fullThinkingBlock(bid, msg.id, msg.reasoningContent, created)); blockIds.push(bid); }
+      const isAssistant = msg.role === 'assistant';
+      const dm = isAssistant
+        ? fullAssistantMessage(msg.id||uuid(), tid, aid, created, msg.updatedAt, blockIds, askId)
+        : fullUserMessage(msg.id||uuid(), tid, aid, created, msg.updatedAt, blockIds);
+      if (msg.modelId) dm.modelId = msg.modelId;
+      if (isAssistant && msg.modelId) dm.model = { id: msg.modelId, provider:'', name: msg.modelId, group:'' };
+      if (!isAssistant && msg.tokenUsage) dm.usage = { prompt_tokens: msg.tokenUsage.promptTokens||0, completion_tokens: msg.tokenUsage.completionTokens||0, total_tokens: msg.tokenUsage.totalTokens||0 };
+      if (isAssistant && (msg.tokenUsage || msg.durationMs!=null || msg.firstTokenMs!=null)) dm.metrics = { completion_tokens: msg.tokenUsage?.completionTokens||0, time_completion_millsec: msg.durationMs||0, time_first_token_millsec: msg.firstTokenMs||0, time_thinking_millsec: 0 };
+      dm.status = mapStatusFromAM(msg.status);
+      blkCount += blockIds.length;
+      return dm;
+    } catch(e) { errors.push({where:`message[${msg&&msg.id}]`, msg:String(e.message||e)}); stats.err++; return null; }
+  };
+
+  // 4a. 每个 document → 一个 topic（文档内容作首条 user 消息 + 关联会话问答）
+  for (const doc of docs) {
+    try {
+      const aid = uuid(), tid = uuid();
+      const ts = doc.capturedAt || doc.updatedAt || nowISO();
+      const title = doc.title || '未命名文档';
+      persist.assistants.assistants.push(fullAssistant(aid, tid, title, ts, '📄', doc.url||''));
+      const dbMsgs = [];
+      // 文档内容作为首条 user 消息
+      const docMsgId = uuid(), docBlockId = uuid();
+      data.indexedDB.message_blocks.push(fullMainTextBlock(docBlockId, docMsgId, formatDocAsContent(doc), ts, ts));
+      dbMsgs.push(fullUserMessage(docMsgId, tid, aid, ts, ts, [docBlockId]));
+      blkCount++;
+      // 关联会话的问答（按 conversation 分组，组内维护 askId 追问链）
+      const related = convsByDoc.get(doc.id) || [];
+      for (const c of related) {
+        let lastUserId = '';
+        for (const msg of (Array.isArray(c.messages)?c.messages:[])) {
+          const dm = convertMsg(msg, tid, aid, msg.role==='assistant' ? (lastUserId||'') : '');
+          if (dm) { if (msg.role==='user') lastUserId = dm.id; dbMsgs.push(dm); }
+        }
+      }
+      data.indexedDB.topics.push({ id: tid, messages: dbMsgs });
+      topicCount++; stats.ok++;
+    } catch(e) { errors.push({where:`document[${doc.id}]`, msg:String(e.message||e)}); stats.err++; }
+  }
+
+  // 4b. 孤儿 conversation（无 document）→ 各自一个 topic
+  for (const c of orphanConvs) {
+    try {
+      const aid = uuid(), tid = uuid();
+      const ts = c.createdAt || nowISO();
+      const title = c.title || '导入的对话';
+      persist.assistants.assistants.push(fullAssistant(aid, tid, title, ts, '💬', '从 AuraMind 导入'));
+      const dbMsgs = [];
+      let lastUserId = '';
+      for (const msg of (Array.isArray(c.messages)?c.messages:[])) {
+        const dm = convertMsg(msg, tid, aid, msg.role==='assistant' ? (lastUserId||'') : '');
+        if (dm) { if (msg.role==='user') lastUserId = dm.id; dbMsgs.push(dm); }
+      }
+      data.indexedDB.topics.push({ id: tid, messages: dbMsgs });
+      topicCount++; stats.ok++;
+    } catch(e) { errors.push({where:`conversation[${c.id}]`, msg:String(e.message||e)}); stats.err++; }
+  }
+
+  /* ── 5. AuraMind 无对应字段 → 未转（documents + conversations 已合并为对话，不在此列） ── */
+  const amKeep = {};
+  if (Array.isArray(am.collections) && am.collections.length) amKeep.collections = am.collections;
+  if (Array.isArray(am.collectionItems) && am.collectionItems.length) amKeep.collectionItems = am.collectionItems;
+  if (Array.isArray(am.feeds) && am.feeds.length) amKeep.feeds = am.feeds;
+  if (Array.isArray(am.promptTemplates) && am.promptTemplates.length) amKeep.promptTemplates = am.promptTemplates;
+  if (Array.isArray(am.settings) && am.settings.length) amKeep.settings = am.settings;
+  unconverted._note = '以下 AuraMind 数据 Cherry Studio 无对应字段，按原样保留（documents + conversations 已合并为对话）';
+  Object.assign(unconverted, amKeep);
+  stats.skip += ['collections','collectionItems','feeds','promptTemplates','settings'].reduce((n,k)=>n+((am[k]||[]).length),0);
+
+  const meta = { providerCount: providers.length, modelTotal: models.length, topicCount, blockCount: blkCount };
+  return { ok:true, output: data, stats, unconverted, errors, meta };
+}
+
+function defaultCherryAssistant(){
+  return { id:'default', name:'默认助手', emoji:'⭐', prompt:'', type:'assistant', model:null, defaultModel:null, topics:[], messages:[], regularPhrases:[], mcpServers:[], knowledgeRecognition:'off', enableWebSearch:false, description:'', settings: defaultCherryAssistantSettings() };
+}
+function defaultCherryAssistantSettings(){
+  return { temperature:1, enableTemperature:true, contextCount:5, enableMaxTokens:false, maxTokens:0, streamOutput:true, topP:1, enableTopP:true, toolUseMode:'prompt', customParameters:[] };
+}
+/* Cherry 对象构造器：字段补全置空，符合 data-schema.md 数据规则 */
+function fullAssistant(aid, tid, name, ts, emoji, description){
+  return { id:aid, name, emoji, prompt:'', type:'assistant', model:null, defaultModel:null,
+    settings: defaultCherryAssistantSettings(),
+    topics:[{ id:tid, assistantId:aid, createdAt:ts, updatedAt:ts, name, messages:[], isNameManuallyEdited:true }],
+    messages:[], regularPhrases:[], mcpServers:[], knowledgeRecognition:'off', enableWebSearch:false, description: description||'' };
+}
+function fullMainTextBlock(bid, mid, content, createdAt, updatedAt){
+  return { id:bid, messageId:mid, type:'main_text', createdAt, status:'success', updatedAt:updatedAt||createdAt, content:content||'', knowledgeBaseIds:[], citationReferences:[] };
+}
+function fullThinkingBlock(bid, mid, content, createdAt){
+  return { id:bid, messageId:mid, type:'thinking', createdAt, status:'success', content:content||'', thinking_millsec:0 };
+}
+function fullUserMessage(mid, tid, aid, createdAt, updatedAt, blockIds){
+  return { id:mid, role:'user', topicId:tid, assistantId:aid, createdAt, updatedAt:updatedAt||createdAt, status:'success', blocks:blockIds||[], mentions:[] };
+}
+function fullAssistantMessage(mid, tid, aid, createdAt, updatedAt, blockIds, askId){
+  return { id:mid, role:'assistant', topicId:tid, assistantId:aid, createdAt, updatedAt:updatedAt||createdAt, status:'success', blocks:blockIds||[], mentions:[], askId:askId||'', modelId:'', model:null, metrics:null, foldSelected:false };
+}
+function formatDocAsContent(doc){
+  const parts = [`# ${doc.title || '未命名文档'}`];
+  const meta = [];
+  if (doc.url) meta.push(`来源：${doc.url}`);
+  if (doc.siteName) meta.push(`站点：${doc.siteName}`);
+  if (doc.author) meta.push(`作者：${doc.author}`);
+  if (doc.capturedAt) meta.push(`收藏：${doc.capturedAt}`);
+  if (meta.length) { parts.push(''); parts.push('> ' + meta.join(' · ')); }
+  parts.push('');
+  if (doc.markdown) parts.push(doc.markdown);
+  else if (doc.excerpt) parts.push(doc.excerpt);
+  if (Array.isArray(doc.highlights) && doc.highlights.length) {
+    parts.push('\n---\n## ✍️ 标注');
+    for (const h of doc.highlights) parts.push(`> ${h.text}${h.note?`\n>\n> 💬 ${h.note}`:''}`);
+  }
+  return parts.join('\n');
+}
+function guessProviderName(baseUrl, sample){
+  if (!baseUrl) return sample || '';
+  let m = baseUrl.match(/^https?:\/\/([^/]+)/);
+  if (m) { const host=m[1]; if (/openai|api\.openai/.test(host)) return 'OpenAI'; if (/anthropic/.test(host)) return 'Anthropic'; if (/google|gemini/.test(host)) return 'Gemini'; return host; }
+  return sample || '';
+}
+
+/* ════════════════════════════════════════════════════════════════
+ *  渲染引擎：把任意 JS 值渲染成可折叠树
+ * ════════════════════════════════════════════════════════════════ */
+
+const MAX_PREVIEW_CHILDREN = 50;      // 数组初始渲染前 N 个
+const STR_THRESHOLD = 200;            // 字符串超过则折叠
+
+function typeTag(v){
+  if (v === null) return ['null','null'];
+  if (Array.isArray(v)) return ['arr', `Array[${v.length}]`];
+  const t = typeof v;
+  if (t === 'object') return ['obj', 'Object'];
+  return [t === 'boolean'?'bool':t === 'number'?'num':t === 'string'?'str':'null', t];
+}
+
+function summary(v){
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return `${v.length} 项`;
+  if (typeof v === 'object') { const k = Object.keys(v); return k.length ? `${k.length} 键` : '{}'; }
+  if (typeof v === 'string') { return v.length > 60 ? esc(v.slice(0,60))+'…' : ''; }
+  return '';
+}
+
+/** 递归渲染一个值。返回 DOM 元素。 */
+function renderValue(key, v, opts){
+  opts = opts || {};
+  const row = document.createElement('div');
+  row.className = 'node-row';
+  const [tagKind, tagText] = typeTag(v);
+  const hasChildren = (Array.isArray(v) && v.length>0) || (v && typeof v==='object' && !Array.isArray(v) && Object.keys(v).length>0);
+  const isLongStr = typeof v === 'string' && v.length > STR_THRESHOLD;
+
+  // toggle 箭头
+  const tog = document.createElement('span');
+  tog.className = 'node-toggle' + (hasChildren || isLongStr ? '' : ' empty');
+  tog.textContent = hasChildren ? '▶' : (isLongStr ? '▸' : '');
+  row.appendChild(tog);
+
+  // key
+  if (key !== undefined) {
+    const k = document.createElement('span');
+    k.className = 'node-key' + (opts.dimKey?' dim':'');
+    k.textContent = key;
+    row.appendChild(k);
+    const col = document.createElement('span'); col.className='node-colon'; col.textContent=':'; row.appendChild(col);
+  }
+
+  // type tag
+  const t = document.createElement('span'); t.className = 'node-type '+tagKind; t.textContent = tagText; row.appendChild(t);
+
+  // summary / value
+  if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean' || v === null) {
+    if (isLongStr) {
+      const val = document.createElement('span');
+      val.className = 'node-value long collapsed';
+      val.textContent = v;
+      row.appendChild(val);
+      // 点击展开/收起长字符串
+      tog.style.cursor='pointer'; row.classList.add('toggle');
+      tog.onclick = (e)=>{ e.stopPropagation(); const open = val.classList.toggle('expanded'); val.classList.toggle('collapsed', !open); tog.textContent = open?'▾':'▸'; };
+    } else {
+      const val = document.createElement('span');
+      val.className = 'node-value';
+      val.textContent = v === null ? 'null' : (typeof v==='string' ? '"'+v+'"' : String(v));
+      val.style.color = tagKind==='str'?'#86efac':tagKind==='num'?'#fcd34d':tagKind==='bool'?'#fca5a5':'var(--text-mute)';
+      row.appendChild(val);
+    }
+  } else {
+    const sm = document.createElement('span'); sm.className='node-summary'; sm.textContent = summary(v); row.appendChild(sm);
+  }
+
+  // 可选 tag pill（成功/未转/报错）
+  if (opts.tag) { const tp=document.createElement('span'); tp.className='tag '+opts.tag; tp.textContent = ({ok:'已转',skip:'未转',err:'报错'})[opts.tag]||opts.tag; row.appendChild(tp); }
+
+  // 子节点容器（懒渲染）
+  let childWrap = null;
+  const wrap = document.createElement('div');
+  wrap.className = 'node';
+  wrap.appendChild(row);
+
+  if (hasChildren) {
+    childWrap = document.createElement('div');
+    childWrap.className = 'node-children hidden';
+    wrap.appendChild(childWrap);
+    let rendered = false;
+    row.classList.add('toggle');
+    tog.style.cursor='pointer';
+    const ensure = ()=>{ if(!rendered){ rendered=true; renderChildren(childWrap, v); } };
+    row.onclick = (e)=>{ e.stopPropagation(); const open = !childWrap.classList.contains('hidden') ? false : true; if(open) ensure(); childWrap.classList.toggle('hidden', !open); tog.textContent = open?'▾':'▶'; };
+  }
+  return wrap;
+}
+
+function renderChildren(container, v){
+  if (Array.isArray(v)) {
+    renderArray(container, v, 0, Math.min(MAX_PREVIEW_CHILDREN, v.length));
+    if (v.length > MAX_PREVIEW_CHILDREN) addMore(container, v);
+  } else {
+    for (const k of Object.keys(v)) container.appendChild(renderValue(k, v[k]));
+  }
+}
+function renderArray(container, arr, from, to){
+  for (let i=from;i<to;i++) container.appendChild(renderValue(i, arr[i]));
+}
+function addMore(container, arr){
+  let shown = Math.min(MAX_PREVIEW_CHILDREN, arr.length);
+  const more = document.createElement('div');
+  more.className='node-more';
+  more.textContent = `▾ 显示更多（剩余 ${arr.length-shown} 项）`;
+  more.onclick = ()=>{
+    const nxt = Math.min(shown+MAX_PREVIEW_CHILDREN, arr.length);
+    renderArray(container, arr, shown, nxt);
+    shown = nxt;
+    if (shown >= arr.length) more.remove();
+    else more.textContent = `▾ 显示更多（剩余 ${arr.length-shown} 项）`;
+  };
+  container.appendChild(more);
+}
+
+/* 全部展开/折叠：遍历所有 .node-row.toggle 触发点击到目标态 */
+function setAllExpanded(root, expand){
+  const rows = root.querySelectorAll('.node-row.toggle');
+  // 自底向上展开，保证父先展开子才可见
+  const arr = Array.from(rows);
+  if (expand) arr.reverse();
+  for (const row of arr) {
+    const wrap = row.parentElement;
+    const child = wrap.querySelector(':scope > .node-children');
+    if (!child) continue;
+    const isHidden = child.classList.contains('hidden');
+    if (expand && isHidden) row.click();
+    if (!expand && !isHidden) row.click();
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+ *  应用状态 & 事件
+ * ════════════════════════════════════════════════════════════════ */
+
+const state = {
+  direction: 'c2a',
+  sourceRaw: null,      // 原始解析对象
+  sourceName: '',
+  sourceSize: 0,
+  sourceFormat: 'unknown', // 自动检测的源格式
+  convResult: null,     // 转换结果 {output, stats, unconverted, errors, meta}
+};
+
+const $ = id => document.getElementById(id);
+
+$('direction').onchange = e => {
+  state.direction = e.target.value;
+  // 切换方向时清空结果，源数据保留
+  state.convResult = null;
+  $('download-btn').disabled = true;
+  $('convert-btn').disabled = !state.sourceRaw;
+  renderResult();
+  renderStatsBar();
+  renderBadges();
+};
+
+$('file-input').onchange = async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  state.sourceName = f.name; state.sourceSize = f.size;
+  $('source-badge').textContent = `${f.name} · ${formatBytes(f.size)} · 读取中…`;
+  try {
+    const text = await f.text();
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch(err){ throw new Error('JSON 解析失败：'+(err.message||err)); }
+    state.sourceRaw = parsed;
+    state.convResult = null;
+    // 自动检测格式并对齐方向（避免选反方向导致全部判为未转）
+    const fmt = detectFormat(parsed);
+    state.sourceFormat = fmt;
+    const wantDir = dirForFormat(fmt);
+    if (wantDir && wantDir !== state.direction) {
+      state.direction = wantDir;
+      $('direction').value = wantDir;
+      toast(`检测到 ${fmtLabel(fmt)}，已自动切换为 ${dirLabel(wantDir)}`, 'ok');
+    }
+    $('convert-btn').disabled = false;
+    $('download-btn').disabled = true;
+    renderSource();
+    renderResult();
+    renderStatsBar();
+    renderBadges();
+    if (fmt === 'unknown') toast('文件格式未识别，请手动确认方向', 'err');
+    else if (!wantDir) toast('源文件加载成功 · '+fmtLabel(fmt), 'ok');
+  } catch(err) {
+    state.sourceRaw = null;
+    $('convert-btn').disabled = true;
+    $('source-body').innerHTML = `<div class="empty"><div class="big">❌</div>${esc(err.message||err)}</div>`;
+    $('source-badge').textContent = '';
+    toast('加载失败：'+(err.message||err), 'err');
+  }
+};
+
+$('convert-btn').onclick = () => {
+  if (!state.sourceRaw) return;
+  $('convert-btn').disabled = true;
+  $('convert-btn').textContent = '⏳ 转换中…';
+  // 异步让 UI 更新
+  setTimeout(()=>{
+    try {
+      let r;
+      if (state.direction === 'c2a') r = cherryToAuraMind(state.sourceRaw);
+      else r = auraMindToCherry(state.sourceRaw);
+      state.convResult = r;
+      $('download-btn').disabled = false;
+      renderResult(); renderStatsBar(); renderBadges();
+      toast(`转换完成：成功 ${r.stats.ok} / 未转 ${r.stats.skip} / 报错 ${r.stats.err}`, r.stats.err?'err':'ok');
+    } catch(err){
+      toast('转换异常：'+(err.message||err), 'err');
+      console.error(err);
+    } finally {
+      $('convert-btn').disabled = false;
+      $('convert-btn').textContent = '⚡ 执行转换';
+    }
+  }, 30);
+};
+
+$('download-btn').onclick = () => {
+  if (!state.convResult) return;
+  try {
+    let payload, filename;
+    if (state.direction === 'c2a') {
+      // 输出 AuraMind 导入格式 + 未转数据
+      payload = { version: 1, exportedAt: nowISO(), data: { ...state.convResult.output, _unconverted: state.convResult.unconverted } };
+      filename = `cherry-to-auramind-${stamp()}.json`;
+    } else {
+      payload = { ...state.convResult.output, _unconverted: state.convResult.unconverted };
+      filename = `auramind-to-cherry-${stamp()}.json`;
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast('已下载 '+filename, 'ok');
+  } catch(err){ toast('下载失败：'+(err.message||err), 'err'); }
+};
+
+$('sample-btn').onclick = () => {
+  // 构造一个小的 Cherry 示例用于预览
+  const sample = {
+    time: nowMs(), version: 5,
+    localStorage: { language:'zh-CN', modelscope_token:'ms-demo',
+      'persist:cherry-studio': {
+        llm: { defaultModel:{id:'gpt-4o-mini',provider:'demo',name:'gpt-4o-mini',group:'gpt-4o'}, providers:[
+          { id:'demo', name:'Demo OpenAI', type:'openai', apiKey:'sk-demo', apiHost:'https://api.demo.com/v1', enabled:true, isSystem:false, models:[
+            {id:'gpt-4o-mini',provider:'demo',name:'gpt-4o-mini',group:'gpt-4o',supported_text_delta:true},
+          ] },
+        ], settings:{} },
+        settings: { webdavHost:'https://dav.demo.com/dav/', webdavUser:'u', webdavPass:'p', webdavPath:'/cs', webdavAutoSync:true, webdavMaxBackups:5, webdavSyncInterval:'1440',
+          s3:{endpoint:'https://s3.demo.com',region:'us-east-1',bucket:'bkt',accessKeyId:'ak',secretAccessKey:'sk',root:'',autoSync:false,syncInterval:0,maxBackups:5,skipBackupFile:false} },
+        assistants: { defaultAssistant: defaultCherryAssistant(), assistants:[
+          { id:'a1', name:'示例助手', emoji:'🧪', prompt:'', type:'assistant', topics:[
+            { id:'t1', assistantId:'a1', createdAt:nowISO(), updatedAt:nowISO(), name:'示例话题', messages:[], isNameManuallyEdited:false },
+          ]},
+        ]},
+        agents:{agents:[]},
+        paintings:{siliconflow_paintings:[]}, mcp:{servers:[]}, minapps:{enabled:[],disabled:[],pinned:[]}, knowledge:{bases:[]},
+      }
+    },
+    indexedDB: { files:[], topics:[
+      { id:'t1', messages:[
+        { id:'m1', role:'user', topicId:'t1', assistantId:'a1', createdAt:nowISO(), status:'success', blocks:['b1'], modelId:'gpt-4o-mini', usage:{prompt_tokens:5,completion_tokens:10,total_tokens:15} },
+        { id:'m2', role:'assistant', topicId:'t1', assistantId:'a1', createdAt:nowISO(), status:'success', blocks:['b2'], askId:'m1', metrics:{completion_tokens:10,time_completion_millsec:500,time_first_token_millsec:80,time_thinking_millsec:0} },
+      ] }
+    ], settings:[], knowledge_notes:[], translate_history:[{id:'th1',sourceText:'hello',targetText:'你好',sourceLanguage:'en-us',targetLanguage:'zh-cn',createdAt:nowISO()}], quick_phrases:[], message_blocks:[
+      { id:'b1', messageId:'m1', type:'main_text', createdAt:nowISO(), status:'success', content:'你好' },
+      { id:'b2', messageId:'m2', type:'main_text', createdAt:nowISO(), status:'success', updatedAt:nowISO(), content:'你好！有什么可以帮你？' },
+    ], translate_languages:[], notes_tree:[] },
+  };
+  state.sourceRaw = sample; state.sourceName='示例数据.json'; state.sourceSize=JSON.stringify(sample).length;
+  state.sourceFormat = 'cherry-v5';
+  state.convResult = null;
+  $('convert-btn').disabled = false; $('download-btn').disabled = true;
+  renderSource(); renderResult(); renderStatsBar(); renderBadges();
+  toast('已载入示例数据，点「执行转换」预览效果', 'ok');
+};
+
+function formatBytes(b){ if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(2)+' MB'; }
+function stamp(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; }
+
+/* ── 渲染各区域 ── */
+function renderSource(){
+  const body = $('source-body');
+  body.innerHTML='';
+  if (!state.sourceRaw){ body.innerHTML='<div class="empty"><div class="big">📋</div>上传文件后在此查看完整源数据</div>'; return; }
+  const fmt = state.sourceFormat || detectFormat(state.sourceRaw);
+  const match = dirMatches(state.direction, fmt);
+  const label = document.createElement('div'); label.className='section-label';
+  label.innerHTML = `<span>${esc(fmtLabel(fmt))}${match?'':' ⚠️ 与当前方向不匹配'}</span><span class="line"></span>`;
+  body.appendChild(label);
+  if (!match) {
+    const wantDir = dirForFormat(fmt);
+    const warn = document.createElement('div'); warn.className='warn-bar';
+    const tip = wantDir ? `建议改为 <b>${dirLabel(wantDir)}</b>，否则源数据会被全部判为「未转」（已转 0）。`
+      : (fmt==='unknown' ? '无法识别该文件格式。请确认它是 Cherry Studio 导出的 data.json 或 AuraMind 备份。' : '');
+    warn.innerHTML = `当前方向 <b>${dirLabel(state.direction)}</b>，文件检测为 <b>${esc(fmtLabel(fmt))}</b>。${tip}`;
+    body.appendChild(warn);
+  }
+  body.appendChild(renderValue(undefined, state.sourceRaw));
+}
+function renderResult(){
+  const body = $('result-body');
+  body.innerHTML='';
+  if (!state.convResult){ body.innerHTML='<div class="empty"><div class="big">⚙️</div>执行转换后在此查看结果</div>'; return; }
+  const r = state.convResult;
+  // 1. 转换成功的数据
+  const l1 = document.createElement('div'); l1.className='section-label';
+  l1.innerHTML = `<span>✅ 已转换数据</span><span class="line"></span>`; body.appendChild(l1);
+  body.appendChild(renderValue(undefined, r.output, {tag:'ok'}));
+  // 2. 未转数据
+  if (r.unconverted && Object.keys(r.unconverted).length>1) {
+    const l2 = document.createElement('div'); l2.className='section-label';
+    l2.innerHTML = `<span>⚠️ 未转换数据（原样保留）</span><span class="line"></span>`; body.appendChild(l2);
+    body.appendChild(renderValue(undefined, r.unconverted, {tag:'skip'}));
+  }
+  // 3. 报错
+  if (r.errors && r.errors.length){
+    const l3 = document.createElement('div'); l3.className='section-label';
+    l3.innerHTML = `<span>❌ 转换报错（${r.errors.length}）</span><span class="line"></span>`; body.appendChild(l3);
+    for (const e of r.errors){
+      const it = document.createElement('div'); it.className='err-item';
+      it.innerHTML = `<div class="msg">${esc(e.msg)}</div><div class="where">位置：${esc(e.where)}</div>`;
+      body.appendChild(it);
+    }
+  }
+}
+function renderStatsBar(){
+  const bar = $('stats-bar');
+  if (!state.sourceRaw){ bar.innerHTML='<span class="hint">提示：选择方向 → 上传 JSON → 执行转换 → 下载。所有数据均会列出，未映射数据原样保留。</span>'; return; }
+  const r = state.convResult;
+  bar.innerHTML='';
+  const addStat = (cls,label,n)=>{ const s=document.createElement('span'); s.className='stat '+cls; s.innerHTML=`<span class="dot"></span>${label} <span class="n">${n}</span>`; bar.appendChild(s); };
+  if (r){
+    addStat('ok','已转', r.stats.ok); addStat('skip','未转', r.stats.skip); addStat('err','报错', r.stats.err);
+    const hint = document.createElement('span'); hint.className='hint';
+    const m = r.meta||{};
+    if (state.direction==='c2a') hint.textContent = `Provider ${m.providerCount??0} · 模型 ${m.modelTotal??0} · 话题 ${m.topicConverted??0} · 消息 ${m.msgConverted??0}`;
+    else hint.textContent = `Provider ${m.providerCount??0} · 模型 ${m.modelTotal??0} · 话题 ${m.topicCount??0} · 消息块 ${m.blockCount??0}`;
+    bar.appendChild(hint);
+  } else {
+    const info = document.createElement('span'); info.className='stat info'; info.innerHTML='<span class="dot"></span>源数据已加载 <span class="hint" style="margin:0 8px">点「执行转换」</span>';
+    bar.appendChild(info);
+  }
+}
+function renderBadges(){
+  const fmtTag = state.sourceRaw && state.sourceFormat ? ' · '+fmtLabel(state.sourceFormat) : '';
+  $('source-badge').textContent = state.sourceRaw ? `${state.sourceName||''} ${state.sourceSize?'· '+formatBytes(state.sourceSize):''}${fmtTag}` : '';
+  if (state.convResult){
+    const r = state.convResult.stats;
+    $('result-badge').textContent = `✅${r.ok} ⚠️${r.skip} ❌${r.err}`;
+  } else $('result-badge').textContent='';
+}
+
+/* 全部展开/折叠按钮 */
+$('src-expand').onclick = ()=>setAllExpanded($('source-body'), true);
+$('src-collapse').onclick = ()=>setAllExpanded($('source-body'), false);
+$('res-expand').onclick = ()=>setAllExpanded($('result-body'), true);
+$('res-collapse').onclick = ()=>setAllExpanded($('result-body'), false);
+
+// 初始
+renderStatsBar();
+</script>
+</body>
+</html>
