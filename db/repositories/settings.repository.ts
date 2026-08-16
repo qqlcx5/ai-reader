@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { db } from '../index'
-import type { AppSettings, ContextSettings, CaptureSettings, InboxSettings, TaggingSettings } from '../../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, InboxSettings, TaggingSettings, ReviewSettings } from '../../types/settings'
 import type { IRepository } from '../repository'
 
 const defaultContextSettings: ContextSettings = {
@@ -24,6 +24,8 @@ const defaultCaptureSettings: CaptureSettings = {
 const defaultInboxSettings: InboxSettings = { endpoint: '', token: '', enabled: false }
 
 const defaultTaggingSettings: TaggingSettings = { autoTagOnCapture: false }
+
+const defaultReviewSettings: ReviewSettings = { newCardsPerDay: 0 }
 
 export const SettingsRepository: IRepository<AppSettings> & {
   get(): Promise<AppSettings | undefined>
@@ -80,6 +82,10 @@ export const SettingsRepository: IRepository<AppSettings> & {
       tagging: {
         ...defaultTaggingSettings,
         ...existing.tagging,
+      },
+      review: {
+        ...defaultReviewSettings,
+        ...existing.review,
       },
       createdAt: existing.createdAt || dayjs().toISOString(),
       updatedAt: dayjs().toISOString(),

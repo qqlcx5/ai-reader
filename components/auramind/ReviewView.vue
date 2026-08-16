@@ -4,7 +4,7 @@ export default { name: 'ReviewView' }
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, Send, History, Flame } from '@lucide/vue'
+import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, FileUp, Send, History, Flame, Pencil, Check, X, PauseCircle, PlayCircle } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useReviewStore } from '@/stores/review.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -12,6 +12,7 @@ import { useModelStore } from '@/stores/model.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useChatStore } from '@/stores/chat.store'
 import { previewIntervalDays, type ReviewGrade } from '@/utils/sm2'
+import { lastNDays } from '@/utils/review-stats'
 import type { FlashcardMode } from '@/services/review/generate'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { FlashcardRepository } from '@/db/repositories/flashcard.repository'
@@ -19,6 +20,7 @@ import { pickResurfaceDoc } from '@/utils/resurface'
 import { formatRelative } from '@/utils/date'
 import type { DocumentEntity } from '@/types/document'
 import { exportFlashcardsToAnkiTxt } from '@/utils/anki-export'
+import { parseAnkiTsv, dedupeAgainst } from '@/utils/anki-import'
 import { downloadBlob } from '@/utils/export'
 import { pushToAnki } from '@/services/anki/anki-connect'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -64,6 +66,8 @@ const currentCard = computed(() => reviewStore.currentCard)
 const hasAnyCard = computed(() => reviewStore.totalCount > 0)
 const currentDocument = computed(() => documentStore.currentDocument)
 
+const last14 = computed(() => lastNDays(reviewStore.log, 14))
+
 const gradeButtons = computed(() => {
   const card = currentCard.value
   if (!card) return []
@@ -98,7 +102,7 @@ onUnmounted(() => {
 
 function onKeydown(e: KeyboardEvent) {
   if (appStore.currentView !== 'review') return
-  if (reviewStore.generating || reviewStore.loading) return
+  if (reviewStore.generating || reviewStore.loading || editing.value) return
   if (e.key === ' ' || e.key === 'Enter') {
     e.preventDefault()
     reviewStore.flip()
@@ -128,6 +132,32 @@ async function generateFromCurrent() {
 
 const pushing = ref(false)
 
+// ── Card editing ──
+const editing = ref(false)
+const editFront = ref('')
+const editBack = ref('')
+
+function startEdit() {
+  const card = currentCard.value
+  if (!card) return
+  editFront.value = card.front
+  editBack.value = card.back
+  editing.value = true
+}
+
+async function saveEdit() {
+  const card = currentCard.value
+  if (!card || !editFront.value.trim() || !editBack.value.trim()) return
+  const updated = { ...card, front: editFront.value.trim(), back: editBack.value.trim(), updatedAt: new Date().toISOString() }
+  await FlashcardRepository.save(updated)
+  reviewStore.queue = reviewStore.queue.map((c) => (c.id === updated.id ? updated : c))
+  editing.value = false
+}
+
+function cancelEdit() {
+  editing.value = false
+}
+
 async function pushToAnkiConnect() {
   pushing.value = true
   try {
@@ -145,6 +175,39 @@ async function pushToAnkiConnect() {
     appStore.showToast(`推送失败：${e?.message || '请确认 Anki 与 AnkiConnect 已启动'}`, 'error')
   } finally {
     pushing.value = false
+  }
+}
+
+async function handleResume() {
+  const n = await reviewStore.resumeSuspended()
+  appStore.showToast(n > 0 ? `已恢复 ${n} 张闪卡` : '没有已挂起的闪卡', 'success')
+}
+
+const ankiInput = ref<HTMLInputElement | null>(null)
+
+async function handleAnkiImport(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  try {
+    const text = await file.text()
+    const { cards, skipped } = parseAnkiTsv(text)
+    const existing = await FlashcardRepository.findAll()
+    const fresh = dedupeAgainst(cards, existing)
+    if (fresh.length > 0) {
+      await FlashcardRepository.saveMany(fresh)
+      reviewStore.totalCount += fresh.length
+      await reviewStore.loadQueue()
+    }
+    appStore.showToast(
+      fresh.length > 0
+        ? `已导入 ${fresh.length} 张闪卡${skipped > 0 ? `，${skipped} 行跳过` : ''}`
+        : '没有新卡（全部已存在或格式无效）',
+      fresh.length > 0 ? 'success' : 'warning',
+    )
+  } catch (e: any) {
+    appStore.showToast(e?.message || '导入失败', 'error')
   }
 }
 
@@ -215,6 +278,17 @@ async function onPickerConfirm(documentIds: string[]) {
             <FileDown class="w-3.5 h-3.5" />
             Anki
           </UButton>
+          <UButton size="sm" variant="ghost" title="从 Anki 导出的 TSV 导入闪卡" @click="ankiInput?.click()">
+            <FileUp class="w-3.5 h-3.5" />
+            导入
+          </UButton>
+          <input
+            ref="ankiInput"
+            type="file"
+            accept=".txt,.tsv,text/plain"
+            class="hidden"
+            @change="handleAnkiImport"
+          />
           <UButton size="sm" variant="ghost" :disabled="pushing || reviewStore.totalCount === 0" title="通过 AnkiConnect 直推到本地 Anki" @click="pushToAnkiConnect">
             <Send class="w-3.5 h-3.5" />
             {{ pushing ? '推送中…' : '推送' }}
@@ -228,6 +302,17 @@ async function onPickerConfirm(documentIds: string[]) {
       </div>
       <div v-if="reviewStore.generateError" class="text-center text-xs text-red-500">
         {{ reviewStore.generateError }}
+      </div>
+
+      <!-- Suspended cards -->
+      <div
+        v-if="reviewStore.suspendedCount > 0"
+        class="flex items-center justify-between text-[11px] text-zinc-400 px-1"
+      >
+        <span>已挂起 {{ reviewStore.suspendedCount }} 张</span>
+        <button class="flex items-center gap-1 text-brand hover:text-brand/80" @click="handleResume">
+          <PlayCircle class="w-3 h-3" />全部恢复
+        </button>
       </div>
 
       <!-- Resurface: one old document a day -->
@@ -244,26 +329,85 @@ async function onPickerConfirm(documentIds: string[]) {
         <span class="text-[10px] text-zinc-400 shrink-0">{{ formatRelative(resurfaceDoc.capturedAt) }}</span>
       </div>
 
+      <!-- Review heatmap: last 14 days -->
+      <div v-if="reviewStore.stats.total > 0" class="flex items-center gap-1">
+        <div
+          v-for="day in last14"
+          :key="day.date"
+          class="flex-1 h-6 rounded-md border transition-colors"
+          :class="day.count === 0
+            ? 'border-zinc-200 bg-zinc-50'
+            : day.count < 5
+              ? 'border-brand/20 bg-brand/20'
+              : day.count < 20
+                ? 'border-brand/30 bg-brand/45'
+                : 'border-brand/40 bg-brand/70'"
+          :title="`${day.date}：复习 ${day.count} 张`"
+        />
+      </div>
+
       <!-- Review card -->
       <div
         v-if="currentCard"
         class="bg-white border border-zinc-200 rounded-2xl p-6 min-h-48 flex flex-col items-center justify-center text-center cursor-pointer select-none soft-shadow"
-        @click="reviewStore.flip()"
+        @click="!editing && reviewStore.flip()"
       >
-        <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-2">
-          <span>{{ reviewStore.flipped ? '答案' : '问题' }} · 点击翻面（空格）</span>
-          <span v-if="currentCard.type === 'cloze'" class="px-1.5 py-px bg-brand/10 text-brand rounded text-[9px] normal-case tracking-normal">填空</span>
-        </div>
-        <div class="text-base leading-relaxed text-zinc-800 max-w-md whitespace-pre-wrap">
-          {{ reviewStore.flipped ? currentCard.back : currentCard.front }}
-        </div>
-        <button
-          class="mt-4 p-1.5 rounded-md text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-          title="删除这张卡"
-          @click.stop="reviewStore.removeCurrent()"
-        >
-          <Trash2 class="w-3.5 h-3.5" />
-        </button>
+        <template v-if="!editing">
+          <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-2">
+            <span>{{ reviewStore.flipped ? '答案' : '问题' }} · 点击翻面（空格）</span>
+            <span v-if="currentCard.type === 'cloze'" class="px-1.5 py-px bg-brand/10 text-brand rounded text-[9px] normal-case tracking-normal">填空</span>
+          </div>
+          <div class="text-base leading-relaxed text-zinc-800 max-w-md whitespace-pre-wrap">
+            {{ reviewStore.flipped ? currentCard.back : currentCard.front }}
+          </div>
+          <div class="mt-4 flex items-center gap-1">
+            <button
+              class="p-1.5 rounded-md text-zinc-300 hover:text-amber-500 hover:bg-amber-50 transition-colors"
+              title="挂起这张卡（暂不复习）"
+              @click.stop="reviewStore.suspendCurrent()"
+            >
+              <PauseCircle class="w-3.5 h-3.5" />
+            </button>
+            <button
+              class="p-1.5 rounded-md text-zinc-300 hover:text-brand hover:bg-brand/50 transition-colors"
+              title="编辑这张卡"
+              @click.stop="startEdit"
+            >
+              <Pencil class="w-3.5 h-3.5" />
+            </button>
+            <button
+              class="p-1.5 rounded-md text-zinc-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="删除这张卡"
+              @click.stop="reviewStore.removeCurrent()"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <div class="w-full max-w-md flex flex-col gap-3 text-left" @click.stop>
+            <textarea
+              v-model="editFront"
+              rows="2"
+              class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-[13px] focus:border-brand outline-none resize-y"
+              placeholder="正面（问题）"
+            />
+            <textarea
+              v-model="editBack"
+              rows="3"
+              class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-[13px] focus:border-brand outline-none resize-y"
+              placeholder="背面（答案）"
+            />
+            <div class="flex justify-end gap-2">
+              <UButton size="sm" variant="ghost" @click="cancelEdit">
+                <X class="w-3.5 h-3.5" />取消
+              </UButton>
+              <UButton size="sm" variant="primary" :disabled="!editFront.trim() || !editBack.trim()" @click="saveEdit">
+                <Check class="w-3.5 h-3.5" />保存
+              </UButton>
+            </div>
+          </div>
+        </template>
       </div>
 
       <!-- Grade buttons -->

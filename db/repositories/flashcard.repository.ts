@@ -14,9 +14,9 @@ export const FlashcardRepository = {
     return db.flashcards.orderBy('createdAt').toArray()
   },
 
-  /** Cards due at (or before) `now`, oldest due first. */
+  /** Cards due at (or before) `now`, oldest due first. Suspended cards excluded. */
   async findDue(nowISO: string, limit?: number): Promise<FlashcardEntity[]> {
-    let coll = db.flashcards.where('sm2.dueAt').belowOrEqual(nowISO)
+    let coll = db.flashcards.where('sm2.dueAt').belowOrEqual(nowISO).filter((c) => !c.suspended)
     if (limit != null) coll = coll.limit(limit)
     return coll.toArray()
   },
@@ -43,6 +43,17 @@ export const FlashcardRepository = {
   },
 
   async countDue(nowISO: string): Promise<number> {
-    return db.flashcards.where('sm2.dueAt').belowOrEqual(nowISO).count()
+    return db.flashcards.where('sm2.dueAt').belowOrEqual(nowISO).filter((c) => !c.suspended).count()
+  },
+
+  async findSuspended(): Promise<FlashcardEntity[]> {
+    return db.flashcards.filter((c) => !!c.suspended).toArray()
+  },
+
+  /** Resume all suspended cards (due immediately). */
+  async resumeAll(): Promise<number> {
+    const suspended = await db.flashcards.filter((c) => !!c.suspended).toArray()
+    await db.flashcards.bulkPut(suspended.map((c) => ({ ...c, suspended: undefined, updatedAt: new Date().toISOString() })))
+    return suspended.length
   },
 }

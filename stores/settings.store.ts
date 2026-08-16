@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import { MetaRepository } from '../db/repositories/meta.repository'
-import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings, TaggingSettings } from '../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings, TaggingSettings, ReviewSettings } from '../types/settings'
 import type { AnkiConnectConfig, TranscribeConfig } from '../types/settings'
 import type { WebDAVConfig } from '../types/sync'
 import type { S3Config } from '../types/s3'
@@ -32,6 +32,8 @@ const defaultInboxSettings: InboxSettings = { endpoint: '', token: '', enabled: 
 
 const defaultTaggingSettings: TaggingSettings = { autoTagOnCapture: false }
 
+const defaultReviewSettings: ReviewSettings = { newCardsPerDay: 0 }
+
 function createDefaultSettings(): AppSettings {
   return {
     id: 'app-settings',
@@ -41,6 +43,7 @@ function createDefaultSettings(): AppSettings {
     autoAnalysis: { ...defaultAutoAnalysisSettings },
     inbox: { ...defaultInboxSettings },
     tagging: { ...defaultTaggingSettings },
+    review: { ...defaultReviewSettings },
     createdAt: dayjs().toISOString(),
     updatedAt: dayjs().toISOString(),
   }
@@ -64,6 +67,7 @@ export const useSettingsStore = defineStore('settings', () => {
         ...saved,
         inbox: { ...defaultInboxSettings, ...saved.inbox },
         tagging: { ...defaultTaggingSettings, ...saved.tagging },
+        review: { ...defaultReviewSettings, ...saved.review },
       }
     }
     const savedWebdav = await MetaRepository.get<WebDAVConfig>('webdav-config')
@@ -140,6 +144,12 @@ export const useSettingsStore = defineStore('settings', () => {
     await persist()
   }
 
+  async function updateReviewSettings(partial: Partial<ReviewSettings>) {
+    settings.value.review = { ...settings.value.review, ...partial }
+    settings.value.updatedAt = dayjs().toISOString()
+    await persist()
+  }
+
   async function persist() {
     await SettingsRepository.save(toRaw(settings.value) as AppSettings)
   }
@@ -164,6 +174,7 @@ export const useSettingsStore = defineStore('settings', () => {
     updateAutoAnalysis,
     updateInboxSettings,
     updateTaggingSettings,
+    updateReviewSettings,
     persist,
   }
 })

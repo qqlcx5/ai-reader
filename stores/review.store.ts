@@ -8,8 +8,9 @@ import { MetaRepository } from '@/db/repositories/meta.repository'
 import { generateFlashcards } from '@/services/review/generate'
 import type { FlashcardMode } from '@/services/review/generate'
 import { schedule, isDue, type ReviewGrade } from '@/utils/sm2'
-import { recordReview, computeReviewStats, type ReviewLog, type ReviewStats } from '@/utils/review-stats'
-import { nowISO } from '@/utils/date'
+import { recordReview, computeReviewStats, applyNewCardLimit, lastNDays, type ReviewLog, type ReviewStats } from '@/utils/review-stats'
+import { nowISO, dateKey } from '@/utils/date'
+import { SettingsRepository } from '@/db/repositories/settings.repository'
 
 /** Tell the background worker to refresh the action badge. Best-effort. */
 function notifyQueueChanged(): void {
@@ -33,11 +34,15 @@ export const useReviewStore = defineStore('review', () => {
   const remainingCount = computed(() => queue.value.length)
   const reviewedToday = ref(0)
   const stats = ref<ReviewStats>({ total: 0, streak: 0, today: 0 })
+  const log = ref<ReviewLog>({})
+  const suspendedCount = ref(0)
 
   async function loadStats(): Promise<void> {
-    const log = (await MetaRepository.get<ReviewLog>('review-log')) ?? {}
-    stats.value = computeReviewStats(log)
+    const log_ = (await MetaRepository.get<ReviewLog>('review-log')) ?? {}
+    log.value = log_
+    stats.value = computeReviewStats(log_)
     reviewedToday.value = stats.value.today
+    suspendedCount.value = (await FlashcardRepository.findSuspended()).length
   }
 
   async function persistReview(): Promise<void> {
@@ -53,7 +58,17 @@ export const useReviewStore = defineStore('review', () => {
         FlashcardRepository.findDue(now),
         FlashcardRepository.count(),
       ])
-      queue.value = due
+
+      // Daily new-card cap (0 = unlimited): review cards always come first,
+      // then up to (limit − already-consumed-today) never-reviewed cards.
+      let queue_ = due
+      const limit = (await SettingsRepository.get())?.review?.newCardsPerDay ?? 0
+      if (limit > 0) {
+        const newLog = (await MetaRepository.get<ReviewLog>('new-cards-log')) ?? {}
+        queue_ = applyNewCardLimit(due, limit, newLog[dateKey()] ?? 0)
+      }
+
+      queue.value = queue_
       totalCount.value = total
       flipped.value = false
     } finally {
@@ -81,6 +96,12 @@ export const useReviewStore = defineStore('review', () => {
     reviewedToday.value += 1
     notifyQueueChanged()
     persistReview().then(loadStats).catch(() => {})
+
+    // Count a first-time-successful grade as one consumed new card.
+    if ((card.sm2.reps ?? 0) === 0 && next.reps > 0) {
+      const log = (await MetaRepository.get<ReviewLog>('new-cards-log')) ?? {}
+      await MetaRepository.set('new-cards-log', recordReview(log))
+    }
   }
 
   /** Delete the current card and advance. */
@@ -92,6 +113,26 @@ export const useReviewStore = defineStore('review', () => {
     totalCount.value = Math.max(0, totalCount.value - 1)
     flipped.value = false
     notifyQueueChanged()
+  }
+
+  /** Suspend the current card (hidden from the queue until resumed). */
+  async function suspendCurrent(): Promise<void> {
+    const card = queue.value[0]
+    if (!card) return
+    await FlashcardRepository.save({ ...card, suspended: true, updatedAt: nowISO() })
+    queue.value = queue.value.slice(1)
+    flipped.value = false
+    suspendedCount.value = Math.max(0, suspendedCount.value - 1)
+    notifyQueueChanged()
+  }
+
+  /** Resume all suspended cards. Returns how many were resumed. */
+  async function resumeSuspended(): Promise<number> {
+    const n = await FlashcardRepository.resumeAll()
+    suspendedCount.value = 0
+    await loadQueue()
+    notifyQueueChanged()
+    return n
   }
 
   /**
@@ -132,12 +173,16 @@ export const useReviewStore = defineStore('review', () => {
     totalCount,
     reviewedToday,
     stats,
+    log,
     currentCard,
     remainingCount,
     loadQueue,
     flip,
     grade,
     removeCurrent,
+    suspendCurrent,
+    resumeSuspended,
+    suspendedCount,
     generateForDocument,
   }
 })

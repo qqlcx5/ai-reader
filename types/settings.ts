@@ -61,6 +61,12 @@ export interface TaggingSettings {
   autoTagOnCapture: boolean
 }
 
+/** Review pacing. */
+export interface ReviewSettings {
+  /** Max never-reviewed (new) cards mixed into one day's queue. 0 = unlimited. */
+  newCardsPerDay: number
+}
+
 export interface AppSettings {
   id: 'app-settings'
 
@@ -71,6 +77,7 @@ export interface AppSettings {
   autoAnalysis: AutoAnalysisSettings
   inbox: InboxSettings
   tagging: TaggingSettings
+  review: ReviewSettings
 
   createdAt: string
   updatedAt: string

@@ -14,6 +14,9 @@ export interface FlashcardEntity {
 
   source: 'ai' | 'manual'
 
+  /** Paused: excluded from the due queue until resumed. */
+  suspended?: boolean
+
   /** How the card was produced — 'qa' (default for legacy rows) or cloze. */
   type?: 'qa' | 'cloze'
 

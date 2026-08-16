@@ -40,3 +40,41 @@ export function recordReview(log: ReviewLog, today: Date = new Date()): ReviewLo
   const key = dateKey(today)
   return { ...log, [key]: (log[key] ?? 0) + 1 }
 }
+
+/**
+ * Last n days as a heatmap series, oldest first. Days with no reviews
+ * carry count 0 (rendered as empty cells).
+ */
+export function lastNDays(log: ReviewLog, n: number, today: Date = new Date()): Array<{ date: string; count: number }> {
+  const out: Array<{ date: string; count: number }> = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    const key = dateKey(d)
+    out.push({ date: key, count: log[key] ?? 0 })
+  }
+  return out
+}
+
+/** True when a card has never been successfully reviewed. */
+export function isNewCard(card: { sm2: { reps: number } }): boolean {
+  return (card.sm2.reps ?? 0) === 0
+}
+
+/**
+ * Apply the daily new-card cap to a due queue: review cards first, then up to
+ * (limit − already used today) new cards, oldest created first. limit <= 0
+ * disables the cap.
+ */
+export function applyNewCardLimit<T extends { sm2: { reps: number }; createdAt: string }>(
+  due: T[],
+  limit: number,
+  usedToday: number,
+): T[] {
+  if (limit <= 0) return due
+  const reviewCards = due.filter((c) => !isNewCard(c))
+  const newCards = due
+    .filter(isNewCard)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  return [...reviewCards, ...newCards.slice(0, Math.max(0, limit - usedToday))]
+}
