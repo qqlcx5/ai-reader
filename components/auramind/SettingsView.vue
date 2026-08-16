@@ -18,6 +18,7 @@ import TranscribeSettings from '@/components/settings/TranscribeSettings.vue'
 import AppearanceSettings from '@/components/settings/AppearanceSettings.vue'
 import ReviewSettings from '@/components/settings/ReviewSettings.vue'
 import AboutCard from '@/components/settings/AboutCard.vue'
+import DigestSettings from '@/components/settings/DigestSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -204,6 +205,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">Newsletter 收件箱</h2>
         <InboxSettings />
+      </section>
+
+      <!-- 每日简报 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">每日 AI 简报</h2>
+        <DigestSettings />
       </section>
 
       <!-- Anki 直推 -->

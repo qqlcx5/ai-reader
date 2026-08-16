@@ -24,7 +24,7 @@ export default defineBackground(() => {
   // ── Pending panel actions ─────────────────────────────────────────────
   // Context menu / keyboard commands may fire while the side panel is not
   // open yet. The action is stashed here; the panel asks for it on mount.
-  let pendingAction: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW'; tabId?: number } | null = null
+  let pendingAction: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW' | 'OMNIBOX_SEARCH'; tabId?: number; query?: string } | null = null
 
   function runPanelAction(action: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW'; tabId?: number }, tabId?: number) {
     pendingAction = action
@@ -77,6 +77,18 @@ export default defineBackground(() => {
         runPanelAction({ type: 'OPEN_REVIEW', tabId: tab?.id }, tab?.id)
       })
     }
+  })
+
+  // ── Omnibox: "am <query>" opens the side panel with the palette ────────
+  const omnibox = b.omnibox || (globalThis as any).chrome?.omnibox
+  omnibox?.setDefaultSuggestion?.({ description: '在 AuraMind 中搜索：%s' })
+  omnibox?.onInputEntered?.addListener((text: string) => {
+    pendingAction = { type: 'OMNIBOX_SEARCH', query: text } as any
+    b.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
+      const tabId = tabs[0]?.id
+      if (tabId != null) openSidebarPanel(tabId)
+      b.runtime.sendMessage({ type: 'OMNIBOX_SEARCH', payload: { query: text } }).catch(() => {})
+    })
   })
 
   // Crash recovery: any job stuck in 'processing' from a prior SW lifetime
@@ -233,6 +245,23 @@ export default defineBackground(() => {
       // Newsletter inbox piggybacks on the feed cycle.
       import('@/services/inbox/inbox').then(({ pollInbox }) =>
         pollInbox().catch((e: any) => console.warn('[bg] inbox poll failed:', e)),
+      )
+      // Daily digest piggybacks on the feed cycle too.
+      import('@/services/digest/daily').then(({ maybeRunDailyDigest }) =>
+        maybeRunDailyDigest().catch((e: any) => console.warn('[bg] digest failed:', e)),
+      )
+      // Page-change watches piggyback as well; toast the panel on changes.
+      import('@/services/watch/watch').then(({ checkAllWatches }) =>
+        checkAllWatches()
+          .then((changed) => {
+            if (changed.length > 0) {
+              b.runtime.sendMessage({
+                type: 'WATCH_CHANGED',
+                payload: { count: changed.length, title: changed[0].title },
+              }).catch(() => {})
+            }
+          })
+          .catch((e: any) => console.warn('[bg] watch check failed:', e)),
       )
       // Keep the due-review badge fresh.
       updateReviewBadge().catch(() => {})
