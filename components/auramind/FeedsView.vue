@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database, Bot, RotateCcw, MessageSquare, BookOpen } from '@lucide/vue'
+import { Plus, RefreshCw, Trash2, ExternalLink, Globe, Upload, Download, AudioLines, ChevronLeft, ChevronDown, ChevronRight, Zap, FolderInput, Check, X, Ellipsis, ArrowUp, Database, Bot, RotateCcw, MessageSquare, BookOpen } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UInput from '@/components/ui/UInput.vue'
 import ScrollFab from '@/components/ui/ScrollFab.vue'
@@ -26,6 +26,53 @@ const newUrl = ref('')
 const newFolder = ref('')
 const selectedItemId = ref<string | null>(null)
 const collecting = ref(false)
+const transcribingItem = ref(false)
+
+const hasAudioEnclosure = computed(
+  () => !!selectedItem.value?.enclosure?.url && (selectedItem.value.enclosure.type || '').startsWith('audio/'),
+)
+
+/** Download the item's audio enclosure and transcribe it into the library. */
+async function onTranscribeAudio() {
+  const item = selectedItem.value
+  const url = item?.enclosure?.url
+  if (!item || !url || transcribingItem.value) return
+  transcribingItem.value = true
+  toast.info('正在下载并转写音频，完成后会提示…', { category: 'rss' })
+  try {
+    const [{ transcribeAudio, buildTranscriptDocument }, { MetaRepository }, { DocumentRepository }, { FeedItemRepository }] =
+      await Promise.all([
+        import('@/services/transcribe/whisper'),
+        import('@/db/repositories/meta.repository'),
+        import('@/db/repositories/document.repository'),
+        import('@/db/repositories/feed-item.repository'),
+      ])
+    const cfg = (await MetaRepository.get<{ baseUrl: string; apiKey: string; model: string }>('transcribe-config'))
+      ?? { baseUrl: '', apiKey: '', model: 'whisper-1' }
+    if (!cfg.baseUrl || !cfg.apiKey) throw new Error('请先在设置中配置音频转写服务')
+
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`音频下载失败：HTTP ${res.status}`)
+    const blob = await res.blob()
+
+    const filename = decodeURIComponent(url.split('/').pop() || 'audio.mp3')
+    const text = await transcribeAudio(Object.assign(blob, { name: filename }), cfg)
+    const doc = await buildTranscriptDocument(item.title || filename, text)
+    const saved = await DocumentRepository.save(doc)
+    await FeedItemRepository.setDocument(item.id, saved.id, new Date().toISOString())
+
+    // Update local list state so the item shows as collected.
+    const idx = feedStore.items.findIndex((i) => i.id === item.id)
+    if (idx >= 0) {
+      feedStore.items[idx] = { ...feedStore.items[idx], documentId: saved.id }
+    }
+    toast.success(`转写完成，已入库「${saved.title}」`, { category: 'rss' })
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : '转写失败', { category: 'rss' })
+  } finally {
+    transcribingItem.value = false
+  }
+}
 const opmlInput = ref<HTMLInputElement | null>(null)
 const collapsed = ref<Set<string>>(new Set())
 const showCollectPanel = ref(false)
@@ -844,6 +891,18 @@ onUnmounted(() => {
           >
             <Plus class="w-3 h-3" />
             {{ collecting ? '收藏中…' : '收藏到记忆库' }}
+          </UButton>
+          <!-- 播客音频：直接转写 -->
+          <UButton
+            v-if="hasAudioEnclosure && !selectedItem.documentId"
+            variant="secondary"
+            size="sm"
+            :disabled="transcribingItem"
+            title="下载附件音频并转写为文档（需在设置中配置音频转写）"
+            @click="onTranscribeAudio"
+          >
+            <AudioLines class="w-3 h-3" />
+            {{ transcribingItem ? '转写中…' : '转写音频' }}
           </UButton>
           <!-- 已收藏：跳转记忆库 + 取消收藏 -->
           <template v-else>

@@ -10,6 +10,8 @@ export interface ParsedFeedItem {
   contentHtml?: string
   author?: string
   publishedAt?: string
+  /** Podcast/audio attachment (RSS <enclosure>). */
+  enclosure?: { url: string; type?: string; lengthBytes?: number }
 }
 
 export interface ParsedFeed {
@@ -46,6 +48,18 @@ function pickLink(parent: Element): string {
   return ''
 }
 
+function parseEnclosure(item: Element): { url: string; type?: string; lengthBytes?: number } | undefined {
+  const enc = child(item, 'enclosure')
+  const url = enc?.getAttribute('url')
+  if (!enc || !url) return undefined
+  const length = enc.getAttribute('length')
+  return {
+    url,
+    type: enc.getAttribute('type') || undefined,
+    lengthBytes: length && /^\d+$/.test(length) ? Number(length) : undefined,
+  }
+}
+
 function parseRssItem(item: Element): ParsedFeedItem {
   const link = text(item, 'link')
   const guid = text(item, 'guid') || link
@@ -58,6 +72,7 @@ function parseRssItem(item: Element): ParsedFeedItem {
     contentHtml,
     author: text(item, 'creator') || undefined, // dc:creator
     publishedAt: text(item, 'pubDate') || text(item, 'date') || undefined,
+    enclosure: parseEnclosure(item),
   }
 }
 

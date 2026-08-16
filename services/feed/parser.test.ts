@@ -81,3 +81,33 @@ describe('parseFeed', () => {
     expect(() => parseFeed('<not><closed>')).toThrow(/Invalid feed XML/)
   })
 })
+
+describe('enclosure (podcast audio)', () => {
+  const PODCAST = `<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <title>Some Podcast</title>
+    <item>
+      <title>Episode 1</title>
+      <link>https://example.com/ep1</link>
+      <guid>ep1</guid>
+      <enclosure url="https://cdn.example.com/ep1.mp3" type="audio/mpeg" length="12345678" />
+    </item>
+    <item>
+      <title>Episode 2 (no enclosure)</title>
+      <link>https://example.com/ep2</link>
+      <guid>ep2</guid>
+    </item>
+  </channel>
+</rss>`
+
+  it('captures audio enclosures and leaves other items undefined', () => {
+    const feed = parseFeed(PODCAST)
+    expect(feed.items[0].enclosure).toEqual({
+      url: 'https://cdn.example.com/ep1.mp3',
+      type: 'audio/mpeg',
+      lengthBytes: 12345678,
+    })
+    expect(feed.items[1].enclosure).toBeUndefined()
+  })
+})

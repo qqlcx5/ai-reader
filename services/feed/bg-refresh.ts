@@ -142,6 +142,7 @@ export async function refreshOneFeed(feed: FeedEntity): Promise<BgRefreshResult>
         summary: it.summary,
         contentHtml: it.contentHtml,
         publishedAt: it.publishedAt,
+        enclosure: it.enclosure,
         fetchedAt: now,
       })
     }

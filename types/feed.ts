@@ -45,6 +45,9 @@ export interface FeedItemEntity {
   publishedAt?: string
   fetchedAt: string
 
+  /** Podcast/audio attachment (RSS <enclosure>), captured on fetch. */
+  enclosure?: { url: string; type?: string; lengthBytes?: number }
+
   /** Local-only state (feedItems are NOT synced). */
   readAt?: string
   /** Set once the item has been collected into the library as a DocumentEntity. */
