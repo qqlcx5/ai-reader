@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard, GitBranch, Paperclip } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
+import { enhanceCitations } from '@/utils/citations'
 import { formatMessageForCopy, copyToClipboard } from '@/utils/conversation-export'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
@@ -55,6 +56,16 @@ async function openSource(id: string) {
     // non-critical
   }
 }
+
+/** Inline citation chips ([1]) open the cited document. */
+function handleCitationClick(e: MouseEvent) {
+  const sup = (e.target as HTMLElement).closest?.('sup.citation') as HTMLElement | null
+  const docId = sup?.dataset?.docId
+  if (docId) {
+    e.stopPropagation()
+    openSource(docId)
+  }
+}
 const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
@@ -106,7 +117,12 @@ function flushRender() {
   displayedHtml.value = renderMarkdown(props.message.content || '')
   if (!isStreaming.value) {
     void nextTick(() => {
-      if (contentRef.value) enhanceCodeBlocks(contentRef.value)
+      if (contentRef.value) {
+        enhanceCodeBlocks(contentRef.value)
+        if (props.message.sources?.length) {
+          enhanceCitations(contentRef.value, props.message.sources)
+        }
+      }
     })
   }
 }
@@ -304,6 +320,7 @@ onUnmounted(() => {
           ref="contentRef"
           class="md-render"
           v-html="displayedHtml"
+          @click="handleCitationClick"
         />
         <span v-if="isStreaming" class="inline-block w-1.5 h-4 bg-brand animate-pulse align-middle ml-0.5 rounded-sm" />
       </template>
