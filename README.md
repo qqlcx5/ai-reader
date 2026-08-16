@@ -8,6 +8,8 @@
 [![Built with WXT](https://img.shields.io/badge/Built%20with-WXT-1f2937)](https://wxt.dev)
 
 > Also builds for Firefox (`pnpm build:firefox`). Background RSS refresh works on both engines (Firefox parses feeds in its persistent background page; Chromium uses an offscreen document).
+>
+> **YouTube captions caveat** (verified 2026-06): YouTube's `timedtext` API now requires a proof-of-origin token; the extension detects the empty response, explains why, and falls back to clipping the page itself. For reliable transcripts, download the audio and use 音频转写.
 
 AuraMind turns the web into a personal, AI-curated knowledge base you can actually review and remember. Clip any page, get an AI summary, highlight what matters, and let the SM-2 algorithm schedule it for daily review.
 

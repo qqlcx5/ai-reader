@@ -169,7 +169,15 @@ async function extractYouTubeTranscript(): Promise<any> {
   const sep = track.baseUrl.includes('?') ? '&' : '?'
   const res = await fetch(`${track.baseUrl}${sep}fmt=json3`, { credentials: 'omit' })
   if (!res.ok) throw new Error(`字幕下载失败：HTTP ${res.status}`)
-  const json: any = await res.json()
+  const raw = await res.text()
+  // YouTube 对 timedtext 接口加了 pot 令牌校验：无令牌请求返回 200 空体。
+  if (!raw.trim()) throw new Error('YouTube 字幕接口需要访问令牌，无法直接获取（将回退为普通页面剪藏）')
+  let json: any
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    throw new Error('字幕响应无法解析')
+  }
 
   return {
     details: {

@@ -29,6 +29,7 @@ const VIEW_ACTIONS: Array<{ key: AppView; label: string }> = [
   { key: 'workspace', label: '跳转：工作区' },
   { key: 'library', label: '跳转：记忆库' },
   { key: 'review', label: '跳转：复习' },
+  { key: 'cards', label: '跳转：卡片库' },
   { key: 'graph', label: '跳转：图谱' },
   { key: 'feeds', label: '跳转：订阅' },
   { key: 'usage', label: '跳转：用量' },
