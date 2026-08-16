@@ -99,6 +99,19 @@ describe('generateFlashcards', () => {
     expect(sent).not.toContain('# 标题')
   })
 
+  it('generates cloze cards with the cloze prompt and type', async () => {
+    const chat = vi.fn().mockResolvedValue({
+      content: '[{"front":"Transformer 使用 ____ 机制","back":"自注意力"}]',
+    })
+    const provider = { chat, streamChat: vi.fn(), testConnection: vi.fn() } as unknown as AIProvider
+    const { cards } = await generateFlashcards({ document: makeDoc(), model, provider, mode: 'cloze' })
+    expect(cards).toHaveLength(1)
+    expect(cards[0].type).toBe('cloze')
+    const system = chat.mock.calls[0][0].systemPrompt as string
+    expect(system).toContain('挖空')
+    expect(system).not.toContain('问答卡')
+  })
+
   it('returns parseError instead of throwing on unparsable output', async () => {
     const provider = fakeProvider('今天天气不错')
     const { cards, parseError } = await generateFlashcards({ document: makeDoc(), model, provider })

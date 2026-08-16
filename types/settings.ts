@@ -46,6 +46,21 @@ export interface AnkiConnectConfig {
   deck: string
 }
 
+/** Whisper-compatible transcription endpoint (OpenAI / Groq / SiliconFlow). Device-local secret. */
+export interface TranscribeConfig {
+  /** API base URL, e.g. https://api.openai.com/v1 */
+  baseUrl: string
+  apiKey: string
+  /** Model name, e.g. whisper-1 */
+  model: string
+}
+
+/** AI auto-tagging on capture. */
+export interface TaggingSettings {
+  /** Generate 3–5 AI tags right after a document is captured. */
+  autoTagOnCapture: boolean
+}
+
 export interface AppSettings {
   id: 'app-settings'
 
@@ -55,6 +70,7 @@ export interface AppSettings {
   capture: CaptureSettings
   autoAnalysis: AutoAnalysisSettings
   inbox: InboxSettings
+  tagging: TaggingSettings
 
   createdAt: string
   updatedAt: string

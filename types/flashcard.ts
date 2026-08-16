@@ -14,6 +14,9 @@ export interface FlashcardEntity {
 
   source: 'ai' | 'manual'
 
+  /** How the card was produced — 'qa' (default for legacy rows) or cloze. */
+  type?: 'qa' | 'cloze'
+
   /** Scheduling state; initial state is due immediately. */
   sm2: Sm2State
 

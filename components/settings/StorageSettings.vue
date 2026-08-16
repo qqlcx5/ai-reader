@@ -68,7 +68,7 @@ async function doExport() {
   showExportConfirm.value = false
   exporting.value = true
   try {
-    const [documents, conversations, models, settings, collections, collectionItems, feeds, promptTemplates, webdavConfig, s3Config] = await Promise.all([
+    const [documents, conversations, models, settings, collections, collectionItems, feeds, promptTemplates, flashcards, webdavConfig, s3Config] = await Promise.all([
       DocumentRepository.findAll(),
       ChatRepository.findAll(),
       ModelRepository.findAll(),
@@ -77,6 +77,7 @@ async function doExport() {
       db.collectionItems.toArray(),
       db.feeds.toArray(),
       db.promptTemplates.toArray(),
+      db.flashcards.toArray(),
       // WebDAV 配置存在 kvMeta 表（键 'webdav-config'）。只导出这一个键，
       // 不导出 'sync-state' —— 同步基线是设备本地的，跨设备恢复会破坏 LWW 三方合并。
       db.kvMeta.toArray().then(arr => arr.filter(e => e.id === 'webdav-config')),
@@ -98,6 +99,7 @@ async function doExport() {
         collectionItems,
         feeds,
         promptTemplates,
+        flashcards,
         webdavConfig,
         s3Config,
       },
@@ -140,10 +142,12 @@ async function doImport(file: File) {
     const collectionItems = Array.isArray(data.collectionItems) ? data.collectionItems : []
     const feeds = Array.isArray(data.feeds) ? data.feeds : []
     const promptTemplates = Array.isArray(data.promptTemplates) ? data.promptTemplates : []
+    // 旧备份没有 flashcards（功能后期加入），缺省为空数组
+    const flashcards = Array.isArray(data.flashcards) ? data.flashcards : []
 
     await db.transaction(
       'rw',
-      [db.documents, db.conversations, db.models, db.settings, db.collections, db.collectionItems, db.feeds, db.promptTemplates],
+      [db.documents, db.conversations, db.models, db.settings, db.collections, db.collectionItems, db.feeds, db.promptTemplates, db.flashcards],
       async () => {
         await Promise.all([
           db.documents.clear(),
@@ -154,6 +158,7 @@ async function doImport(file: File) {
           db.collectionItems.clear(),
           db.feeds.clear(),
           db.promptTemplates.clear(),
+          db.flashcards.clear(),
         ])
 
         if (data.documents.length > 0) await db.documents.bulkAdd(data.documents)
@@ -166,6 +171,7 @@ async function doImport(file: File) {
         if (collectionItems.length > 0) await db.collectionItems.bulkAdd(collectionItems)
         if (feeds.length > 0) await db.feeds.bulkAdd(feeds)
         if (promptTemplates.length > 0) await db.promptTemplates.bulkAdd(promptTemplates)
+        if (flashcards.length > 0) await db.flashcards.bulkAdd(flashcards)
       },
     )
 

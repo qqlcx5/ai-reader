@@ -26,6 +26,13 @@ const emit = defineEmits<{
 
 const unread = computed(() => readStatus.value === 'unread')
 const readStatus = computed(() => getReadStatus(props.document))
+
+/** ~250 words/min (CJK-aware word count already). */
+const readMinutes = computed(() => {
+  const w = props.document.wordCount
+  if (!w || w < 200) return null
+  return Math.max(1, Math.round(w / 250))
+})
 const progressPct = computed(() => {
   const p = props.document.readProgress
   if (p == null) return 0
@@ -107,6 +114,10 @@ const excerpt = computed(() => {
         <span class="truncate">{{ domain }}</span>
         <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
         <span class="shrink-0">{{ displayTime }}</span>
+        <template v-if="readMinutes">
+          <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
+          <span class="shrink-0" :title="`全文约 ${document.wordCount} 词`">约 {{ readMinutes }} 分钟</span>
+        </template>
         <template v-if="hasConversation">
           <span class="w-[3px] h-[3px] rounded-full bg-zinc-300 shrink-0" />
           <span class="inline-flex items-center gap-0.5 text-brand shrink-0">

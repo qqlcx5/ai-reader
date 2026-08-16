@@ -1,4 +1,4 @@
-export type ExtractionMethod = 'defuddle' | 'fallback' | 'manual' | 'rss' | 'pdf' | 'youtube'
+export type ExtractionMethod = 'defuddle' | 'fallback' | 'manual' | 'rss' | 'pdf' | 'youtube' | 'audio'
 
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 

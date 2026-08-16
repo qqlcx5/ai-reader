@@ -14,6 +14,8 @@ import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import S3Settings from '@/components/settings/S3Settings.vue'
 import InboxSettings from '@/components/settings/InboxSettings.vue'
 import AnkiSettings from '@/components/settings/AnkiSettings.vue'
+import TranscribeSettings from '@/components/settings/TranscribeSettings.vue'
+import AppearanceSettings from '@/components/settings/AppearanceSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -174,6 +176,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
 
         <ContextSettings />
         <CaptureSettings />
+        <AppearanceSettings />
       </section>
 
       <!-- 自动 AI 分析 -->
@@ -204,6 +207,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">Anki 直推</h2>
         <AnkiSettings />
+      </section>
+
+      <!-- 音频转写 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">音频转写</h2>
+        <TranscribeSettings />
       </section>
 
       <!-- 本地存储 -->

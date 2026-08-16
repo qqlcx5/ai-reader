@@ -11,6 +11,16 @@ vi.mock('@lucide/vue', () => ({
     template: '<span class="mock-copy" />',
     props: ['class', 'size'],
   },
+  Volume2: {
+    name: 'Volume2',
+    template: '<span class="mock-volume2" />',
+    props: ['class', 'size'],
+  },
+  Square: {
+    name: 'Square',
+    template: '<span class="mock-square" />',
+    props: ['class', 'size'],
+  },
   RefreshCw: {
     name: 'RefreshCw',
     template: '<span class="mock-refresh-cw" />',

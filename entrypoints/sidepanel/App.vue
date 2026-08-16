@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useSettingsStore } from '@/stores/settings.store'
@@ -46,6 +46,15 @@ function handleBackgroundMessage(
   if (message.type === 'FLOATING_CAPTURE') {
     const tabId = message.payload?.tabId
     if (tabId) triggerAutoExtract(tabId)
+    return
+  }
+  if (message.type === 'CAPTURE_PAGE') {
+    const tabId = message.payload?.tabId
+    if (tabId) triggerAutoExtract(tabId)
+    return
+  }
+  if (message.type === 'OPEN_REVIEW') {
+    appStore.setCurrentView('review', { resetHistory: true })
     return
   }
   if (message.type === 'AI_JOB_SKIPPED') {
@@ -138,8 +147,19 @@ async function triggerAutoExtract(tabId: number) {
 
 let removeListener: (() => void) | null = null
 
+// ── Theme: apply dark class from settings + system preference ──
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)')
+function applyTheme() {
+  const dark = settingsStore.theme === 'dark'
+    || (settingsStore.theme === 'system' && systemDark.matches)
+  document.documentElement.classList.toggle('dark', dark)
+}
+systemDark.addEventListener('change', applyTheme)
+watch(() => settingsStore.theme, applyTheme)
+
 onMounted(async () => {
   await settingsStore.loadSettings()
+  applyTheme()
   await modelStore.loadModels()
   if (documentStore.currentDocumentId) {
     await documentStore.loadDocument(documentStore.currentDocumentId).catch(() => {})
@@ -189,6 +209,16 @@ onMounted(async () => {
         if (settingsStore.settings.capture.autoExtractOnOpen && tab?.id) {
           triggerAutoExtract(tab.id)
         }
+      })
+      .catch(() => {})
+
+    // Context menu / keyboard command that fired while the panel was closed.
+    browser.runtime
+      .sendMessage({ type: 'GET_PENDING_ACTION' })
+      .then((action: any) => {
+        if (!action) return
+        if (action.type === 'CAPTURE_PAGE' && action.tabId) triggerAutoExtract(action.tabId)
+        if (action.type === 'OPEN_REVIEW') appStore.setCurrentView('review', { resetHistory: true })
       })
       .catch(() => {})
   }

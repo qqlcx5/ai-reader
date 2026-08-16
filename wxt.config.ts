@@ -9,8 +9,18 @@ export default defineConfig({
     version: '0.1.0',
     short_name: 'AuraMind',
     description: 'AI-powered web clipper that summarizes, highlights, and turns pages into a spaced-repetition review feed. Local-first, sync via WebDAV/S3.',
-    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms', 'offscreen'],
+    permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms', 'offscreen', 'contextMenus'],
     host_permissions: ['<all_urls>', 'http://127.0.0.1/*', 'http://localhost/*'],
+    commands: {
+      'capture-page': {
+        suggested_key: { default: 'Alt+Shift+C' },
+        description: '剪藏当前页面到 AuraMind',
+      },
+      'open-review': {
+        suggested_key: { default: 'Alt+Shift+R' },
+        description: '打开 AuraMind 复习面板',
+      },
+    },
   },
   dev: {
     server: {

@@ -292,3 +292,67 @@ input, select, textarea {
 }
 .code-block__copy:hover { color: #24292f; background: rgba(0, 0, 0, 0.05); }
 .code-block pre { margin: 0; border-radius: 0; }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Experimental dark theme (实验性暗色模式)
+   Flips the app's limited palette via attribute selectors — no per-component
+   changes. Coarse by design; enable via settings (亮色/暗色/跟随系统).
+   ════════════════════════════════════════════════════════════════════════ */
+
+html.dark, html.dark body { color: #e4e4e7; background: #18181b; }
+html.dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* Surfaces */
+html.dark [class*="bg-white/95"], html.dark [class*="bg-white/78"],
+html.dark [class*="bg-white/75"] { background-color: rgba(24, 24, 27, 0.92) !important; }
+html.dark .bg-white { background-color: #18181b !important; }
+html.dark .bg-surface, html.dark [class*="bg-surface/"], html.dark .bg-zinc-50 { background-color: #1c1c1f !important; }
+html.dark .bg-zinc-100 { background-color: #27272a !important; }
+html.dark .bg-zinc-200 { background-color: #3f3f46 !important; }
+
+/* Text */
+html.dark .text-zinc-900, html.dark .text-zinc-800, html.dark .text-zinc-700 { color: #e4e4e7 !important; }
+html.dark .text-zinc-600, html.dark .text-zinc-500 { color: #a1a1aa !important; }
+html.dark .text-zinc-400, html.dark .text-zinc-300 { color: #71717a !important; }
+
+/* Borders */
+html.dark .border-zinc-100, html.dark .border-zinc-200, html.dark .border-zinc-300 { border-color: #3f3f46 !important; }
+html.dark [class*="border-zinc-100"], html.dark [class*="border-zinc-200"] { border-color: #3f3f46 !important; }
+
+/* Status tints keep their hue on dark */
+html.dark [class*="bg-red-50"] { background-color: rgba(244, 63, 94, 0.14) !important; }
+html.dark [class*="bg-amber-50"] { background-color: rgba(245, 158, 11, 0.14) !important; }
+html.dark [class*="bg-emerald-50"] { background-color: rgba(16, 185, 129, 0.14) !important; }
+html.dark [class*="bg-green-50"] { background-color: rgba(16, 185, 129, 0.14) !important; }
+html.dark [class*="bg-red-100"] { background-color: rgba(244, 63, 94, 0.22) !important; }
+html.dark [class*="bg-amber-100"] { background-color: rgba(245, 158, 11, 0.22) !important; }
+html.dark [class*="bg-zinc-200"] { background-color: #3f3f46 !important; }
+
+/* Prose + markdown */
+html.dark .prose-lite h1, html.dark .prose-lite h2 { color: #e4e4e7; }
+html.dark .prose-lite h3, html.dark .prose-lite p, html.dark .prose-lite li { color: #d4d4d8; }
+html.dark .prose-lite blockquote { background: #27272a; color: #a1a1aa; }
+html.dark .prose-lite code { background: #27272a; color: #f472b6; }
+
+html.dark .md-render { color: #d4d4d8; }
+html.dark .md-render h1, html.dark .md-render h2, html.dark .md-render h3,
+html.dark .md-render h4, html.dark .md-render h5, html.dark .md-render h6,
+html.dark .md-render strong { color: #e4e4e7; }
+html.dark .md-render h1 { border-bottom-color: #3f3f46; }
+html.dark .md-render hr { border-top-color: #3f3f46; }
+html.dark .md-render blockquote { background: rgba(99, 102, 241, 0.08); color: #a1a1aa; }
+html.dark .md-render del { color: #52525b; }
+html.dark .md-render li::marker { color: #52525b; }
+html.dark .md-render code:not(pre code) { background: #27272a; color: #f472b6; }
+html.dark .md-render pre { background: #1f2430; }
+html.dark .md-render th { background: #27272a; color: #e4e4e7; }
+html.dark .md-render td { color: #d4d4d8; }
+html.dark .md-render th, html.dark .md-render td { border-color: #3f3f46; }
+html.dark .md-render .footnotes { border-top-color: #3f3f46; color: #a1a1aa; }
+
+/* Code blocks */
+html.dark .code-block { border-color: #3f3f46; background: #1f2430; }
+html.dark .code-block__header { background: #27272a; border-bottom-color: #3f3f46; }
+html.dark .code-block__lang, html.dark .code-block__copy { color: #a1a1aa; }
+html.dark .code-block__copy:hover { color: #e4e4e7; background: rgba(255, 255, 255, 0.06); }

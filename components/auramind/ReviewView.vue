@@ -4,14 +4,20 @@ export default { name: 'ReviewView' }
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, Send } from '@lucide/vue'
+import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, Send, History, Flame } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useReviewStore } from '@/stores/review.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useChatStore } from '@/stores/chat.store'
 import { previewIntervalDays, type ReviewGrade } from '@/utils/sm2'
+import type { FlashcardMode } from '@/services/review/generate'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { FlashcardRepository } from '@/db/repositories/flashcard.repository'
+import { pickResurfaceDoc } from '@/utils/resurface'
+import { formatRelative } from '@/utils/date'
+import type { DocumentEntity } from '@/types/document'
 import { exportFlashcardsToAnkiTxt } from '@/utils/anki-export'
 import { downloadBlob } from '@/utils/export'
 import { pushToAnki } from '@/services/anki/anki-connect'
@@ -24,9 +30,35 @@ const appStore = useAppStore()
 const reviewStore = useReviewStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
+const workspaceStore = useWorkspaceStore()
+const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 
 const showPicker = ref(false)
+const resurfaceDoc = ref<DocumentEntity | null>(null)
+const genMode = ref<FlashcardMode>('qa')
+
+async function loadResurface() {
+  try {
+    const docs = await DocumentRepository.findAll()
+    resurfaceDoc.value = pickResurfaceDoc(docs)
+  } catch {
+    resurfaceDoc.value = null
+  }
+}
+
+async function openResurface() {
+  const doc = resurfaceDoc.value
+  if (!doc) return
+  documentStore.setCurrentDocument(doc)
+  documentStore.markOpened(doc.id)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // non-critical
+  }
+}
 
 const currentCard = computed(() => reviewStore.currentCard)
 const hasAnyCard = computed(() => reviewStore.totalCount > 0)
@@ -56,6 +88,7 @@ function formatInterval(days: number): string {
 
 onMounted(() => {
   reviewStore.loadQueue()
+  loadResurface()
   window.addEventListener('keydown', onKeydown)
 })
 
@@ -86,7 +119,7 @@ async function generateFromCurrent() {
     appStore.showToast('请先在设置中添加并启用模型', 'error')
     return
   }
-  const n = await reviewStore.generateForDocument(doc, model)
+  const n = await reviewStore.generateForDocument(doc, model, genMode.value)
   appStore.showToast(
     n > 0 ? `已生成 ${n} 张闪卡` : (reviewStore.generateError || '没有生成新卡片（可能已全部覆盖）'),
     n > 0 ? 'success' : 'warning',
@@ -137,7 +170,7 @@ async function onPickerConfirm(documentIds: string[]) {
   for (const id of documentIds) {
     const doc = await DocumentRepository.findById(id)
     if (!doc) continue
-    total += await reviewStore.generateForDocument(doc, model)
+    total += await reviewStore.generateForDocument(doc, model, genMode.value)
   }
   appStore.showToast(total > 0 ? `共生成 ${total} 张闪卡` : '没有生成新卡片', total > 0 ? 'success' : 'warning')
 }
@@ -146,12 +179,25 @@ async function onPickerConfirm(documentIds: string[]) {
 <template>
   <div class="flex-1 min-h-0 overflow-y-auto">
     <div class="max-w-xl mx-auto px-4 py-5 flex flex-col gap-4">
-      <!-- Stats -->
+      <!-- Generate mode + stats -->
       <div class="flex items-center justify-between text-xs text-zinc-500">
         <div class="flex items-center gap-3">
+          <div class="flex p-0.5 bg-zinc-100 border border-zinc-200 rounded-[9px]">
+            <button
+              v-for="m in [{ key: 'qa', label: '问答卡' }, { key: 'cloze', label: '挖空卡' }] as const"
+              :key="m.key"
+              class="px-2.5 py-1 text-[11px] font-medium rounded-[7px] transition-all"
+              :class="genMode === m.key ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-500 hover:text-zinc-700'"
+              @click="genMode = m.key"
+            >{{ m.label }}</button>
+          </div>
           <span>待复习 <b class="text-zinc-800">{{ reviewStore.remainingCount }}</b></span>
           <span>总卡片 <b class="text-zinc-800">{{ reviewStore.totalCount }}</b></span>
           <span>已复习 <b class="text-zinc-800">{{ reviewStore.reviewedToday }}</b></span>
+          <span v-if="reviewStore.stats.streak > 0" class="flex items-center gap-0.5 text-orange-500" title="连续复习天数">
+            <Flame class="w-3 h-3" /><b>{{ reviewStore.stats.streak }}</b>天
+          </span>
+          <span class="text-zinc-400">累计 {{ reviewStore.stats.total }}</span>
         </div>
         <div class="flex items-center gap-1">
           <UButton size="sm" variant="ghost" :disabled="reviewStore.loading" title="刷新队列" @click="reviewStore.loadQueue()">
@@ -184,14 +230,29 @@ async function onPickerConfirm(documentIds: string[]) {
         {{ reviewStore.generateError }}
       </div>
 
+      <!-- Resurface: one old document a day -->
+      <div
+        v-if="resurfaceDoc"
+        class="bg-white border border-zinc-200 rounded-2xl p-3 flex items-center gap-3 soft-shadow cursor-pointer hover:border-brand/40 transition-colors"
+        @click="openResurface"
+      >
+        <History class="w-4 h-4 text-brand/70 shrink-0" />
+        <div class="min-w-0 flex-1">
+          <div class="text-[10px] text-zinc-400">今日重温 · 30 天前剪藏</div>
+          <div class="text-[12px] text-zinc-700 truncate">{{ resurfaceDoc.title || '(无标题)' }}</div>
+        </div>
+        <span class="text-[10px] text-zinc-400 shrink-0">{{ formatRelative(resurfaceDoc.capturedAt) }}</span>
+      </div>
+
       <!-- Review card -->
       <div
         v-if="currentCard"
         class="bg-white border border-zinc-200 rounded-2xl p-6 min-h-48 flex flex-col items-center justify-center text-center cursor-pointer select-none soft-shadow"
         @click="reviewStore.flip()"
       >
-        <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-3">
-          {{ reviewStore.flipped ? '答案' : '问题' }} · 点击翻面（空格）
+        <div class="text-[10px] uppercase tracking-wider text-zinc-400 mb-3 flex items-center gap-2">
+          <span>{{ reviewStore.flipped ? '答案' : '问题' }} · 点击翻面（空格）</span>
+          <span v-if="currentCard.type === 'cloze'" class="px-1.5 py-px bg-brand/10 text-brand rounded text-[9px] normal-case tracking-normal">填空</span>
         </div>
         <div class="text-base leading-relaxed text-zinc-800 max-w-md whitespace-pre-wrap">
           {{ reviewStore.flipped ? currentCard.back : currentCard.front }}

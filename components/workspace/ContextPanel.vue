@@ -1,14 +1,16 @@
 <script lang="ts" setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
-import { Copy, Check, RefreshCw, Trash2 } from '@lucide/vue'
+import { Copy, Check, RefreshCw, Trash2, Volume2, Square } from '@lucide/vue'
+import { useTts } from '@/composables/useTts'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
 import { useChatStore } from '@/stores/chat.store'
 import { captureTab } from '@/services/capture/smart-capture'
+import { maybeAutoTag } from '@/services/tags/auto-tag'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity, ExtractionMethod, Highlight } from '@/types/document'
 import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
@@ -34,6 +36,16 @@ const markdownPreviewRef = ref<InstanceType<typeof MarkdownPreview> | null>(null
 const highlightCount = computed(() => documentStore.currentDocument?.highlights?.length ?? 0)
 
 const currentDoc = computed(() => documentStore.currentDocument)
+
+// ── Read aloud ──
+const tts = useTts()
+watch(currentDoc, () => tts.stop())
+
+function handleReadAloud() {
+  if (!currentDoc.value) return
+  tts.toggle(currentDoc.value.markdown)
+  if (tts.error.value) appStore.showToast(tts.error.value, 'warning')
+}
 
 const contextTab = computed({
   get: () => workspaceStore.currentContextTab,
@@ -107,6 +119,9 @@ async function handleRefresh() {
       documentStore.setCurrentDocument(doc)
       documentStore.setPageDocument(doc)
       await documentStore.saveDocument(doc)
+      maybeAutoTag(doc.id).then((tags) => {
+        if (tags.length > 0) appStore.showToast(`AI 标签：${tags.join('、')}`, 'success')
+      }).catch(() => {})
       workspaceStore.setCaptureStatus('ready')
     } else {
       // Reload from IndexedDB for library-sourced documents.
@@ -285,6 +300,15 @@ async function handleJumpToHighlight(hl: Highlight) {
       </TabsRoot>
 
       <div class="flex items-center gap-1">
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="!currentDoc"
+          :title="tts.speaking.value ? '停止朗读' : '朗读全文'"
+          @click="handleReadAloud"
+        >
+          <Square v-if="tts.speaking.value" class="w-3.5 h-3.5 text-brand" />
+          <Volume2 v-else class="w-3.5 h-3.5" />
+        </button>
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
           :title="copied ? '已复制' : '复制当前标签页内容'"

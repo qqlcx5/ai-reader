@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { List } from '@lucide/vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useAppStore } from '@/stores/app.store'
@@ -48,6 +49,31 @@ const rawMarkdown = computed(() => documentStore.currentDocument?.markdown || ''
 const highlights = computed(() => documentStore.currentDocument?.highlights ?? [])
 
 const renderedHtml = computed(() => renderMarkdown(rawMarkdown.value))
+
+// ── Table of contents ─────────────────────────────────
+interface TocEntry { id: string; text: string; level: number }
+const toc = ref<TocEntry[]>([])
+const showToc = ref(false)
+
+function refreshToc(): void {
+  const container = containerRef.value
+  if (!container) {
+    toc.value = []
+    return
+  }
+  toc.value = Array.from(container.querySelectorAll('h1, h2, h3, h4'))
+    .filter((el) => el.id)
+    .map((el) => ({ id: el.id, text: el.textContent?.trim() || '', level: Number(el.tagName[1]) }))
+  if (toc.value.length === 0) showToc.value = false
+}
+
+function jumpToHeading(entry: TocEntry): void {
+  const container = containerRef.value
+  if (!container) return
+  const el = container.querySelector(`#${CSS.escape(entry.id)}`)
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  showToc.value = false
+}
 
 // ── Reading progress tracking ──────────────────────────
 let lastReportedProgress = -1
@@ -449,7 +475,14 @@ function jumpToHighlight(hl: Highlight) {
 
 defineExpose({ jumpToHighlight })
 
+// Re-extract the TOC whenever the rendered markdown changes.
+watch(renderedHtml, async () => {
+  await nextTick()
+  refreshToc()
+})
+
 onMounted(() => {
+  nextTick(refreshToc)
   document.addEventListener('selectionchange', handleSelectionClear)
   document.addEventListener('click', closeMarkPopover, { capture: true })
   const progress = documentStore.currentDocument?.readProgress
@@ -557,6 +590,40 @@ onUnmounted(() => {
         {{ highlights.length }} 条标注 · 切换到「标注」标签页查看全部
       </div>
     </div>
+
+    <!-- TOC: floating button + drawer, only for documents with >= 4 headings -->
+    <template v-if="toc.length >= 4">
+      <div v-if="!showToc" class="fixed bottom-20 right-6 z-30">
+        <button
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white border border-zinc-200 shadow-sm text-[11px] text-zinc-500 hover:text-brand hover:border-brand/40 transition-colors"
+          title="文档目录"
+          @click="showToc = true"
+        >
+          <List class="w-3.5 h-3.5" />
+          目录
+        </button>
+      </div>
+      <div
+        v-else
+        class="fixed inset-0 z-40 bg-black/20"
+        @click="showToc = false"
+      >
+        <div
+          class="absolute bottom-16 right-4 w-64 max-h-[60%] overflow-y-auto bg-white border border-zinc-200 rounded-2xl shadow-xl p-2"
+          @click.stop
+        >
+          <div class="px-2 py-1.5 text-[10px] text-zinc-400 uppercase tracking-wider">目录</div>
+          <button
+            v-for="entry in toc"
+            :key="entry.id"
+            class="w-full text-left px-2 py-1.5 rounded-lg text-[12px] text-zinc-600 hover:text-brand hover:bg-brand/5 transition-colors truncate"
+            :style="{ paddingLeft: `${(entry.level - 1) * 12 + 8}px` }"
+            :title="entry.text"
+            @click="jumpToHeading(entry)"
+          >{{ entry.text }}</button>
+        </div>
+      </div>
+    </template>
 
     <div v-if="!rawMarkdown" class="text-zinc-400 text-[13px] py-8 text-center">
       暂无 Markdown 内容

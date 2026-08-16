@@ -3,8 +3,8 @@ import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import { MetaRepository } from '../db/repositories/meta.repository'
-import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings } from '../types/settings'
-import type { AnkiConnectConfig } from '../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings, TaggingSettings } from '../types/settings'
+import type { AnkiConnectConfig, TranscribeConfig } from '../types/settings'
 import type { WebDAVConfig } from '../types/sync'
 import type { S3Config } from '../types/s3'
 
@@ -30,6 +30,8 @@ const defaultAutoAnalysisSettings: AutoAnalysisSettings = {}
 
 const defaultInboxSettings: InboxSettings = { endpoint: '', token: '', enabled: false }
 
+const defaultTaggingSettings: TaggingSettings = { autoTagOnCapture: false }
+
 function createDefaultSettings(): AppSettings {
   return {
     id: 'app-settings',
@@ -38,6 +40,7 @@ function createDefaultSettings(): AppSettings {
     capture: { ...defaultCaptureSettings },
     autoAnalysis: { ...defaultAutoAnalysisSettings },
     inbox: { ...defaultInboxSettings },
+    tagging: { ...defaultTaggingSettings },
     createdAt: dayjs().toISOString(),
     updatedAt: dayjs().toISOString(),
   }
@@ -49,6 +52,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const webdav = ref<WebDAVConfig>({ url: '', username: '', password: '', basePath: '/auramind', enabled: false, maxBackups: 10 })
   const s3 = ref<S3Config>({ endpoint: '', bucket: '', region: 'us-east-1', accessKeyId: '', secretAccessKey: '', basePath: '/auramind', enabled: false, forcePathStyle: false, maxBackups: 10 })
   const anki = ref<AnkiConnectConfig>({ url: 'http://127.0.0.1:8765', deck: 'AuraMind' })
+  const transcribe = ref<TranscribeConfig>({ baseUrl: 'https://api.openai.com/v1', apiKey: '', model: 'whisper-1' })
+  const theme = ref<'light' | 'dark' | 'system'>('system')
 
   async function loadSettings() {
     const saved = await SettingsRepository.get()
@@ -58,6 +63,7 @@ export const useSettingsStore = defineStore('settings', () => {
         ...createDefaultSettings(),
         ...saved,
         inbox: { ...defaultInboxSettings, ...saved.inbox },
+        tagging: { ...defaultTaggingSettings, ...saved.tagging },
       }
     }
     const savedWebdav = await MetaRepository.get<WebDAVConfig>('webdav-config')
@@ -66,6 +72,10 @@ export const useSettingsStore = defineStore('settings', () => {
     if (savedS3) s3.value = { ...s3.value, ...savedS3 }
     const savedAnki = await MetaRepository.get<AnkiConnectConfig>('anki-config')
     if (savedAnki) anki.value = { ...anki.value, ...savedAnki }
+    const savedTranscribe = await MetaRepository.get<TranscribeConfig>('transcribe-config')
+    if (savedTranscribe) transcribe.value = { ...transcribe.value, ...savedTranscribe }
+    const savedTheme = await MetaRepository.get<'light' | 'dark' | 'system'>('theme')
+    if (savedTheme) theme.value = savedTheme
     isLoaded.value = true
   }
 
@@ -82,6 +92,16 @@ export const useSettingsStore = defineStore('settings', () => {
   async function updateAnkiConfig(partial: Partial<AnkiConnectConfig>) {
     anki.value = { ...anki.value, ...partial }
     await MetaRepository.set('anki-config', toRaw(anki.value))
+  }
+
+  async function updateTranscribeConfig(partial: Partial<TranscribeConfig>) {
+    transcribe.value = { ...transcribe.value, ...partial }
+    await MetaRepository.set('transcribe-config', toRaw(transcribe.value))
+  }
+
+  async function updateTheme(value: 'light' | 'dark' | 'system') {
+    theme.value = value
+    await MetaRepository.set('theme', value)
   }
 
   async function updateGlobalSystemPrompt(prompt: string) {
@@ -114,6 +134,12 @@ export const useSettingsStore = defineStore('settings', () => {
     await persist()
   }
 
+  async function updateTaggingSettings(partial: Partial<TaggingSettings>) {
+    settings.value.tagging = { ...settings.value.tagging, ...partial }
+    settings.value.updatedAt = dayjs().toISOString()
+    await persist()
+  }
+
   async function persist() {
     await SettingsRepository.save(toRaw(settings.value) as AppSettings)
   }
@@ -124,15 +150,20 @@ export const useSettingsStore = defineStore('settings', () => {
     webdav,
     s3,
     anki,
+    transcribe,
+    theme,
     loadSettings,
     updateWebDAVConfig,
     updateS3Config,
     updateAnkiConfig,
+    updateTranscribeConfig,
+    updateTheme,
     updateGlobalSystemPrompt,
     updateContextSettings,
     updateCaptureSettings,
     updateAutoAnalysis,
     updateInboxSettings,
+    updateTaggingSettings,
     persist,
   }
 })

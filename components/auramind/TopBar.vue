@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settings.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
 import { captureTab } from '@/services/capture/smart-capture'
+import { maybeAutoTag } from '@/services/tags/auto-tag'
 import { nowISO } from '@/utils/date'
 import { openAppWindow, isWindowMode } from '@/utils/open-window'
 import type { DocumentEntity, ExtractionMethod } from '@/types/document'
@@ -133,6 +134,9 @@ async function handleRefresh() {
     documentStore.setCurrentDocument(doc)
     documentStore.setPageDocument(doc)
     await documentStore.saveDocument(doc)
+    maybeAutoTag(doc.id).then((tags) => {
+      if (tags.length > 0) appStore.showToast(`AI 标签：${tags.join('、')}`, 'success')
+    }).catch(() => {})
     workspaceStore.setDocumentSource('current-page')
 
     workspaceStore.setCaptureStatus('ready')

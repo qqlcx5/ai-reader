@@ -1,13 +1,15 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { ListChecks, Trash2, FolderPlus, Download, Zap } from '@lucide/vue'
+import { ListChecks, Trash2, FolderPlus, Download, Zap, AudioLines } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useCollectionStore } from '@/stores/collection.store'
 import { searchDocuments } from '@/services/search'
+import { enqueueForDocument } from '@/services/ai-job/queue'
 import { ChatRepository } from '@/db/repositories/chat.repository'
 import { AiJobRepository } from '@/db/repositories/ai-job.repository'
 import type { DocumentEntity } from '@/types/document'
@@ -25,6 +27,7 @@ import CollectionPickerDialog from './CollectionPickerDialog.vue'
 import BatchAnalysisDialog from './BatchAnalysisDialog.vue'
 
 const appStore = useAppStore()
+const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
 const documentStore = useDocumentStore()
 const chatStore = useChatStore()
@@ -68,6 +71,36 @@ async function confirmBatchDelete() {
   await documentStore.deleteSelectedDocuments()
   await loadConversationIndex()
   multiSelectActive.value = false
+}
+
+// ── Audio transcription import ──
+const audioInput = ref<HTMLInputElement | null>(null)
+const transcribing = ref(false)
+
+async function handleAudioFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  transcribing.value = true
+  appStore.showToast(`正在转写「${file.name}」…`, 'info')
+  try {
+    const { transcribeAudio, buildTranscriptDocument } = await import('@/services/transcribe/whisper')
+    const text = await transcribeAudio(file, settingsStore.transcribe)
+    const doc = await buildTranscriptDocument(file.name, text)
+    await documentStore.saveDocument(doc)
+    try {
+      await enqueueForDocument(doc.id)
+    } catch {
+      // non-critical
+    }
+    await documentStore.refreshDocuments()
+    appStore.showToast(`转写完成，已入库「${doc.title}」`, 'success')
+  } catch (e: any) {
+    appStore.showToast(e?.message || '转写失败', 'error')
+  } finally {
+    transcribing.value = false
+  }
 }
 
 function handleBatchExport() {
@@ -473,8 +506,24 @@ function cancelDelete() {
   <div class="flex-1 min-h-0 flex-col bg-surface flex">
     <div ref="scrollRootRef" class="flex-1 min-h-0 overflow-y-auto">
       <!-- Search -->
-      <div class="sticky top-0 z-10 p-4 pb-3 bg-surface/95 backdrop-blur-md border-b border-zinc-100">
-        <SearchBar v-model="searchQuery" @search="onSearch" />
+      <div class="sticky top-0 z-10 p-4 pb-3 bg-surface/95 backdrop-blur-md border-b border-zinc-100 flex items-center gap-2">
+        <SearchBar v-model="searchQuery" class="flex-1" @search="onSearch" />
+        <button
+          class="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-lg text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+          :disabled="transcribing"
+          title="音频转写为文档（Whisper 兼容端点，设置中配置）"
+          @click="audioInput?.click()"
+        >
+          <AudioLines class="w-3.5 h-3.5" :class="{ 'animate-pulse': transcribing }" />
+          {{ transcribing ? '转写中…' : '音频' }}
+        </button>
+        <input
+          ref="audioInput"
+          type="file"
+          accept="audio/*"
+          class="hidden"
+          @change="handleAudioFileChange"
+        />
       </div>
 
       <!-- Multi-select toolbar -->

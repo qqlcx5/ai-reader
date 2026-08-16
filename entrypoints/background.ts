@@ -3,15 +3,85 @@ import { reclaimStaleJobs } from '@/services/ai-job/processor'
 import { bgDrain } from '@/services/ai-job/bg-drain'
 import { runSchedules } from '@/services/schedule/runner'
 import { updateReviewBadge } from '@/services/review/badge'
+import { saveQuickNote } from '@/services/capture/quick-note'
 
 export default defineBackground(() => {
   console.log('AuraMind background', { id: browser.runtime.id })
 
+  const b = browser as any
+
+  // Open the side panel across engines: Chrome uses `sidePanel.open({tabId})`,
+  // Firefox uses `sidebarAction.open()` (no args, needs a user gesture — our
+  // callers are all menu/command/click handlers, which qualify).
+  function openSidebarPanel(tabId?: number): void {
+    if (sidePanel && tabId != null) {
+      sidePanel.open({ tabId }).catch(() => {})
+    } else if (b.sidebarAction?.open) {
+      b.sidebarAction.open().catch(() => {})
+    }
+  }
+
+  // ── Pending panel actions ─────────────────────────────────────────────
+  // Context menu / keyboard commands may fire while the side panel is not
+  // open yet. The action is stashed here; the panel asks for it on mount.
+  let pendingAction: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW'; tabId?: number } | null = null
+
+  function runPanelAction(action: { type: 'CAPTURE_PAGE' | 'OPEN_REVIEW'; tabId?: number }, tabId?: number) {
+    pendingAction = action
+    const target = tabId ?? action.tabId
+    if (target != null || b.sidebarAction) openSidebarPanel(target)
+    // If the panel is already open it handles this directly.
+    b.runtime.sendMessage({ type: action.type, payload: { tabId: target } }).catch(() => {})
+  }
+
+  // ── Context menus ─────────────────────────────────────────────────────
+  const MENU_CLIP_PAGE = 'auramind-clip-page'
+  const MENU_CLIP_SELECTION = 'auramind-clip-selection'
+
+  function setupContextMenus() {
+    if (!b.contextMenus) return
+    b.contextMenus.removeAll(() => {
+      b.contextMenus.create({ id: MENU_CLIP_PAGE, title: '剪藏此页面到 AuraMind', contexts: ['page'] })
+      b.contextMenus.create({ id: MENU_CLIP_SELECTION, title: '保存选中文字到 AuraMind', contexts: ['selection'] })
+    })
+  }
+
+  b.runtime.onInstalled?.addListener(() => { setupContextMenus() })
+  b.runtime.onStartup?.addListener(() => { setupContextMenus() })
+  setupContextMenus()
+
+  b.contextMenus?.onClicked?.addListener((info: any, tab: any) => {
+    if (info.menuItemId === MENU_CLIP_PAGE && tab?.id != null) {
+      runPanelAction({ type: 'CAPTURE_PAGE', tabId: tab.id })
+    }
+    if (info.menuItemId === MENU_CLIP_SELECTION && info.selectionText) {
+      saveQuickNote({
+        selection: info.selectionText,
+        pageUrl: info.pageUrl || tab?.url || '',
+        pageTitle: tab?.title || '',
+      }).catch((e: any) => console.warn('[bg] quick note failed:', e))
+    }
+  })
+
+  // ── Keyboard commands ────────────────────────────────────────────────
+  b.commands?.onCommand?.addListener((command: string) => {
+    if (command === 'capture-page') {
+      b.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
+        const tab = tabs[0]
+        if (tab?.id != null) runPanelAction({ type: 'CAPTURE_PAGE', tabId: tab.id })
+      })
+    }
+    if (command === 'open-review') {
+      b.tabs.query({ active: true, currentWindow: true }, (tabs: any) => {
+        const tab = tabs[0]
+        runPanelAction({ type: 'OPEN_REVIEW', tabId: tab?.id }, tab?.id)
+      })
+    }
+  })
+
   // Crash recovery: any job stuck in 'processing' from a prior SW lifetime
   // can never complete (its AbortController is gone). Flip to failed once.
   void reclaimStaleJobs()
-
-  const b = browser as any
 
   // Clear the tracked app-window id when that window closes (singleton cleanup).
   b.windows?.onRemoved?.addListener(() => {
@@ -31,6 +101,8 @@ export default defineBackground(() => {
     // Reopen side panel on the new tab to keep it visible across tab switches
     if (sidePanel) {
       sidePanel.open({ tabId: activeInfo.tabId }).catch(() => {})
+      // Firefox fallback:
+      if (!sidePanel) b.sidebarAction?.open?.().catch(() => {})
     }
     b.tabs.get(activeInfo.tabId, (tab: any) => {
       if (b.runtime.lastError || !tab) return
@@ -71,9 +143,17 @@ export default defineBackground(() => {
 
   // Handle getCurrentTab request
   b.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    if (message.type === 'GET_PENDING_ACTION') {
+      sendResponse(pendingAction)
+      pendingAction = null
+      return false
+    }
+
     if (message.type === 'FLOATING_OPEN') {
       if (sidePanel && _sender.tab?.id) {
         sidePanel.open({ tabId: _sender.tab.id }).catch(() => {})
+      } else {
+        b.sidebarAction?.open?.().catch(() => {})
       }
       sendResponse({ ok: true })
       return true

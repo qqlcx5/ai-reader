@@ -5,6 +5,11 @@ import { useSettingsStore } from '@/stores/settings.store'
 
 const settingsStore = useSettingsStore()
 
+const autoTagOnCapture = computed({
+  get: () => settingsStore.settings.tagging.autoTagOnCapture,
+  set: (val: boolean) => settingsStore.updateTaggingSettings({ autoTagOnCapture: val }),
+})
+
 const autoExtractOnOpen = computed({
   get: () => settingsStore.settings.capture.autoExtractOnOpen,
   set: (val: boolean) => settingsStore.updateCaptureSettings({ autoExtractOnOpen: val }),
@@ -36,6 +41,13 @@ const preferCache = computed({
         <span class="text-[11px] text-zinc-400">浏览器标签页切换时自动提取新页面</span>
       </div>
       <Switch v-model="autoExtractOnTabChange" />
+    </div>
+    <div class="p-3 border-b border-zinc-100 flex items-center justify-between">
+      <div class="flex flex-col gap-0.5">
+        <span class="text-zinc-700">抓取时 AI 自动打标签</span>
+        <span class="text-[11px] text-zinc-400">保存文档后用默认模型生成 3~5 个主题标签（额外消耗少量 token）</span>
+      </div>
+      <Switch v-model="autoTagOnCapture" />
     </div>
     <div class="p-3 flex items-center justify-between">
       <div class="flex flex-col gap-0.5">

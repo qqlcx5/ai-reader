@@ -4,8 +4,11 @@ import type { DocumentEntity } from '@/types/document'
 import type { ModelConfig } from '@/types/model'
 import type { FlashcardEntity } from '@/types/flashcard'
 import { FlashcardRepository } from '@/db/repositories/flashcard.repository'
+import { MetaRepository } from '@/db/repositories/meta.repository'
 import { generateFlashcards } from '@/services/review/generate'
+import type { FlashcardMode } from '@/services/review/generate'
 import { schedule, isDue, type ReviewGrade } from '@/utils/sm2'
+import { recordReview, computeReviewStats, type ReviewLog, type ReviewStats } from '@/utils/review-stats'
 import { nowISO } from '@/utils/date'
 
 /** Tell the background worker to refresh the action badge. Best-effort. */
@@ -29,6 +32,18 @@ export const useReviewStore = defineStore('review', () => {
   const currentCard = computed<FlashcardEntity | null>(() => queue.value[0] ?? null)
   const remainingCount = computed(() => queue.value.length)
   const reviewedToday = ref(0)
+  const stats = ref<ReviewStats>({ total: 0, streak: 0, today: 0 })
+
+  async function loadStats(): Promise<void> {
+    const log = (await MetaRepository.get<ReviewLog>('review-log')) ?? {}
+    stats.value = computeReviewStats(log)
+    reviewedToday.value = stats.value.today
+  }
+
+  async function persistReview(): Promise<void> {
+    const log = (await MetaRepository.get<ReviewLog>('review-log')) ?? {}
+    await MetaRepository.set('review-log', recordReview(log))
+  }
 
   async function loadQueue(): Promise<void> {
     loading.value = true
@@ -44,6 +59,7 @@ export const useReviewStore = defineStore('review', () => {
     } finally {
       loading.value = false
     }
+    loadStats().catch(() => {})
   }
 
   function flip(): void {
@@ -64,6 +80,7 @@ export const useReviewStore = defineStore('review', () => {
     flipped.value = false
     reviewedToday.value += 1
     notifyQueueChanged()
+    persistReview().then(loadStats).catch(() => {})
   }
 
   /** Delete the current card and advance. */
@@ -81,12 +98,12 @@ export const useReviewStore = defineStore('review', () => {
    * Generate flashcards for a document with AI and persist them.
    * Returns the number of new cards created.
    */
-  async function generateForDocument(document: DocumentEntity, model: ModelConfig): Promise<number> {
+  async function generateForDocument(document: DocumentEntity, model: ModelConfig, mode: FlashcardMode = 'qa'): Promise<number> {
     generating.value = true
     generateError.value = null
     try {
       const existing = await FlashcardRepository.findByDocument(document.id)
-      const { cards, parseError } = await generateFlashcards({ document, model, existing })
+      const { cards, parseError } = await generateFlashcards({ document, model, existing, mode })
       if (parseError) {
         generateError.value = parseError
         return 0
@@ -114,6 +131,7 @@ export const useReviewStore = defineStore('review', () => {
     generateError,
     totalCount,
     reviewedToday,
+    stats,
     currentCard,
     remainingCount,
     loadQueue,
