@@ -14,13 +14,15 @@ vi.mock('../../utils/date', () => ({
 }))
 
 // Stub lucide icon
-vi.mock('@lucide/vue', () => ({
-  RefreshCw: {
-    name: 'RefreshCw',
-    template: '<span class="mock-refresh-cw" />',
+vi.mock('@lucide/vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@lucide/vue')>()
+  const stub = (name: string) => ({
+    name,
+    template: `<span class="mock-${name.toLowerCase()}" />`,
     props: ['class', 'size'],
-  },
-}))
+  })
+  return { ...actual, RefreshCw: stub('RefreshCw'), Download: stub('Download'), FileText: stub('FileText'), FileJson: stub('FileJson') }
+})
 
 function createMockDocumentStore() {
   return reactive({
@@ -146,7 +148,7 @@ describe('WorkspaceHeader', () => {
       },
     })
 
-    const button = wrapper.find('button')
+    const button = wrapper.find('button[title="重新抓取"]')
     expect(button.exists()).toBe(true)
     expect(button.attributes('disabled')).toBeUndefined()
   })

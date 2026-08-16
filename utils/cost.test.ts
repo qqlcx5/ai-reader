@@ -22,7 +22,7 @@ describe('getModelPricing', () => {
   })
 
   it('prefers gpt-5.4-mini over broader gpt-5.x patterns', () => {
-    expect(getModelPricing(model('gpt-5.4-mini'))).toEqual({ input: 5.25, output: 31.5 })
+    expect(getModelPricing(model('gpt-5.4-mini'))).toEqual({ input: 11.25, output: 67.5 })
   })
 
   it('matches deepseek pro over flash', () => {
