@@ -7,6 +7,8 @@ export interface PageWatchChange {
   hash: string
   /** Excerpt (first ~2KB markdown) of the PREVIOUS version, for diff view. */
   previousExcerpt?: string
+  /** One-sentence AI summary of what changed (filled in async). */
+  summary?: string
 }
 
 export interface PageWatchEntity {

@@ -180,6 +180,7 @@ onMounted(load)
           <div class="text-[13px] font-semibold text-zinc-800">变更历史 · {{ diffWatch.title }}</div>
           <div v-for="(change, i) in diffWatch.changes" :key="change.at" class="border border-zinc-200 rounded-xl p-2.5 flex flex-col gap-1.5">
             <div class="text-[10px] text-zinc-400">第 {{ diffWatch.changes!.length - i }} 次 · {{ formatRelative(change.at) }}</div>
+            <div v-if="change.summary" class="text-[12px] text-emerald-600 bg-emerald-50 rounded-lg p-2">✨ {{ change.summary }}</div>
             <div v-if="change.previousExcerpt" class="text-[11px] text-zinc-500 bg-zinc-50 rounded-lg p-2 whitespace-pre-wrap line-clamp-6">{{ change.previousExcerpt }}</div>
             <div class="text-[10px] text-zinc-400">↑ 变更前的版本摘录（当前版本在正文中查看）</div>
           </div>

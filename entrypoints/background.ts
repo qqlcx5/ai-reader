@@ -253,12 +253,17 @@ export default defineBackground(() => {
       // Page-change watches piggyback as well; toast the panel on changes.
       import('@/services/watch/watch').then(({ checkAllWatches }) =>
         checkAllWatches()
-          .then((changed) => {
+          .then(async (changed) => {
             if (changed.length > 0) {
               b.runtime.sendMessage({
                 type: 'WATCH_CHANGED',
                 payload: { count: changed.length, title: changed[0].title },
               }).catch(() => {})
+              // Best-effort AI summaries for the changes (async, non-blocking).
+              const { annotateLatestChange } = await import('@/services/watch/summarize')
+              for (const w of changed) {
+                annotateLatestChange(w).catch(() => {})
+              }
             }
           })
           .catch((e: any) => console.warn('[bg] watch check failed:', e)),
