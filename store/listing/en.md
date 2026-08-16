@@ -39,18 +39,25 @@ Highlight any passage on any page. A floating toolbar lets you save the
 highlight, ask AI about it, or schedule it for review.
 
 ## 🔁 Spaced-Repetition Review (SM-2)
-AuraMind automatically schedules your highlights for daily review using
-the SM-2 algorithm — the same science behind Anki. Read it once, remember
-it forever.
+Generate QA or cloze flashcards from your highlights with AI; the SM-2
+algorithm — the same science behind Anki — schedules daily review, with
+streaks, due-count badge, daily new-card limits, and old-document
+resurfacing. Push cards to Anki via export or AnkiConnect.
 
 ## 📡 RSS Reader with Auto-Discovery
-Subscribe to feeds in one click. The extension refreshes on a schedule
-and de-duplicates via content hash.
+Subscribe to feeds in one click. The extension refreshes on a schedule and
+de-duplicates via content hash; OPML import/export, a self-hosted
+newsletter inbox, and one-tap podcast transcription are built in.
+
+## 🕸️ Knowledge Graph & Export
+Connect documents with [[wikilinks]] and visualize your second brain;
+related documents are surfaced automatically. Export to Obsidian-compatible
+Markdown ZIP (highlights included), Anki cards, or a full JSON backup.
 
 ## 🔄 Cross-Device Sync
 End-to-end sync via WebDAV (Nextcloud, 坚果云, etc.) or any S3-compatible
 storage (Cloudflare R2, AWS S3, MinIO, Backblaze B2). Conflict-free
-thanks to vector clocks.
+thanks to vector clocks. Flashcards and review progress sync too.
 
 ## 🔒 Local-First & Privacy
 - Everything is stored locally in your browser's IndexedDB
@@ -85,7 +92,10 @@ function is to turn web pages into reviewable knowledge cards.
 | `storage` | Persist settings, models, and the local IndexedDB store. |
 | `tabs` | Reopen the side panel when the user switches tabs and broadcast tab events. |
 | `windows` | Manage the optional popped-out workspace window. |
-| `alarms` | Schedule periodic RSS feed refreshes. |
+| `alarms` | Schedule periodic RSS feed refreshes and review-badge updates. |
+| `offscreen` | Parse RSS bodies in the background (Chromium-only). |
+| `contextMenus` | Right-click "clip this page / save selection" actions. |
+| `http://127.0.0.1/*`, `http://localhost/*` | Optional AnkiConnect push (localhost only). |
 | `<all_urls>` | Required to clip content from any site the user visits. |
 
 ## Data usage (for the "Privacy" tab)
