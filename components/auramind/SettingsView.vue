@@ -16,6 +16,8 @@ import InboxSettings from '@/components/settings/InboxSettings.vue'
 import AnkiSettings from '@/components/settings/AnkiSettings.vue'
 import TranscribeSettings from '@/components/settings/TranscribeSettings.vue'
 import AppearanceSettings from '@/components/settings/AppearanceSettings.vue'
+import ReviewSettings from '@/components/settings/ReviewSettings.vue'
+import AboutCard from '@/components/settings/AboutCard.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -177,6 +179,7 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
         <ContextSettings />
         <CaptureSettings />
         <AppearanceSettings />
+        <ReviewSettings />
       </section>
 
       <!-- 自动 AI 分析 -->
@@ -219,6 +222,11 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5 pb-8">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">本地存储</h2>
         <StorageSettings />
+      </section>
+
+      <!-- 关于 -->
+      <section class="flex flex-col gap-2.5 pb-8">
+        <AboutCard />
       </section>
     </main>
 
