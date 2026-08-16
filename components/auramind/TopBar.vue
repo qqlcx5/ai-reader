@@ -1,12 +1,13 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft, Zap } from '@lucide/vue'
+import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft, Zap, GraduationCap, Waypoints } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useChatStore } from '@/stores/chat.store'
 import { requestExtract } from '@/services/capture/capture.service'
+import { captureTab } from '@/services/capture/smart-capture'
 import { nowISO } from '@/utils/date'
 import { openAppWindow, isWindowMode } from '@/utils/open-window'
 import type { DocumentEntity, ExtractionMethod } from '@/types/document'
@@ -32,6 +33,8 @@ const navItems = [
   { key: 'library', icon: BookOpen, label: '记忆库' },
   { key: 'analysis', icon: Zap, label: 'AI 分析' },
   { key: 'feeds', icon: Rss, label: '订阅' },
+  { key: 'review', icon: GraduationCap, label: '复习' },
+  { key: 'graph', icon: Waypoints, label: '图谱' },
   { key: 'usage', icon: Gauge, label: '用量' },
   { key: 'settings', icon: Settings, label: '设置' },
 ] as const
@@ -98,8 +101,8 @@ function buildDocumentEntity(data: {
 }
 
 async function handleRefresh() {
-  const tabId = appStore.activeTab?.id
-  if (!tabId) {
+  const tab = appStore.activeTab
+  if (!tab?.id) {
     appStore.showToast('无法获取当前标签页', 'error')
     return
   }
@@ -108,7 +111,9 @@ async function handleRefresh() {
   workspaceStore.setExtracting(true)
 
   try {
-    const extracted = await requestExtract(tabId)
+    // PDFs / arXiv papers can't go through the content script — captureTab
+    // dispatches to the right pipeline.
+    const extracted = await captureTab(tab)
 
     const doc = buildDocumentEntity({
       url: extracted.url,

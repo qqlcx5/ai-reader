@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
 import { db } from '../index'
-import type { AppSettings, ContextSettings, CaptureSettings } from '../../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, InboxSettings } from '../../types/settings'
 import type { IRepository } from '../repository'
 
 const defaultContextSettings: ContextSettings = {
@@ -20,6 +20,8 @@ const defaultCaptureSettings: CaptureSettings = {
   saveRawHtml: false,
   compressRawHtml: true,
 }
+
+const defaultInboxSettings: InboxSettings = { endpoint: '', token: '', enabled: false }
 
 export const SettingsRepository: IRepository<AppSettings> & {
   get(): Promise<AppSettings | undefined>
@@ -68,6 +70,10 @@ export const SettingsRepository: IRepository<AppSettings> & {
       },
       autoAnalysis: {
         queuePaused: existing.autoAnalysis?.queuePaused,
+      },
+      inbox: {
+        ...defaultInboxSettings,
+        ...existing.inbox,
       },
       createdAt: existing.createdAt || dayjs().toISOString(),
       updatedAt: dayjs().toISOString(),

@@ -35,12 +35,16 @@ export function exportDocumentsToZip(documents: DocumentEntity[]): Blob {
     usedNames.add(name)
 
     const meta = [
-      `# ${doc.title || 'Untitled'}`,
+      '---',
+      `title: "${(doc.title || 'Untitled').replace(/"/g, '\"')}"`,
+      `source: ${doc.url}`,
+      doc.author ? `author: ${doc.author}` : null,
+      doc.publishedAt ? `published: ${doc.publishedAt}` : null,
+      `captured: ${doc.capturedAt}`,
+      doc.tags?.length ? `tags: [${doc.tags.join(', ')}]` : null,
+      '---',
       '',
-      `> Source: ${doc.url}`,
-      doc.author ? `> Author: ${doc.author}` : null,
-      doc.publishedAt ? `> Published: ${doc.publishedAt}` : null,
-      `> Captured: ${doc.capturedAt}`,
+      `# ${doc.title || 'Untitled'}`,
       '',
       '---',
       '',
@@ -48,7 +52,18 @@ export function exportDocumentsToZip(documents: DocumentEntity[]): Blob {
       .filter((l) => l !== null)
       .join('\n')
 
-    const content = meta + (doc.markdown || '')
+    let content = meta + (doc.markdown || '')
+
+    // Highlights as an Obsidian-friendly section (==mark== syntax + notes).
+    const highlights = (doc.highlights ?? []).slice().sort((a, b) => a.startOffset - b.startOffset)
+    if (highlights.length > 0) {
+      const lines = highlights.map((h) => {
+        const base = `- ==${h.text.replaceAll('\n', ' ')}==`
+        return h.note?.trim() ? `${base}\n  - 笔记：${h.note.trim().replaceAll('\n', ' ')}` : base
+      })
+      content += `\n\n## 高亮\n\n${lines.join('\n')}\n`
+    }
+
     files[name] = strToU8(content)
   })
 

@@ -18,6 +18,8 @@ import AnalysisView from '@/components/auramind/AnalysisView.vue'
 import SettingsView from '@/components/auramind/SettingsView.vue'
 import UsageView from '@/components/auramind/UsageView.vue'
 import FeedsView from '@/components/auramind/FeedsView.vue'
+import ReviewView from '@/components/auramind/ReviewView.vue'
+import GraphView from '@/components/auramind/GraphView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import Toaster from '@/components/Toaster.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
@@ -206,6 +208,8 @@ onUnmounted(() => {
     <LibraryView v-if="appStore.currentView === 'library'" />
     <AnalysisView v-show="appStore.currentView === 'analysis'" />
     <FeedsView v-show="appStore.currentView === 'feeds'" />
+    <ReviewView v-show="appStore.currentView === 'review'" />
+    <GraphView v-show="appStore.currentView === 'graph'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
 

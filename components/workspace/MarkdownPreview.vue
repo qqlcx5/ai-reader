@@ -4,13 +4,42 @@ import { computed, watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useAppStore } from '@/stores/app.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
+import { normalizeTitle } from '@/utils/wikilinks'
+import { DocumentRepository } from '@/db/repositories/document.repository'
 import { HighlightColors } from '@/components/workspace/highlight-colors'
 import type { Highlight, HighlightColor } from '@/types/document'
 
 const documentStore = useDocumentStore()
 const chatStore = useChatStore()
 const appStore = useAppStore()
+const workspaceStore = useWorkspaceStore()
+
+/** Click on a [[wikilink]] → resolve by title → open that document. */
+async function handleWikilinkClick(e: MouseEvent) {
+  const anchor = (e.target as HTMLElement).closest?.('.am-wikilink') as HTMLElement | null
+  if (!anchor) return
+  e.preventDefault()
+  e.stopPropagation()
+  const target = anchor.getAttribute('data-target') || ''
+  const key = normalizeTitle(target)
+  if (!key) return
+  const docs = await DocumentRepository.findAll()
+  const doc = docs.find((d) => normalizeTitle(d.title || '') === key)
+  if (!doc) {
+    appStore.showToast(`没有找到「${target}」对应的文档`, 'error')
+    return
+  }
+  documentStore.setCurrentDocument(doc)
+  documentStore.markOpened(doc.id)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // non-critical
+  }
+}
 
 const scrollRef = ref<HTMLElement | null>(null)
 const containerRef = ref<HTMLElement | null>(null)
@@ -453,6 +482,7 @@ onUnmounted(() => {
       v-html="renderedHtml"
       @mouseup="handleMouseUp"
       @click="handleMarkClick"
+      @click.capture="handleWikilinkClick"
     />
 
     <!-- Selection toolbar: shows color dots when text is selected -->

@@ -10,6 +10,16 @@ describe('renderMarkdown', () => {
     expect(html).toContain('<code>inline</code>')
   })
 
+  it('renders [[wikilinks]] as internal links', () => {
+    const html = renderMarkdown('看 [[目标文档]] 和 [[另一篇|显示名]]')
+    expect(html).toContain('class="am-wikilink"')
+    expect(html).toContain('data-target="目标文档"')
+    expect(html).toContain('data-target="另一篇"')
+    expect(html).toContain('>显示名</a>')
+    // plain link shows the target as label
+    expect(html).toContain('>目标文档</a>')
+  })
+
   it('sanitizes dangerous markup', () => {
     const html = renderMarkdown('hello <script>alert(1)</script> world')
     expect(html).not.toContain('<script>')

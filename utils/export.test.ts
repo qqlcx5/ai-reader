@@ -82,7 +82,7 @@ describe('exportDocumentsToZip', () => {
     })
   })
 
-  it('includes metadata header in each file', () => {
+  it('includes YAML frontmatter in each file', () => {
     const doc = makeDoc({
       title: 'My Article',
       url: 'https://blog.example.com/post',
@@ -93,10 +93,32 @@ describe('exportDocumentsToZip', () => {
     return blob.arrayBuffer().then((buf) => {
       const files = unzipSync(new Uint8Array(buf))
       const content = strFromU8(Object.values(files)[0])
+      expect(content.startsWith('---\n')).toBe(true)
+      expect(content).toContain('title: "My Article"')
+      expect(content).toContain('source: https://blog.example.com/post')
+      expect(content).toContain('author: Jane Doe')
+      expect(content).toContain('published: 2024-01-15')
       expect(content).toContain('# My Article')
-      expect(content).toContain('Source: https://blog.example.com/post')
-      expect(content).toContain('Author: Jane Doe')
-      expect(content).toContain('Published: 2024-01-15')
+    })
+  })
+
+  it('appends highlights as a marked section', () => {
+    const doc = makeDoc({
+      highlights: [
+        { id: 'h1', startOffset: 10, endOffset: 20, text: '第一处高亮', note: '重要', createdAt: '', updatedAt: '' },
+        { id: 'h2', startOffset: 0, endOffset: 5, text: '第二处高亮', createdAt: '', updatedAt: '' },
+      ],
+    })
+    const blob = exportDocumentsToZip([doc])
+    return blob.arrayBuffer().then((buf) => {
+      const files = unzipSync(new Uint8Array(buf))
+      const content = strFromU8(Object.values(files)[0])
+      expect(content).toContain('## 高亮')
+      expect(content).toContain('==第二处高亮==')
+      expect(content).toContain('==第一处高亮==')
+      expect(content).toContain('笔记：重要')
+      // Sorted by startOffset: h2 before h1
+      expect(content.indexOf('第二处高亮')).toBeLessThan(content.indexOf('第一处高亮'))
     })
   })
 })

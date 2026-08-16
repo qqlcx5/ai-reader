@@ -6,7 +6,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useChatStore } from '@/stores/chat.store'
-import { requestExtract } from '@/services/capture/capture.service'
+import { captureTab } from '@/services/capture/smart-capture'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity, ExtractionMethod } from '@/types/document'
 import { ChatRepository } from '@/db/repositories/chat.repository'
@@ -91,8 +91,8 @@ function buildDocumentEntity(data: {
 }
 
 async function handleRefresh() {
-  const tabId = appStore.activeTab?.id
-  if (!tabId) {
+  const tab = appStore.activeTab
+  if (!tab?.id) {
     appStore.showToast('无法获取当前标签页', 'error')
     return
   }
@@ -101,7 +101,7 @@ async function handleRefresh() {
   workspaceStore.setExtracting(true)
 
   try {
-    const extracted = await requestExtract(tabId)
+    const extracted = await captureTab(tab)
 
     const doc = buildDocumentEntity({
       url: extracted.url,

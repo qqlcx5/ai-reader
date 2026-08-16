@@ -8,7 +8,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
 import { useChatStore } from '@/stores/chat.store'
-import { requestExtract } from '@/services/capture/capture.service'
+import { captureTab } from '@/services/capture/smart-capture'
 import { nowISO } from '@/utils/date'
 import type { DocumentEntity, ExtractionMethod, Highlight } from '@/types/document'
 import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
@@ -79,14 +79,14 @@ async function handleRefresh() {
 
   try {
     if (workspaceStore.documentSource === 'current-page') {
-      const tabId = appStore.activeTab?.id
-      if (!tabId) {
+      const tab = appStore.activeTab
+      if (!tab?.id) {
         appStore.showToast('无法获取当前标签页', 'error')
         return
       }
       workspaceStore.setExtracting(true)
 
-      const extracted = await requestExtract(tabId)
+      const extracted = await captureTab(tab)
 
       const doc = buildDocumentEntity({
         url: extracted.url,

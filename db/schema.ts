@@ -1,4 +1,4 @@
-export const DB_VERSION = 13
+export const DB_VERSION = 14
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',
@@ -22,4 +22,6 @@ export const STORE_MAP = {
   // Condition-based rules that override default model/template selection
   // for auto-analysis. Local-only.
   analysisRules: 'id, enabled, createdAt',
+  // SM-2 flashcards generated from documents/highlights. Local-only for now.
+  flashcards: 'id, documentId, sm2.dueAt, source, createdAt, updatedAt',
 } as const

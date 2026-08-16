@@ -132,6 +132,10 @@ export default defineBackground(() => {
   b.alarms?.onAlarm?.addListener((alarm: any) => {
     if (alarm?.name === FEED_ALARM) {
       onFeedAlarm()
+      // Newsletter inbox piggybacks on the feed cycle.
+      import('@/services/inbox/inbox').then(({ pollInbox }) =>
+        pollInbox().catch((e: any) => console.warn('[bg] inbox poll failed:', e)),
+      )
       // After feed refresh may have enqueued new jobs, try a lightweight drain.
       bgDrain().catch((e: any) => console.warn('[bg] post-feed drain failed:', e))
     }
@@ -144,6 +148,14 @@ export default defineBackground(() => {
 
   // Panel can request an immediate refresh (e.g. on open if stale)
   b.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    if (message?.type === 'TRIGGER_INBOX_POLL') {
+      import('@/services/inbox/inbox')
+        .then(({ pollInbox }) => pollInbox())
+        .then((result) => sendResponse({ ok: !result.error, ...result }))
+        .catch((e: any) => sendResponse({ ok: false, error: e?.message || 'inbox poll failed' }))
+      return true // async
+    }
+
     if (message?.type === 'TRIGGER_FEED_REFRESH') {
       import('@/services/feed/bg-refresh').then(({ refreshAllFeeds }) => {
         refreshAllFeeds().then((results) => {

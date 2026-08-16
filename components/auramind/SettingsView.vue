@@ -12,6 +12,7 @@ import AiJobQueue from '@/components/settings/AiJobQueue.vue'
 import StorageSettings from '@/components/settings/StorageSettings.vue'
 import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import S3Settings from '@/components/settings/S3Settings.vue'
+import InboxSettings from '@/components/settings/InboxSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -190,6 +191,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">S3 同步</h2>
         <S3Settings />
+      </section>
+
+      <!-- Newsletter 收件箱 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">Newsletter 收件箱</h2>
+        <InboxSettings />
       </section>
 
       <!-- 本地存储 -->

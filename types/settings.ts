@@ -29,6 +29,15 @@ export interface AutoAnalysisSettings {
   queuePaused?: boolean
 }
 
+/** Newsletter inbox pull endpoint (self-hosted; see doc/newsletter-worker). */
+export interface InboxSettings {
+  /** GET endpoint returning { items, cursor } JSON. */
+  endpoint: string
+  /** Bearer token sent to the endpoint. */
+  token: string
+  enabled: boolean
+}
+
 export interface AppSettings {
   id: 'app-settings'
 
@@ -37,6 +46,7 @@ export interface AppSettings {
   context: ContextSettings
   capture: CaptureSettings
   autoAnalysis: AutoAnalysisSettings
+  inbox: InboxSettings
 
   createdAt: string
   updatedAt: string

@@ -14,7 +14,7 @@ import type { ExtractionMethod } from '@/types/document'
  *   - CJK characters: each character = 1 word
  *   - Non-CJK: split by whitespace as usual
  */
-function countWords(text: string): number {
+export function countWords(text: string): number {
   // Remove markdown syntax (headers, links, images, code fences, etc.)
   const stripped = text
     .replace(/```[\s\S]*?```/g, ' ')   // code blocks

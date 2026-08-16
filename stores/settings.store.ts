@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import { MetaRepository } from '../db/repositories/meta.repository'
-import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings } from '../types/settings'
+import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings } from '../types/settings'
 import type { WebDAVConfig } from '../types/sync'
 import type { S3Config } from '../types/s3'
 
@@ -27,6 +27,8 @@ const defaultCaptureSettings: CaptureSettings = {
 
 const defaultAutoAnalysisSettings: AutoAnalysisSettings = {}
 
+const defaultInboxSettings: InboxSettings = { endpoint: '', token: '', enabled: false }
+
 function createDefaultSettings(): AppSettings {
   return {
     id: 'app-settings',
@@ -34,6 +36,7 @@ function createDefaultSettings(): AppSettings {
     context: { ...defaultContextSettings },
     capture: { ...defaultCaptureSettings },
     autoAnalysis: { ...defaultAutoAnalysisSettings },
+    inbox: { ...defaultInboxSettings },
     createdAt: dayjs().toISOString(),
     updatedAt: dayjs().toISOString(),
   }
@@ -48,7 +51,12 @@ export const useSettingsStore = defineStore('settings', () => {
   async function loadSettings() {
     const saved = await SettingsRepository.get()
     if (saved) {
-      settings.value = saved
+      // Merge defaults so settings saved before a field group existed get it.
+      settings.value = {
+        ...createDefaultSettings(),
+        ...saved,
+        inbox: { ...defaultInboxSettings, ...saved.inbox },
+      }
     }
     const savedWebdav = await MetaRepository.get<WebDAVConfig>('webdav-config')
     if (savedWebdav) webdav.value = { ...webdav.value, ...savedWebdav }
@@ -91,6 +99,12 @@ export const useSettingsStore = defineStore('settings', () => {
     await persist()
   }
 
+  async function updateInboxSettings(partial: Partial<InboxSettings>) {
+    settings.value.inbox = { ...settings.value.inbox, ...partial }
+    settings.value.updatedAt = dayjs().toISOString()
+    await persist()
+  }
+
   async function persist() {
     await SettingsRepository.save(toRaw(settings.value) as AppSettings)
   }
@@ -107,6 +121,7 @@ export const useSettingsStore = defineStore('settings', () => {
     updateContextSettings,
     updateCaptureSettings,
     updateAutoAnalysis,
+    updateInboxSettings,
     persist,
   }
 })

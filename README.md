@@ -13,11 +13,14 @@ AuraMind turns the web into a personal, AI-curated knowledge base you can actual
 
 ## ✨ Features
 
-- **✂️ One-click clipping** — clean Markdown extraction, works on every site
+- **✂️ One-click clipping** — clean Markdown extraction, works on every site (PDF / arXiv included)
 - **🤖 AI summaries** — side-panel chat that runs asynchronously while you browse
 - **🖍️ Highlights & floating toolbar** — save the parts that matter
-- **🔁 SM-2 spaced repetition** — read it once, remember it forever
+- **🔁 SM-2 spaced repetition** — AI-generated flashcards from your highlights, review daily
 - **📡 RSS reader** — auto-discovery, scheduled refresh, content-hash dedup
+- **✉️ Newsletter inbox** — self-hosted Cloudflare Email Worker pulls newsletters into your library
+- **🕸️ Knowledge graph** — `[[wikilinks]]` in notes connect documents; visualize your second brain
+- **📤 Obsidian / Anki export** — one-click Markdown ZIP or Anki TSV
 - **🔄 Cross-device sync** — WebDAV (Nextcloud, 坚果云) or S3 (Cloudflare R2, AWS S3, MinIO)
 - **🔒 Local-first** — everything in IndexedDB, no servers, no tracking
 

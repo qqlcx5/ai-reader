@@ -1,4 +1,4 @@
-import { marked } from 'marked'
+import { marked, type TokenizerAndRendererExtension } from 'marked'
 import DOMPurify from 'dompurify'
 import hljs from 'highlight.js'
 import markedFootnote from 'marked-footnote'
@@ -54,6 +54,32 @@ function configure(): void {
         },
       },
     })
+
+    // [[Wikilinks]] — rendered as internal links; MarkdownPreview handles
+    // clicks by resolving the target against library document titles.
+    const wikilink: TokenizerAndRendererExtension = {
+      name: 'wikilink',
+      level: 'inline',
+      start(src: string) {
+        return src.indexOf('[[')
+      },
+      tokenizer(src: string) {
+        const match = /^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/.exec(src)
+        if (!match) return undefined
+        return {
+          type: 'wikilink',
+          raw: match[0],
+          target: match[1].trim(),
+          label: (match[2] || '').trim() || match[1].trim(),
+        } as any
+      },
+      renderer(token: any) {
+        const target = String(token.target || '').replace(/"/g, '&quot;')
+        const label = String(token.label || token.target || '').replace(/</g, '&lt;')
+        return `<a href="#" class="am-wikilink" data-target="${target}">${label}</a>`
+      },
+    }
+    marked.use({ extensions: [wikilink] })
   }
 }
 
