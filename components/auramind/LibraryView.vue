@@ -484,6 +484,32 @@ function requestDelete(doc: DocumentEntity) {
   showDeleteConfirm.value = true
 }
 
+// ── Collection export ──
+const exportingCollection = ref(false)
+
+async function handleExportCollection() {
+  const collection = collectionStore.selectedCollection
+  if (!collection || exportingCollection.value) return
+  exportingCollection.value = true
+  try {
+    const { CollectionRepository } = await import('@/db/repositories/collection.repository')
+    const ids = await CollectionRepository.getDocumentIds(collection.id)
+    const byId = new Map(documentStore.documents.map((d) => [d.id, d]))
+    const docs = ids.map((id) => byId.get(id)).filter((d): d is DocumentEntity => !!d)
+    if (docs.length === 0) {
+      appStore.showToast('合集内暂无文档', 'warning')
+      return
+    }
+    const date = dayjs().toISOString().slice(0, 10)
+    downloadBlob(exportDocumentsToZip(docs), `auramind-collection-${collection.name}-${date}.zip`)
+    appStore.showToast(`已导出合集「${collection.name}」共 ${docs.length} 篇`, 'success')
+  } catch (e: any) {
+    appStore.showToast(e?.message || '导出失败', 'error')
+  } finally {
+    exportingCollection.value = false
+  }
+}
+
 async function confirmDelete() {
   if (!deleteTargetId.value) return
   const id = deleteTargetId.value
@@ -574,6 +600,7 @@ function cancelDelete() {
             {{ collectionStore.selectedCollection.name }} · {{ collectionStore.selectedDocIds.length }} 篇
           </span>
           <span class="flex items-center gap-2 shrink-0 text-[11px]">
+            <button class="text-brand hover:text-brand/80" :disabled="exportingCollection" @click="handleExportCollection">{{ exportingCollection ? '导出中…' : '导出 Markdown' }}</button>
             <button class="text-brand hover:text-brand/80" @click="openRenameCollection">重命名</button>
             <button class="text-red-500 hover:text-red-700" @click="requestDeleteCollection">删除</button>
             <button class="text-zinc-400 hover:text-zinc-600" @click="collectionStore.clearSelection()">取消</button>
