@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { ListChecks, Trash2, FolderPlus, Download, Zap, AudioLines, Globe } from '@lucide/vue'
+import { ListChecks, Trash2, FolderPlus, Download, Zap, AudioLines, Globe, Link } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -484,6 +484,40 @@ function requestDelete(doc: DocumentEntity) {
   showDeleteConfirm.value = true
 }
 
+// ── Batch URL import ──
+const showUrlImport = ref(false)
+const urlListText = ref('')
+const importing = ref(false)
+const importProgress = ref('')
+const importResults = ref<Array<{ url: string; ok: boolean; title?: string; error?: string }>>([])
+
+async function runUrlImport() {
+  const { captureUrls } = await import('@/services/capture/batch-urls')
+  const { parseUrlList } = await import('@/services/capture/batch-urls')
+  const urls = parseUrlList(urlListText.value)
+  if (urls.length === 0 || importing.value) return
+  importing.value = true
+  importResults.value = []
+  importProgress.value = '0/' + urls.length
+  try {
+    const results = await captureUrls(urls, (done, total, last) => {
+      importProgress.value = `${done}/${total}`
+      importResults.value = [...importResults.value.slice(-49), last]
+    })
+    const ok = results.filter((r) => r.ok).length
+    appStore.showToast(`导入完成：成功 ${ok} / ${results.length} 篇`, ok > 0 ? 'success' : 'error')
+    if (ok > 0) {
+      await documentStore.refreshDocuments()
+      urlListText.value = ''
+    }
+  } catch (e: any) {
+    appStore.showToast(e?.message || '导入失败', 'error')
+  } finally {
+    importing.value = false
+    importProgress.value = ''
+  }
+}
+
 // ── Static site export ──
 async function handleBatchExportSite() {
   if (documentStore.selectedIds.size === 0) return
@@ -552,6 +586,14 @@ function cancelDelete() {
       <!-- Search -->
       <div class="sticky top-0 z-10 p-4 pb-3 bg-surface/95 backdrop-blur-md border-b border-zinc-100 flex items-center gap-2">
         <SearchBar v-model="searchQuery" class="flex-1" @search="onSearch" />
+        <button
+          class="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-lg text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-colors"
+          title="粘贴链接列表批量剪藏（迁移自其他稍后读应用）"
+          @click="showUrlImport = true"
+        >
+          <Link class="w-3.5 h-3.5" />
+          链接
+        </button>
         <button
           class="shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-lg text-[12px] font-medium text-zinc-600 bg-zinc-100 hover:bg-zinc-200 transition-colors disabled:opacity-50"
           :disabled="transcribing"
@@ -770,6 +812,33 @@ function cancelDelete() {
       >
         <Zap class="w-4 h-4" />批量分析
       </button>
+    </div>
+
+    <!-- Batch URL import dialog -->
+    <div v-if="showUrlImport" class="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" @click.self="!importing && (showUrlImport = false)">
+      <div class="w-[460px] max-w-full bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 flex flex-col gap-3">
+        <div class="text-[13px] font-semibold text-zinc-800">批量导入链接</div>
+        <div class="text-[11px] text-zinc-400">每行一个链接（或逗号分隔），最多 100 条。后台逐个抓取正文，需要 JS 渲染的页面可能失败。</div>
+        <textarea
+          v-model="urlListText"
+          rows="7"
+          :disabled="importing"
+          placeholder="https://example.com/article-1&#10;https://example.com/article-2"
+          class="w-full bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 text-[12px] font-mono focus:border-brand outline-none resize-y"
+        />
+        <div v-if="importing" class="text-[11px] text-brand">导入中 {{ importProgress }}…</div>
+        <div v-if="importResults.length" class="max-h-28 overflow-y-auto flex flex-col gap-0.5">
+          <div v-for="(r, i) in importResults" :key="i" class="text-[10px] truncate" :class="r.ok ? 'text-emerald-600' : 'text-red-400'">
+            {{ r.ok ? '✓' : '✗' }} {{ r.ok ? r.title : r.error }} — {{ r.url }}
+          </div>
+        </div>
+        <div class="flex justify-end gap-2">
+          <UButton size="sm" variant="ghost" :disabled="importing" @click="showUrlImport = false">关闭</UButton>
+          <UButton size="sm" variant="primary" :disabled="importing || !urlListText.trim()" @click="runUrlImport">
+            {{ importing ? '导入中…' : '开始导入' }}
+          </UButton>
+        </div>
+      </div>
     </div>
 
     <!-- Delete Confirm -->
