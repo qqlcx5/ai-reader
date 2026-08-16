@@ -7,7 +7,7 @@
 [![Chrome Web Store](https://img.shields.io/badge/Chrome-Web%20Store-blue)](https://chrome.google.com/webstore)
 [![Built with WXT](https://img.shields.io/badge/Built%20with-WXT-1f2937)](https://wxt.dev)
 
-> Also builds for Firefox (`pnpm build:firefox`). Known limitation: background RSS refresh (offscreen) is Chromium-only; core clipping/reading/review work in the sidebar.
+> Also builds for Firefox (`pnpm build:firefox`). Background RSS refresh works on both engines (Firefox parses feeds in its persistent background page; Chromium uses an offscreen document).
 
 AuraMind turns the web into a personal, AI-curated knowledge base you can actually review and remember. Clip any page, get an AI summary, highlight what matters, and let the SM-2 algorithm schedule it for daily review.
 
@@ -16,14 +16,14 @@ AuraMind turns the web into a personal, AI-curated knowledge base you can actual
 ## ✨ Features
 
 - **✂️ One-click clipping** — clean Markdown extraction, works on every site (PDF / arXiv / YouTube transcripts / audio files included); right-click menu & keyboard shortcuts included
-- **🤖 AI summaries** — side-panel chat that runs asynchronously while you browse; optional AI auto-tagging on capture
+- **🤖 AI summaries & translation** — side-panel chat that runs asynchronously while you browse; optional AI auto-tagging on capture; aligned paragraph-by-paragraph translation with a cached bilingual view
 - **🖍️ Highlights & floating toolbar** — save the parts that matter; read aloud with TTS; TOC navigation for long docs
 - **🔁 SM-2 spaced repetition** — AI-generated QA or cloze flashcards, daily review with resurfacing, streaks, badge reminders, syncs across devices
-- **📡 RSS reader** — auto-discovery, scheduled refresh, content-hash dedup, OPML import/export
+- **📡 RSS reader & podcasts** — auto-discovery, scheduled refresh, content-hash dedup, OPML import/export, one-tap enclosure transcription
 - **✉️ Newsletter inbox** — self-hosted Cloudflare Email Worker pulls newsletters into your library
 - **🕸️ Knowledge graph** — `[[wikilinks]]` in notes connect documents; visualize your second brain
 - **🔗 Related documents** — bigram similarity surfaces connected reading in the workspace
-- **📤 Obsidian / Anki export** — Markdown ZIP, Anki TSV, or direct push via AnkiConnect
+- **📤 Obsidian / Anki export** — Markdown ZIP (whole library, selection, or a collection), Anki TSV, or direct push via AnkiConnect
 - **🔄 Cross-device sync** — WebDAV (Nextcloud, 坚果云) or S3 (Cloudflare R2, AWS S3, MinIO), full JSON backup/restore
 - **🔊 Audio transcription** — turn podcasts/meetings into documents via any Whisper-compatible endpoint
 - **🌓 Dark mode (experimental)** — light / dark / system setting
