@@ -64,7 +64,7 @@ export function rerankByBigram(
 export async function retrieveKnowledge(
   query: string,
   k = 4,
-  opts: { perDocTokens?: number; excludeIds?: string[]; collectionId?: string; candidatePool?: number } = {},
+  opts: { perDocTokens?: number; excludeIds?: string[]; collectionId?: string; candidatePool?: number; ensureIds?: string[] } = {},
 ): Promise<RetrievalResult> {
   const q = query.trim()
   if (!q) return { context: '', sources: [] }
@@ -86,6 +86,9 @@ export async function retrieveKnowledge(
   const pool = opts.candidatePool ?? 10
   const candidateIds = hits.slice(0, pool)
 
+  // Multi-turn memory: previously cited docs stay retrievable for follow-ups.
+  const ensureIds = (opts.ensureIds ?? []).filter((id) => !exclude.has(id))
+
   // ── Hybrid retrieval: when an embedding endpoint is configured, fuse
   // keyword candidates with semantic ranking (RRF). Semantic misses can
   // surface docs MiniSearch's tokenizer never matched (esp. CJK).
@@ -101,7 +104,10 @@ export async function retrieveKnowledge(
   } catch {
     // semantic leg is best-effort — keyword-only on failure
   }
-  const finalIds = fusedIds ?? candidateIds.map((h) => h.id)
+  let finalIds = fusedIds ?? candidateIds.map((h) => h.id)
+  if (ensureIds.length > 0) {
+    finalIds = [...new Set([...ensureIds, ...finalIds])]
+  }
 
   const candidates: DocumentEntity[] = []
   for (const id of finalIds) {

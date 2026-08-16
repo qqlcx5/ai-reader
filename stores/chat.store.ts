@@ -56,6 +56,8 @@ export const useChatStore = defineStore('chat', () => {
   const knowledgeMode = ref(false)
   /** Optional collection scope for knowledge QA (null = whole library). */
   const knowledgeScope = ref<string | null>(null)
+  /** Per-conversation retrieved doc ids — follow-ups keep prior sources in context. */
+  const knowledgeMemory = new Map<string, string[]>()
 
   watch(
     [currentConversationId, () => streamStates.value.size],
@@ -811,12 +813,20 @@ export const useChatStore = defineStore('chat', () => {
     if (knowledgeMode.value && userContent.trim()) {
       try {
         const { retrieveKnowledge } = await import('@/services/search/rag')
+        const memoryIds = currentConversationId.value ? (knowledgeMemory.get(currentConversationId.value) ?? []) : []
         const retrieval = await retrieveKnowledge(userContent, 4, {
           collectionId: knowledgeScope.value ?? undefined,
+          ensureIds: memoryIds,
         })
         if (retrieval.context) {
           knowledgeContext = retrieval.context
           assistantMsg.sources = retrieval.sources
+          // Remember this turn's sources for follow-up questions (cap 8).
+          if (currentConversationId.value) {
+            const prev = knowledgeMemory.get(currentConversationId.value) ?? []
+            const merged = [...new Set([...retrieval.sources.map((s) => s.id), ...prev])].slice(0, 8)
+            knowledgeMemory.set(currentConversationId.value, merged)
+          }
         }
       } catch {
         // retrieval is best-effort — fall back to normal context

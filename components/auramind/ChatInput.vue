@@ -201,6 +201,26 @@ function handleModelChange(value: string | string[]) {
   }
 }
 
+// ── Quick prompts (when a document is mounted) ─────────
+const QUICK_PROMPTS = [
+  { label: '总结全文', text: '请用 5~8 条要点总结这篇文档的核心内容。' },
+  { label: '关键点', text: '列出这篇文档最重要的 5 个关键点，每条一句话。' },
+  { label: '解释术语', text: '挑出这篇文档中出现的专业术语，逐个用一句话解释。' },
+  { label: '生成考点', text: '假设我要考试，基于这篇文档出 5 道问答题并给出答案。' },
+]
+
+function sendQuickPrompt(text: string) {
+  if (chatStore.isSending || chatStore.isStreaming) return
+  chatStore.clearError()
+  const modelIds = multiModelIds.value.length > 0
+    ? multiModelIds.value
+    : modelStore.currentModelId ? [modelStore.currentModelId] : []
+  chatStore.setInputText(text)
+  chatStore.sendMessage(text, modelIds.length > 0 ? modelIds : undefined).catch((e: unknown) => {
+    chatStore.lastError = e instanceof Error ? e.message : String(e)
+  })
+}
+
 function submit() {
   const msg = chatStore.inputText.trim()
   if (!msg && !chatStore.canSendEmpty) return
@@ -493,6 +513,17 @@ function handleStop() {
             <option :value="null">全库</option>
             <option v-for="c in collectionStore.collections" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
+        </div>
+
+        <!-- Quick prompts when a document is mounted -->
+        <div v-if="hasContext && !chatStore.knowledgeMode" class="flex items-center gap-1 flex-wrap">
+          <button
+            v-for="p in QUICK_PROMPTS"
+            :key="p.label"
+            class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-500 hover:text-brand hover:border-brand/30 transition-colors"
+            :title="p.text"
+            @click="sendQuickPrompt(p.text)"
+          >{{ p.label }}</button>
         </div>
 
         <!-- Voice input -->

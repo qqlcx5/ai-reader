@@ -86,6 +86,19 @@ describe('retrieveKnowledge', () => {
     expect(miss.context).toBe('')
   })
 
+  it('keeps previously-cited docs in context via ensureIds', async () => {
+    await db.documents.bulkPut([
+      makeDoc('a', '注意力 机制 详解', '自注意力内容。'),
+      makeDoc('b', '红烧肉 做法', '五花肉炖煮。'),
+    ])
+    await initSearchIndex()
+
+    // Query matches only b, but ensureIds pins a into the context.
+    const { sources, context } = await retrieveKnowledge('红烧肉 怎么做', 2, { ensureIds: ['a'] })
+    expect(sources.map((s) => s.id)).toContain('a')
+    expect(context).toContain('注意力')
+  })
+
   it('scopes retrieval to a collection', async () => {
     await db.documents.bulkPut([
       makeDoc('a', 'Rust 异步 指南', 'async await 状态机。'),
