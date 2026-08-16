@@ -3,7 +3,7 @@ import { ref, computed, nextTick, watch } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
-import { Copy, Check, RefreshCw, Trash2, Volume2, Square, Highlighter, Search } from '@lucide/vue'
+import { Copy, Check, RefreshCw, Trash2, Volume2, Square, Highlighter, Search, Printer, ArrowRight, Wand2 } from '@lucide/vue'
 import { useTts } from '@/composables/useTts'
 import { highlightsToMarkdown } from '@/utils/highlight-export'
 import { downloadBlob } from '@/utils/export'
@@ -82,6 +82,87 @@ function handleFindKeydown(e: KeyboardEvent) {
   } else if (e.key === 'Escape') {
     showFind.value = false
     findQuery.value = ''
+  }
+}
+
+// ── Export PDF: print-optimized page in a new tab ──
+async function handleExportPdf() {
+  const doc = currentDoc.value
+  if (!doc) return
+  try {
+    const { buildDocHtml } = await import('@/services/publish/site')
+    const html = buildDocHtml(doc, '#').replace('</head>', `<style>
+@media print { body { background: #fff } .back { display: none } }
+</style></head>`)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const tabs = (globalThis as any).browser?.tabs ?? (globalThis as any).chrome?.tabs
+    if (tabs?.create) {
+      await tabs.create({ url })
+      appStore.showToast('已打开打印页，按 Ctrl/Cmd+P 保存为 PDF', 'info')
+    } else {
+      window.open(url, '_blank')
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (e: any) {
+    appStore.showToast(e?.message || '导出失败', 'error')
+  }
+}
+
+// ── Serial reading: next unread by capture time ──
+async function handleNextUnread() {
+  const currentId = currentDoc.value?.id
+  const { DocumentRepository } = await import('@/db/repositories/document.repository')
+  const docs = (await DocumentRepository.findAll())
+    .filter((d) => d.id !== currentId && !d.tags?.includes('digest') && (d.readProgress ?? 0) < 1)
+    .sort((a, b) => (a.capturedAt || '').localeCompare(b.capturedAt || ''))
+  const next = docs[0]
+  if (!next) {
+    appStore.showToast('全部读完了 🎉', 'success')
+    return
+  }
+  documentStore.setCurrentDocument(next)
+  documentStore.markOpened(next.id)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(next.id)
+  } catch {
+    // non-critical
+  }
+}
+
+// ── One-click smart processing: tag → flashcards ──
+const smartRunning = ref(false)
+
+async function handleSmartProcess() {
+  const doc = currentDoc.value
+  if (!doc || smartRunning.value) return
+  const modelStore = (await import('@/stores/model.store')).useModelStore()
+  const model = modelStore.defaultModel
+  if (!model) {
+    appStore.showToast('请先在设置中添加并启用模型', 'error')
+    return
+  }
+  smartRunning.value = true
+  try {
+    // 1. AI 打标签
+    const { suggestTags } = await import('@/services/tags/auto-tag')
+    const tags = await suggestTags({ document: doc, model, existing: doc.tags ?? [] })
+    if (tags.length > 0) {
+      const { DocumentRepository } = await import('@/db/repositories/document.repository')
+      await DocumentRepository.save({ ...doc, tags: [...(doc.tags ?? []), ...tags] })
+      documentStore.setCurrentDocument({ ...doc, tags: [...(doc.tags ?? []), ...tags] })
+      appStore.showToast(`已打标签：${tags.join('、')}`, 'success')
+    }
+    // 2. 生成闪卡
+    const { useReviewStore } = await import('@/stores/review.store')
+    const reviewStore = useReviewStore()
+    const n = await reviewStore.generateForDocument(currentDoc.value!, model)
+    appStore.showToast(n > 0 ? `已生成 ${n} 张闪卡` : '闪卡无新增（可能已覆盖）', n > 0 ? 'success' : 'info')
+  } catch (e: any) {
+    appStore.showToast(e?.message || '处理失败', 'error')
+  } finally {
+    smartRunning.value = false
   }
 }
 
@@ -354,6 +435,30 @@ async function handleJumpToHighlight(hl: Highlight) {
           >
           <span class="text-[9px] text-zinc-400">回车下一个 · Esc 关</span>
         </div>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="!currentDoc"
+          title="一键智能处理：AI 打标签 + 生成闪卡"
+          @click="handleSmartProcess"
+        >
+          <Wand2 class="w-3.5 h-3.5" :class="{ 'animate-pulse text-brand': smartRunning }" />
+        </button>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="!currentDoc"
+          title="导出 PDF（打开打印页）"
+          @click="handleExportPdf"
+        >
+          <Printer class="w-3.5 h-3.5" />
+        </button>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="!currentDoc"
+          title="下一篇未读（按剪藏时间）"
+          @click="handleNextUnread"
+        >
+          <ArrowRight class="w-3.5 h-3.5" />
+        </button>
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
           :class="{ 'bg-brand/10 text-brand': showFind }"
