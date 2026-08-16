@@ -163,6 +163,36 @@ q.addEventListener('input', search)
 </div></body></html>`
 }
 
+/** Build an Atom feed for the exported site (pure). */
+export function buildAtomXml(docs: DocumentEntity[], files: Map<string, string>, now: string): string {
+  const entries = [...docs]
+    .sort((a, b) => (b.capturedAt || '').localeCompare(a.capturedAt || ''))
+    .slice(0, 50)
+    .map((doc) => {
+      const href = files.get(doc.id) ?? '#'
+      const updated = (doc.updatedAt || doc.capturedAt || now)
+      return `  <entry>
+    <title>${escapeXml(doc.title || '无标题')}</title>
+    <link href="${escapeXml(href)}"/>
+    <id>${escapeXml(doc.url)}</id>
+    <updated>${updated}</updated>
+    <summary>${escapeXml((doc.excerpt || '').slice(0, 200))}</summary>
+  </entry>`
+    })
+    .join('\n')
+  return `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>My AuraMind Library</title>
+  <id>urn:auramind-site</id>
+  <updated>${now}</updated>
+${entries}
+</feed>`
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 /** Build the whole site as a ZIP blob (pure aside from zipSync). */
 export function buildSiteZip(docs: DocumentEntity[], now: string = nowISO()): Blob {
   const used = new Set<string>()
@@ -184,6 +214,7 @@ export function buildSiteZip(docs: DocumentEntity[], now: string = nowISO()): Bl
   }))
   const searchHtml = buildSearchHtml(docs.length).replace('__DOCS_INDEX__', JSON.stringify(docsIndex))
   zipFiles['search.html'] = strToU8(searchHtml)
+  zipFiles['atom.xml'] = strToU8(buildAtomXml(docs, files, now))
 
   return new Blob([zipSync(zipFiles)], { type: 'application/zip' })
 }

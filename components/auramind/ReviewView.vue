@@ -3,8 +3,8 @@ export default { name: 'ReviewView' }
 </script>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, FileUp, Send, History, Flame, Pencil, Check, X, PauseCircle, PlayCircle } from '@lucide/vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, FileUp, Send, History, Flame, Pencil, Check, X, PauseCircle, PlayCircle, Headphones } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useReviewStore } from '@/stores/review.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -13,6 +13,7 @@ import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useChatStore } from '@/stores/chat.store'
 import { previewIntervalDays, type ReviewGrade } from '@/utils/sm2'
 import { lastNDays } from '@/utils/review-stats'
+import { useTts } from '@/composables/useTts'
 import type { FlashcardMode } from '@/services/review/generate'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { FlashcardRepository } from '@/db/repositories/flashcard.repository'
@@ -67,6 +68,29 @@ const hasAnyCard = computed(() => reviewStore.totalCount > 0)
 const currentDocument = computed(() => documentStore.currentDocument)
 
 const last14 = computed(() => lastNDays(reviewStore.log, 14))
+
+// ── Listening mode: auto-read the current card ──
+const tts = useTts()
+const listeningMode = ref(false)
+
+watch(() => currentCard.value?.id, (id) => {
+  if (listeningMode.value && id) speakCurrent()
+})
+watch(() => reviewStore.flipped, (flipped) => {
+  if (listeningMode.value && flipped) speakCurrent()
+})
+
+function speakCurrent() {
+  const card = currentCard.value
+  if (!card) return
+  tts.speak(reviewStore.flipped ? card.back : card.front)
+}
+
+function toggleListening() {
+  listeningMode.value = !listeningMode.value
+  if (!listeningMode.value) tts.stop()
+  else speakCurrent()
+}
 
 const gradeButtons = computed(() => {
   const card = currentCard.value
@@ -289,6 +313,9 @@ async function onPickerConfirm(documentIds: string[]) {
             class="hidden"
             @change="handleAnkiImport"
           />
+          <UButton size="sm" variant="ghost" :class="{ 'text-brand': listeningMode }" title="听力模式：自动朗读正反面" @click="toggleListening">
+            <Headphones class="w-3.5 h-3.5" />
+          </UButton>
           <UButton size="sm" variant="ghost" :disabled="pushing || reviewStore.totalCount === 0" title="通过 AnkiConnect 直推到本地 Anki" @click="pushToAnkiConnect">
             <Send class="w-3.5 h-3.5" />
             {{ pushing ? '推送中…' : '推送' }}

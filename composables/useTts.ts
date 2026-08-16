@@ -50,6 +50,12 @@ export function useTts() {
     speaking.value = false
   }
 
+  /** Speak from the start, replacing anything in progress. */
+  function speak(markdown: string, rate = 1): void {
+    stop()
+    toggle(markdown, rate)
+  }
+
   /** Speak a markdown document from the start; toggles off if already speaking. */
   function toggle(markdown: string, rate = 1): void {
     if (!hasSpeech()) {
@@ -104,5 +110,5 @@ export function useTts() {
 
   onUnmounted(stop)
 
-  return { speaking, error, toggle, stop }
+  return { speaking, error, toggle, speak, stop }
 }

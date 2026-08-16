@@ -61,11 +61,24 @@ describe('buildSiteZip', () => {
     const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
     const names = Object.keys(files).sort()
     // Paths are URL-encoded for safe hosting; duplicates get a -2 suffix.
-    expect(names).toEqual(['docs/%E5%90%8C%E9%A2%98-2.html', 'docs/%E5%90%8C%E9%A2%98.html', 'index.html', 'search.html'])
+    expect(names).toEqual(['atom.xml', 'docs/%E5%90%8C%E9%A2%98-2.html', 'docs/%E5%90%8C%E9%A2%98.html', 'index.html', 'search.html'])
     const index = strFromU8(files['index.html'])
     expect(index).toContain('docs/%E5%90%8C%E9%A2%98-2.html')
     expect(index).toContain('docs/%E5%90%8C%E9%A2%98.html')
     expect(strFromU8(files['docs/%E5%90%8C%E9%A2%98.html'])).toContain('返回目录')
+  })
+
+  it('ships an Atom feed sorted by capture date with escaped titles', async () => {
+    const docs = [
+      doc('old', '旧文', '2025-05-01T00:00:00Z'),
+      doc('new', '新文<有标签>', '2025-06-01T00:00:00Z'),
+    ]
+    const blob = buildSiteZip(docs)
+    const files = unzipSync(new Uint8Array(await blob.arrayBuffer()))
+    const atom = strFromU8(files['atom.xml'])
+    expect(atom).toContain('<feed xmlns="http://www.w3.org/2005/Atom">')
+    expect(atom.indexOf('新文&lt;有标签&gt;')).toBeLessThan(atom.indexOf('旧文'))
+    expect(atom).not.toContain('新文<有标签>')
   })
 
   it('embeds a self-contained search page with the docs index', async () => {
