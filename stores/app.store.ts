@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { TabInfo } from '../types/message'
 import { toast as toastService } from '@/utils/toast'
 
-export type AppView = 'workspace' | 'library' | 'analysis' | 'settings' | 'usage' | 'feeds' | 'review' | 'cards' | 'watch' | 'graph' | 'insights'
+export type AppView = 'workspace' | 'library' | 'analysis' | 'settings' | 'usage' | 'feeds' | 'review' | 'cards' | 'watch' | 'graph' | 'insights' | 'health'
 
 export const useAppStore = defineStore('app', () => {
   const currentView = ref<AppView>('workspace')

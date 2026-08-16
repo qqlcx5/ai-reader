@@ -22,6 +22,7 @@ import ReviewView from '@/components/auramind/ReviewView.vue'
 import CardManagerView from '@/components/auramind/CardManagerView.vue'
 import WatchView from '@/components/auramind/WatchView.vue'
 import InsightsView from '@/components/auramind/InsightsView.vue'
+import HealthView from '@/components/auramind/HealthView.vue'
 import GraphView from '@/components/auramind/GraphView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import CommandPalette from '@/components/common/CommandPalette.vue'
@@ -277,6 +278,7 @@ onUnmounted(() => {
     <CardManagerView v-show="appStore.currentView === 'cards'" />
     <WatchView v-show="appStore.currentView === 'watch'" />
     <InsightsView v-show="appStore.currentView === 'insights'" />
+    <HealthView v-show="appStore.currentView === 'health'" />
     <GraphView v-show="appStore.currentView === 'graph'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />

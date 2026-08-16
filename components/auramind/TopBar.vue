@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft, Zap, GraduationCap, Waypoints, Layers, Radar, BarChart3 } from '@lucide/vue'
+import { PanelRight, BookOpen, Settings, RefreshCw, Gauge, Rss, Maximize2, ArrowLeft, Zap, GraduationCap, Waypoints, Layers, Radar, BarChart3, HeartPulse } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -36,6 +36,7 @@ const navItems = [
   { key: 'feeds', icon: Rss, label: '订阅' },
   { key: 'watch', icon: Radar, label: '监控' },
   { key: 'insights', icon: BarChart3, label: '洞察' },
+  { key: 'health', icon: HeartPulse, label: '体检' },
   { key: 'review', icon: GraduationCap, label: '复习' },
   { key: 'cards', icon: Layers, label: '卡片库' },
   { key: 'graph', icon: Waypoints, label: '图谱' },
