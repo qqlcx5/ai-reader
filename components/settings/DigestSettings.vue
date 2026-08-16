@@ -9,6 +9,8 @@ const appStore = useAppStore()
 
 const enabled = ref(false)
 const hour = ref(8)
+const webhookUrl = ref('')
+const webhookFormat = ref<'feishu' | 'generic'>('feishu')
 const loaded = ref(false)
 const testing = ref(false)
 
@@ -24,7 +26,7 @@ const hourValue = computed({
 
 async function persist() {
   if (!loaded.value) return
-  await saveDigestConfig({ enabled: enabled.value, hour: hour.value })
+  await saveDigestConfig({ enabled: enabled.value, hour: hour.value, webhookUrl: webhookUrl.value.trim() || undefined, webhookFormat: webhookFormat.value })
 }
 
 async function toggleEnabled() {
@@ -50,6 +52,8 @@ onMounted(async () => {
   const config = await loadDigestConfig()
   enabled.value = config.enabled
   hour.value = config.hour
+  webhookUrl.value = config.webhookUrl ?? ''
+  webhookFormat.value = config.webhookFormat ?? 'feishu'
   loaded.value = true
 })
 </script>
@@ -89,6 +93,26 @@ onMounted(async () => {
         <Zap class="w-3.5 h-3.5" />
         {{ testing ? '生成中…' : '立即生成' }}
       </UButton>
+    </div>
+    <div class="p-3 flex items-center justify-between border-t border-zinc-100">
+      <label class="text-[11px] text-zinc-500 flex-1 flex flex-col gap-1 mr-3">
+        推送到 Webhook（可选）
+        <input
+          v-model="webhookUrl"
+          placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/…"
+          class="bg-zinc-50 border border-zinc-200 rounded-lg px-2 py-1.5 text-[11px] font-mono focus:border-brand outline-none"
+          @change="persist"
+        >
+      </label>
+      <select
+        v-model="webhookFormat"
+        class="mt-4 bg-zinc-50 border border-zinc-200 rounded-lg text-[11px] px-1.5 py-1.5 outline-none"
+        title="Webhook 格式"
+        @change="persist"
+      >
+        <option value="feishu">飞书/钉钉</option>
+        <option value="generic">通用 JSON</option>
+      </select>
     </div>
   </div>
 </template>

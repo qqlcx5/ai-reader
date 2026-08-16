@@ -20,6 +20,10 @@ export interface DigestConfig {
   enabled: boolean
   /** Hour of day (0-23) after which the digest may run. Default 8. */
   hour: number
+  /** Optional webhook: POST the digest after generation. */
+  webhookUrl?: string
+  /** Webhook body format: feishu (msg_type) or generic JSON. */
+  webhookFormat?: 'feishu' | 'generic'
 }
 
 export const DEFAULT_DIGEST_CONFIG: DigestConfig = { enabled: false, hour: 8 }
@@ -84,6 +88,24 @@ export function buildDigestDocument(markdown: string, day: string): Pick<Documen
   }
 }
 
+/** POST a digest to the configured webhook (best-effort, never throws). */
+export async function pushDigestToWebhook(config: DigestConfig, title: string, markdown: string): Promise<boolean> {
+  if (!config.webhookUrl) return false
+  try {
+    const body = config.webhookFormat === 'feishu'
+      ? { msg_type: 'text', content: { text: `${title}\n\n${markdown.slice(0, 1500)}` } }
+      : { title, markdown, source: 'AuraMind' }
+    const res = await fetch(config.webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 export interface DigestRunResult {
   ran: boolean
   reason?: string
@@ -135,6 +157,11 @@ export async function maybeRunDailyDigest(now: Date = new Date()): Promise<Diges
     const { DocumentRepository: repo } = await import('@/db/repositories/document.repository')
     const doc = buildDigestDocument(output.content, today)
     await repo.save(doc as any)
+
+    // Optional webhook push (best-effort, doesn't affect the run result).
+    if (config.webhookUrl) {
+      pushDigestToWebhook(config, doc.title, output.content).catch(() => {})
+    }
 
     await MetaRepository.set(STATE_KEY, { lastRunDate: today, updatedAt: dayjs(now).toISOString() })
     return { ran: true, documentId: doc.id }
