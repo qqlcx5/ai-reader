@@ -4,18 +4,55 @@ export default { name: 'InsightsView' }
 
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
-import { BarChart3, RefreshCw, BookOpen, Type, GraduationCap, Flame } from '@lucide/vue'
+import { BarChart3, RefreshCw, BookOpen, Type, GraduationCap, Flame, Sparkles } from '@lucide/vue'
 import UButton from '@/components/ui/UButton.vue'
 import UEmptyState from '@/components/ui/UEmptyState.vue'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import { MetaRepository } from '@/db/repositories/meta.repository'
 import { computeInsights, type Insights } from '@/utils/insights'
+import { computeTopics, type TopicCluster } from '@/services/search/clusters'
+import { useDocumentStore } from '@/stores/document.store'
+import { useChatStore } from '@/stores/chat.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useAppStore } from '@/stores/app.store'
 import type { ReviewLog } from '@/utils/review-stats'
 import type { DocumentEntity } from '@/types/document'
 
 const loading = ref(false)
 const insights = ref<Insights | null>(null)
 const docs = ref<DocumentEntity[]>([])
+
+// ── Topic clusters (needs the semantic index) ──
+const topics = ref<TopicCluster[] | null>(null)
+const topicsNote = ref('')
+const topicsLoading = ref(false)
+const documentStore = useDocumentStore()
+const chatStore = useChatStore()
+const workspaceStore = useWorkspaceStore()
+const appStore = useAppStore()
+
+async function loadTopics() {
+  topicsLoading.value = true
+  try {
+    const result = await computeTopics()
+    topics.value = result.clusters
+    topicsNote.value = result.notReady ?? ''
+  } finally {
+    topicsLoading.value = false
+  }
+}
+
+async function openTopicDoc(doc: DocumentEntity) {
+  documentStore.setCurrentDocument(doc)
+  documentStore.markOpened(doc.id)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // non-critical
+  }
+  appStore.setCurrentView('workspace')
+}
 
 const maxDay = computed(() => Math.max(1, ...(insights.value?.capturesByDay.map((d) => d.count) ?? [1])))
 
@@ -40,7 +77,10 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadTopics()
+})
 </script>
 
 <template>
@@ -86,6 +126,38 @@ onMounted(load)
           <div class="flex justify-between text-[9px] text-zinc-400 mt-1">
             <span>{{ insights.capturesByDay[0]?.date.slice(5) }}</span>
             <span>{{ insights.capturesByDay[13]?.date.slice(5) }}</span>
+          </div>
+        </div>
+
+        <!-- Topic clusters -->
+        <div class="bg-white border border-zinc-200 rounded-xl p-3">
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-[11px] text-zinc-400 flex items-center gap-1">
+              <Sparkles class="w-3 h-3 text-brand/70" />自动主题（语义聚类 + AI 命名）
+            </div>
+            <UButton size="sm" variant="ghost" :disabled="topicsLoading" @click="loadTopics">
+              <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': topicsLoading }" />
+            </UButton>
+          </div>
+          <div v-if="topicsLoading" class="text-[11px] text-zinc-400 py-3 text-center">聚类中…</div>
+          <div v-else-if="topicsNote" class="text-[11px] text-zinc-400 py-2">{{ topicsNote }}</div>
+          <div v-else-if="topics?.length" class="flex flex-col gap-2">
+            <div v-for="(cluster, ci) in topics" :key="ci" class="border border-zinc-100 rounded-lg p-2">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[12px] font-medium text-brand">{{ cluster.name }}</span>
+                <span class="text-[10px] text-zinc-400">{{ cluster.docs.length }} 篇</span>
+              </div>
+              <div class="flex flex-wrap gap-1">
+                <button
+                  v-for="d in cluster.docs.slice(0, 4)"
+                  :key="d.id"
+                  class="text-[11px] text-zinc-500 hover:text-brand bg-zinc-50 hover:bg-brand/5 rounded px-1.5 py-0.5 max-w-40 truncate"
+                  :title="d.title"
+                  @click="openTopicDoc(d)"
+                >{{ d.title || '(无标题)' }}</button>
+                <span v-if="cluster.docs.length > 4" class="text-[10px] text-zinc-300 self-center">+{{ cluster.docs.length - 4 }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
