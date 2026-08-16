@@ -56,6 +56,13 @@ export interface DocumentEntity {
 
   tags?: string[]
 
+  /** Cached AI translation of the markdown, aligned block-by-block. */
+  translation?: {
+    lang: string
+    markdown: string
+    translatedAt: string
+  }
+
   /** User highlights/annotations on the markdown content. */
   highlights?: Highlight[]
 

@@ -4,34 +4,25 @@ import { createPinia, setActivePinia } from 'pinia'
 import { reactive } from 'vue'
 import ContextPanel from './ContextPanel.vue'
 
-// Mock lucide icons
-vi.mock('@lucide/vue', () => ({
-  Copy: {
-    name: 'Copy',
-    template: '<span class="mock-copy" />',
+// Mock lucide icons: pass through real exports, stub only the ones asserted on.
+vi.mock('@lucide/vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@lucide/vue')>()
+  const stub = (name: string) => ({
+    name,
+    template: `<span class="mock-${name.toLowerCase()}" />`,
     props: ['class', 'size'],
-  },
-  Volume2: {
-    name: 'Volume2',
-    template: '<span class="mock-volume2" />',
-    props: ['class', 'size'],
-  },
-  Square: {
-    name: 'Square',
-    template: '<span class="mock-square" />',
-    props: ['class', 'size'],
-  },
-  RefreshCw: {
-    name: 'RefreshCw',
-    template: '<span class="mock-refresh-cw" />',
-    props: ['class', 'size'],
-  },
-  Trash2: {
-    name: 'Trash2',
-    template: '<span class="mock-trash2" />',
-    props: ['class', 'size'],
-  },
-}))
+  })
+  return {
+    ...actual,
+    Copy: stub('Copy'),
+    Volume2: stub('Volume2'),
+    Square: stub('Square'),
+    Highlighter: stub('Highlighter'),
+    Languages: stub('Languages'),
+    RefreshCw: stub('RefreshCw'),
+    Trash2: stub('Trash2'),
+  }
+})
 
 // Mock capture service
 vi.mock('@/services/capture/capture.service', () => ({
@@ -151,20 +142,21 @@ describe('ContextPanel', () => {
     vi.clearAllMocks()
   })
 
-  it('renders five tabs', () => {
+  it('renders six tabs', () => {
     const wrapper = mount(ContextPanel)
 
     const triggers = wrapper.findAll('[role="tab"]')
-    expect(triggers.length).toBe(5)
+    expect(triggers.length).toBe(6)
   })
 
-  it('tab labels are Markdown, 标注, 相关, Raw, 元数据', () => {
+  it('tab labels are Markdown, 标注, 相关, 翻译, Raw, 元数据', () => {
     const wrapper = mount(ContextPanel)
 
     const text = wrapper.text()
     expect(text).toContain('Markdown')
     expect(text).toContain('标注')
     expect(text).toContain('相关')
+    expect(text).toContain('翻译')
     expect(text).toContain('Raw')
     expect(text).toContain('元数据')
   })

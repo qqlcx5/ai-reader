@@ -3,8 +3,10 @@ import { ref, computed, nextTick, watch } from 'vue'
 import TabsRoot from '@/components/ui/Tabs.vue'
 import TabsList from '@/components/ui/TabsList.vue'
 import TabsTrigger from '@/components/ui/TabsTrigger.vue'
-import { Copy, Check, RefreshCw, Trash2, Volume2, Square } from '@lucide/vue'
+import { Copy, Check, RefreshCw, Trash2, Volume2, Square, Highlighter, Search } from '@lucide/vue'
 import { useTts } from '@/composables/useTts'
+import { highlightsToMarkdown } from '@/utils/highlight-export'
+import { downloadBlob } from '@/utils/export'
 import { useDocumentStore } from '@/stores/document.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useAppStore } from '@/stores/app.store'
@@ -18,6 +20,7 @@ import RawPreview from '@/components/workspace/RawPreview.vue'
 import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
 import HighlightsPanel from '@/components/workspace/HighlightsPanel.vue'
 import RelatedPanel from '@/components/workspace/RelatedPanel.vue'
+import TranslationPanel from '@/components/workspace/TranslationPanel.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const documentStore = useDocumentStore()
@@ -45,6 +48,41 @@ function handleReadAloud() {
   if (!currentDoc.value) return
   tts.toggle(currentDoc.value.markdown)
   if (tts.error.value) appStore.showToast(tts.error.value, 'warning')
+}
+
+function handleExportHighlights() {
+  const doc = currentDoc.value
+  if (!doc) return
+  const md = highlightsToMarkdown(doc)
+  if (!md) {
+    appStore.showToast('本文还没有高亮', 'warning')
+    return
+  }
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+  downloadBlob(blob, `highlights-${(doc.title || 'untitled').slice(0, 40)}.md`)
+  appStore.showToast(`已导出 ${(doc.highlights ?? []).length} 条高亮`, 'success')
+}
+
+// ── In-reader find (Ctrl+F doesn't reach the side panel; window.find does) ──
+const showFind = ref(false)
+const findQuery = ref('')
+
+function handleFindNext() {
+  const q = findQuery.value.trim()
+  if (!q) return
+  // window.find: (query, caseSensitive, backwards, wrapAround)
+  const found = (window as any).find?.(q, false, false, true)
+  if (!found) appStore.showToast(`没有找到「${q}」`, 'info')
+}
+
+function handleFindKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    handleFindNext()
+  } else if (e.key === 'Escape') {
+    showFind.value = false
+    findQuery.value = ''
+  }
 }
 
 const contextTab = computed({
@@ -285,6 +323,12 @@ async function handleJumpToHighlight(hl: Highlight) {
             相关
           </TabsTrigger>
           <TabsTrigger
+            value="translation"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            翻译
+          </TabsTrigger>
+          <TabsTrigger
             value="raw"
             class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
           >
@@ -300,6 +344,32 @@ async function handleJumpToHighlight(hl: Highlight) {
       </TabsRoot>
 
       <div class="flex items-center gap-1">
+        <div v-if="showFind" class="flex items-center gap-1 bg-zinc-100 rounded-lg px-2 py-1">
+          <input
+            ref="findInputRef"
+            v-model="findQuery"
+            placeholder="查找…"
+            class="w-28 text-[11px] bg-transparent outline-none"
+            @keydown="handleFindKeydown"
+          >
+          <span class="text-[9px] text-zinc-400">回车下一个 · Esc 关</span>
+        </div>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+          :class="{ 'bg-brand/10 text-brand': showFind }"
+          title="在正文中查找"
+          @click="showFind = !showFind"
+        >
+          <Search class="w-3.5 h-3.5" />
+        </button>
+        <button
+          class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          :disabled="!currentDoc || (currentDoc.highlights ?? []).length === 0"
+          title="导出本文高亮为 Markdown"
+          @click="handleExportHighlights"
+        >
+          <Highlighter class="w-3.5 h-3.5" />
+        </button>
         <button
           class="p-1.5 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-50"
           :disabled="!currentDoc"
@@ -350,6 +420,7 @@ async function handleJumpToHighlight(hl: Highlight) {
       @jump="handleJumpToHighlight"
     />
     <RelatedPanel v-show="contextTab === 'related'" />
+    <TranslationPanel v-show="contextTab === 'translation'" />
     <RawPreview v-show="contextTab === 'raw'" />
     <MetadataPanel v-show="contextTab === 'metadata'" />
 
