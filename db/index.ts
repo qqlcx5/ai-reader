@@ -12,6 +12,7 @@ import type { WorkflowEntity } from '../types/workflow'
 import type { ScheduleEntity } from '../types/schedule'
 import type { AnalysisRuleEntity } from '../types/analysis-rule'
 import type { FlashcardEntity } from '../types/flashcard'
+import type { PageWatchEntity } from '../types/page-watch'
 
 export class AuraMindDB extends Dexie {
   documents!: Table<DocumentEntity, string>
@@ -29,6 +30,7 @@ export class AuraMindDB extends Dexie {
   schedules!: Table<ScheduleEntity, string>
   analysisRules!: Table<AnalysisRuleEntity, string>
   flashcards!: Table<FlashcardEntity, string>
+  pageWatches!: Table<PageWatchEntity, string>
 
   constructor() {
     super('AuraMindDB')

@@ -1,4 +1,4 @@
-export const DB_VERSION = 14
+export const DB_VERSION = 15
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',
@@ -24,4 +24,6 @@ export const STORE_MAP = {
   analysisRules: 'id, enabled, createdAt',
   // SM-2 flashcards generated from documents/highlights.
   flashcards: 'id, documentId, sm2.dueAt, source, createdAt, updatedAt',
+  // Page-change watches. Local-only (like feedItems).
+  pageWatches: 'id, url, enabled, lastChangedAt, updatedAt',
 } as const

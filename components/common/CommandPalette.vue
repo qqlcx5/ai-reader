@@ -112,8 +112,20 @@ async function activate(item: { kind: 'doc'; doc: DocumentEntity } | { kind: 'vi
   appStore.setCurrentView('workspace')
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  window.addEventListener('auramind:omnibox', onOmnibox as EventListener)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('auramind:omnibox', onOmnibox as EventListener)
+})
+
+function onOmnibox(e: Event) {
+  const q = (e as CustomEvent).detail?.query || ''
+  open.value = true
+  query.value = q
+}
 </script>
 
 <template>

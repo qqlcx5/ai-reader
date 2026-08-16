@@ -20,6 +20,7 @@ import UsageView from '@/components/auramind/UsageView.vue'
 import FeedsView from '@/components/auramind/FeedsView.vue'
 import ReviewView from '@/components/auramind/ReviewView.vue'
 import CardManagerView from '@/components/auramind/CardManagerView.vue'
+import WatchView from '@/components/auramind/WatchView.vue'
 import GraphView from '@/components/auramind/GraphView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import CommandPalette from '@/components/common/CommandPalette.vue'
@@ -49,6 +50,17 @@ function handleBackgroundMessage(
   if (message.type === 'FLOATING_CAPTURE') {
     const tabId = message.payload?.tabId
     if (tabId) triggerAutoExtract(tabId)
+    return
+  }
+  if (message.type === 'WATCH_CHANGED') {
+    const count = (message.payload as any)?.count ?? 0
+    const title = (message.payload as any)?.title ?? ''
+    appStore.showToast(count > 1 ? `监控：${count} 个页面有更新` : `监控：「${title}」有更新`, 'success')
+    return
+  }
+  if (message.type === 'OMNIBOX_SEARCH') {
+    const query = (message.payload as any)?.query || ''
+    window.dispatchEvent(new CustomEvent('auramind:omnibox', { detail: { query } }))
     return
   }
   if (message.type === 'CAPTURE_PAGE') {
@@ -222,6 +234,9 @@ onMounted(async () => {
         if (!action) return
         if (action.type === 'CAPTURE_PAGE' && action.tabId) triggerAutoExtract(action.tabId)
         if (action.type === 'OPEN_REVIEW') appStore.setCurrentView('review', { resetHistory: true })
+        if (action.type === 'OMNIBOX_SEARCH') {
+          window.dispatchEvent(new CustomEvent('auramind:omnibox', { detail: { query: action.query || '' } }))
+        }
       })
       .catch(() => {})
   }
@@ -243,6 +258,7 @@ onUnmounted(() => {
     <FeedsView v-show="appStore.currentView === 'feeds'" />
     <ReviewView v-show="appStore.currentView === 'review'" />
     <CardManagerView v-show="appStore.currentView === 'cards'" />
+    <WatchView v-show="appStore.currentView === 'watch'" />
     <GraphView v-show="appStore.currentView === 'graph'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />

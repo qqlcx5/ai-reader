@@ -21,6 +21,9 @@ export default defineConfig({
         description: '打开 AuraMind 复习面板',
       },
     },
+    omnibox: {
+      keyword: 'am',
+    },
   },
   dev: {
     server: {

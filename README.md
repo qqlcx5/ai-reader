@@ -18,10 +18,13 @@ AuraMind turns the web into a personal, AI-curated knowledge base you can actual
 ## ✨ Features
 
 - **✂️ One-click clipping** — clean Markdown extraction, works on every site (PDF / arXiv / YouTube transcripts / audio files included); right-click menu & keyboard shortcuts included
-- **🤖 AI summaries & translation** — side-panel chat that runs asynchronously while you browse; optional AI auto-tagging on capture; aligned paragraph-by-paragraph translation with a cached bilingual view
+- **🤖 AI summaries, translation & knowledge QA** — side-panel chat that runs asynchronously while you browse; ask your whole library with retrieval-augmented answers and clickable citations; optional AI auto-tagging on capture; aligned paragraph-by-paragraph translation with a cached bilingual view
 - **🖍️ Highlights & floating toolbar** — save the parts that matter; read aloud with TTS; TOC navigation for long docs
 - **🔁 SM-2 spaced repetition** — AI-generated QA or cloze flashcards, daily review with resurfacing, streaks, badge reminders, syncs across devices
 - **📡 RSS reader & podcasts** — auto-discovery, scheduled refresh, content-hash dedup, OPML import/export, one-tap enclosure transcription
+- **👁️ Page watch** — monitor any URL for content changes (content-hash diff) with change history
+- **📰 Daily AI digest** — a scheduled morning brief: yesterday's captures, review outlook, one action item
+- **🎙️ Voice input & omnibox** — dictate chat messages; type `am <query>` in the address bar to search your library
 - **✉️ Newsletter inbox** — self-hosted Cloudflare Email Worker pulls newsletters into your library
 - **🕸️ Knowledge graph** — `[[wikilinks]]` in notes connect documents; visualize your second brain
 - **🔗 Related documents** — bigram similarity surfaces connected reading in the workspace
