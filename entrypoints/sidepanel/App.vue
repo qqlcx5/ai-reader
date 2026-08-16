@@ -21,6 +21,7 @@ import FeedsView from '@/components/auramind/FeedsView.vue'
 import ReviewView from '@/components/auramind/ReviewView.vue'
 import CardManagerView from '@/components/auramind/CardManagerView.vue'
 import WatchView from '@/components/auramind/WatchView.vue'
+import InsightsView from '@/components/auramind/InsightsView.vue'
 import GraphView from '@/components/auramind/GraphView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
 import CommandPalette from '@/components/common/CommandPalette.vue'
@@ -170,6 +171,15 @@ function applyTheme() {
   document.documentElement.classList.toggle('dark', dark)
 }
 systemDark.addEventListener('change', applyTheme)
+
+// Command-palette actions that need App-local plumbing (e.g. capture).
+function onPaletteAction(e: Event) {
+  const type = (e as CustomEvent).detail?.type
+  if (type === 'capture' && appStore.activeTab?.id) {
+    triggerAutoExtract(appStore.activeTab.id)
+  }
+}
+window.addEventListener('auramind:palette-action', onPaletteAction as EventListener)
 watch(() => settingsStore.theme, applyTheme)
 
 onMounted(async () => {
@@ -244,6 +254,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   removeListener?.()
+  window.removeEventListener('auramind:palette-action', onPaletteAction as EventListener)
 })
 </script>
 
@@ -259,6 +270,7 @@ onUnmounted(() => {
     <ReviewView v-show="appStore.currentView === 'review'" />
     <CardManagerView v-show="appStore.currentView === 'cards'" />
     <WatchView v-show="appStore.currentView === 'watch'" />
+    <InsightsView v-show="appStore.currentView === 'insights'" />
     <GraphView v-show="appStore.currentView === 'graph'" />
     <UsageView v-show="appStore.currentView === 'usage'" />
     <SettingsView v-show="appStore.currentView === 'settings'" />
