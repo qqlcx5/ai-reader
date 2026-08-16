@@ -21,6 +21,8 @@ import FeedsView from '@/components/auramind/FeedsView.vue'
 import ReviewView from '@/components/auramind/ReviewView.vue'
 import GraphView from '@/components/auramind/GraphView.vue'
 import PageChangeHint from '@/components/auramind/PageChangeHint.vue'
+import CommandPalette from '@/components/common/CommandPalette.vue'
+import ShortcutsHelp from '@/components/common/ShortcutsHelp.vue'
 import Toaster from '@/components/Toaster.vue'
 import type { MessageEnvelope, TabActivatedPayload, TabUpdatedPayload } from '@/types/message'
 import type { DocumentEntity } from '@/types/document'
@@ -244,5 +246,7 @@ onUnmounted(() => {
     <SettingsView v-show="appStore.currentView === 'settings'" />
 
     <Toaster />
+    <CommandPalette />
+    <ShortcutsHelp />
   </div>
 </template>
