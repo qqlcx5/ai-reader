@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import dayjs from 'dayjs'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import { ListChecks, Trash2, FolderPlus, Download, Zap, AudioLines } from '@lucide/vue'
+import { ListChecks, Trash2, FolderPlus, Download, Zap, AudioLines, Globe } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
@@ -484,6 +484,24 @@ function requestDelete(doc: DocumentEntity) {
   showDeleteConfirm.value = true
 }
 
+// ── Static site export ──
+async function handleBatchExportSite() {
+  if (documentStore.selectedIds.size === 0) return
+  const ids = [...documentStore.selectedIds]
+  const byId = new Map(documentStore.documents.map((d) => [d.id, d]))
+  const docs = ids.map((id) => byId.get(id)).filter((d): d is DocumentEntity => !!d)
+  if (!docs.length) return
+  try {
+    const { buildSiteZip } = await import('@/services/publish/site')
+    const { downloadBlob } = await import('@/utils/export')
+    const date = dayjs().toISOString().slice(0, 10)
+    downloadBlob(buildSiteZip(docs), `auramind-site-${date}.zip`)
+    appStore.showToast(`已生成含 ${docs.length} 篇的静态站点`, 'success')
+  } catch (e: any) {
+    appStore.showToast(e?.message || '站点生成失败', 'error')
+  }
+}
+
 // ── Collection export ──
 const exportingCollection = ref(false)
 
@@ -736,6 +754,14 @@ function cancelDelete() {
         @click="handleBatchExport"
       >
         <Download class="w-4 h-4" />导出 Markdown
+      </button>
+      <button
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-zinc-700 bg-zinc-100 border border-zinc-200 hover:bg-zinc-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        :disabled="documentStore.selectedIds.size === 0"
+        title="把选中文档生成为可发布的静态 HTML 站点（ZIP）"
+        @click="handleBatchExportSite"
+      >
+        <Globe class="w-4 h-4" />导出站点
       </button>
       <button
         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-semibold text-white bg-brand hover:bg-brand/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"

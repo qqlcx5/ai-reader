@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { Search, FileText, ArrowRight } from '@lucide/vue'
+import { Search, FileText, ArrowRight, Zap, Languages, GraduationCap, Moon } from '@lucide/vue'
 import { useAppStore, type AppView } from '@/stores/app.store'
 import { useDocumentStore } from '@/stores/document.store'
 import { useChatStore } from '@/stores/chat.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
+import { useModelStore } from '@/stores/model.store'
+import { useReviewStore } from '@/stores/review.store'
+import { useSettingsStore } from '@/stores/settings.store'
 import { searchDocuments } from '@/services/search'
 import { DocumentRepository } from '@/db/repositories/document.repository'
 import type { DocumentEntity } from '@/types/document'
@@ -18,6 +21,9 @@ const appStore = useAppStore()
 const documentStore = useDocumentStore()
 const chatStore = useChatStore()
 const workspaceStore = useWorkspaceStore()
+const modelStore = useModelStore()
+const reviewStore = useReviewStore()
+const settingsStore = useSettingsStore()
 
 const open = ref(false)
 const query = ref('')
@@ -36,15 +42,74 @@ const VIEW_ACTIONS: Array<{ key: AppView; label: string }> = [
   { key: 'settings', label: '跳转：设置' },
 ]
 
+interface ActionItem {
+  key: string
+  label: string
+  icon: unknown
+  run: () => void | Promise<void>
+}
+
+const ACTIONS: ActionItem[] = [
+  {
+    key: 'capture',
+    label: '动作：抓取当前页面',
+    icon: Zap,
+    run: () => {
+      // The capture trigger lives in App.vue; delegate via a DOM event.
+      window.dispatchEvent(new CustomEvent('auramind:palette-action', { detail: { type: 'capture' } }))
+    },
+  },
+  {
+    key: 'flashcards',
+    label: '动作：为当前文档生成闪卡',
+    icon: GraduationCap,
+    run: async () => {
+      const doc = documentStore.currentDocument
+      const model = modelStore.defaultModel
+      if (!doc || !model) {
+        appStore.showToast(doc ? '请先在设置中添加模型' : '工作区还没有文档', 'error')
+        return
+      }
+      const n = await reviewStore.generateForDocument(doc, model)
+      appStore.showToast(n > 0 ? `已生成 ${n} 张闪卡` : '没有生成新卡片', n > 0 ? 'success' : 'info')
+    },
+  },
+  {
+    key: 'translate',
+    label: '动作：翻译当前文档',
+    icon: Languages,
+    run: () => {
+      workspaceStore.setContextTab('translation')
+      appStore.setCurrentView('workspace')
+    },
+  },
+  {
+    key: 'theme',
+    label: '动作：切换亮色 / 暗色',
+    icon: Moon,
+    run: () => {
+      const dark = document.documentElement.classList.contains('dark')
+      settingsStore.updateTheme(dark ? 'light' : 'dark')
+    },
+  },
+]
+
 const viewActions = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return VIEW_ACTIONS.slice(0, 3)
   return VIEW_ACTIONS.filter((a) => a.label.toLowerCase().includes(q) || a.key.includes(q)).slice(0, 3)
 })
 
+const commandActions = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return ACTIONS.slice(0, 2)
+  return ACTIONS.filter((a) => a.label.toLowerCase().includes(q))
+})
+
 const items = computed(() => [
   ...docHits.value.slice(0, 7).map((doc) => ({ kind: 'doc' as const, doc })),
   ...viewActions.value.map((a) => ({ kind: 'view' as const, a })),
+  ...commandActions.value.map((a) => ({ kind: 'action' as const, a })),
 ])
 
 watch(query, async () => {
@@ -93,11 +158,15 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-async function activate(item: { kind: 'doc'; doc: DocumentEntity } | { kind: 'view'; a: { key: AppView; label: string } } | undefined) {
+async function activate(item: { kind: 'doc'; doc: DocumentEntity } | { kind: 'view'; a: { key: AppView; label: string } } | { kind: 'action'; a: ActionItem } | undefined) {
   if (!item) return
   open.value = false
   if (item.kind === 'view') {
     appStore.setCurrentView(item.a.key, { resetHistory: true })
+    return
+  }
+  if (item.kind === 'action') {
+    await item.a.run()
     return
   }
   const doc = item.doc
@@ -153,14 +222,15 @@ function onOmnibox(e: Event) {
           </div>
           <button
             v-for="(item, i) in items"
-            :key="item.kind === 'doc' ? item.doc.id : item.a.key"
+            :key="item.kind === 'doc' ? item.doc.id : item.kind === 'view' ? item.a.key : item.a.key"
             class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors"
             :class="i === activeIndex ? 'bg-brand/10 text-brand' : 'text-zinc-600 hover:bg-zinc-50'"
             @mouseenter="activeIndex = i"
             @click="activate(item)"
           >
             <FileText v-if="item.kind === 'doc'" class="w-3.5 h-3.5 shrink-0 opacity-60" />
-            <ArrowRight v-else class="w-3.5 h-3.5 shrink-0 opacity-60" />
+            <ArrowRight v-else-if="item.kind === 'view'" class="w-3.5 h-3.5 shrink-0 opacity-60" />
+            <component :is="item.a.icon" v-else class="w-3.5 h-3.5 shrink-0 opacity-60" />
             <span class="truncate text-[12.5px]">{{ item.kind === 'doc' ? (item.doc.title || '(无标题)') : item.a.label }}</span>
             <span v-if="item.kind === 'doc' && item.doc.siteName" class="ml-auto text-[10px] text-zinc-400 shrink-0 truncate max-w-24">{{ item.doc.siteName }}</span>
           </button>

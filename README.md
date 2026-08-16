@@ -22,8 +22,9 @@ AuraMind turns the web into a personal, AI-curated knowledge base you can actual
 - **🖍️ Highlights & floating toolbar** — save the parts that matter; read aloud with TTS; TOC navigation for long docs
 - **🔁 SM-2 spaced repetition** — AI-generated QA or cloze flashcards, daily review with resurfacing, streaks, badge reminders, syncs across devices
 - **📡 RSS reader & podcasts** — auto-discovery, scheduled refresh, content-hash dedup, OPML import/export, one-tap enclosure transcription
-- **👁️ Page watch** — monitor any URL for content changes (content-hash diff) with change history
+- **👁️ Page watch** — monitor any URL for content changes (content-hash diff) with change history and AI change summaries
 - **📰 Daily AI digest** — a scheduled morning brief: yesterday's captures, review outlook, one action item
+- **📊 Insights & publishing** — weekly stats dashboard; export your library as a dependency-free static HTML site
 - **🎙️ Voice input & omnibox** — dictate chat messages; type `am <query>` in the address bar to search your library
 - **✉️ Newsletter inbox** — self-hosted Cloudflare Email Worker pulls newsletters into your library
 - **🕸️ Knowledge graph** — `[[wikilinks]]` in notes connect documents; visualize your second brain
