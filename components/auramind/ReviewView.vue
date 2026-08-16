@@ -11,6 +11,7 @@ import { useDocumentStore } from '@/stores/document.store'
 import { useModelStore } from '@/stores/model.store'
 import { useWorkspaceStore } from '@/stores/workspace.store'
 import { useChatStore } from '@/stores/chat.store'
+import { useCollectionStore } from '@/stores/collection.store'
 import { previewIntervalDays, type ReviewGrade } from '@/utils/sm2'
 import { lastNDays } from '@/utils/review-stats'
 import { useTts } from '@/composables/useTts'
@@ -35,6 +36,10 @@ const documentStore = useDocumentStore()
 const modelStore = useModelStore()
 const workspaceStore = useWorkspaceStore()
 const chatStore = useChatStore()
+const collectionStore = useCollectionStore()
+if (collectionStore.collections.length === 0) {
+  collectionStore.loadCollections?.().catch?.(() => {})
+}
 const settingsStore = useSettingsStore()
 
 const showPicker = ref(false)
@@ -278,7 +283,20 @@ async function onPickerConfirm(documentIds: string[]) {
               @click="genMode = m.key"
             >{{ m.label }}</button>
           </div>
-          <span>待复习 <b class="text-zinc-800">{{ reviewStore.remainingCount }}</b></span>
+          <div class="flex items-center gap-1">
+            <select
+              :value="reviewStore.collectionScope"
+              class="bg-white border border-zinc-200 rounded-md text-[10px] text-zinc-600 px-1 py-0.5 outline-none max-w-24"
+              title="复习范围（按合集）"
+              @change="reviewStore.setCollectionScope(($event.target as HTMLSelectElement).value || null)"
+            >
+              <option :value="null">全部卡片</option>
+              <option v-for="c in collectionStore.collections" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+          <span class="flex items-center gap-3">
+            <span>待复习 <b class="text-zinc-800">{{ reviewStore.remainingCount }}</b></span>
+          </span>
           <span>总卡片 <b class="text-zinc-800">{{ reviewStore.totalCount }}</b></span>
           <span>已复习 <b class="text-zinc-800">{{ reviewStore.reviewedToday }}</b></span>
           <span v-if="reviewStore.stats.streak > 0" class="flex items-center gap-0.5 text-orange-500" title="连续复习天数">

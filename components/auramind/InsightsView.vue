@@ -54,6 +54,28 @@ async function openTopicDoc(doc: DocumentEntity) {
   appStore.setCurrentView('workspace')
 }
 
+const savingCollection = ref(false)
+
+/** Persist one topic cluster as a collection. */
+async function saveTopicAsCollection(cluster: TopicCluster) {
+  if (savingCollection.value) return
+  savingCollection.value = true
+  try {
+    const { useCollectionStore } = await import('@/stores/collection.store')
+    const collectionStore = useCollectionStore()
+    const created = await collectionStore.createCollection(cluster.name)
+    for (const doc of cluster.docs) {
+      await collectionStore.addDocument(created.id, doc.id)
+    }
+    await collectionStore.loadCollections()
+    appStore.showToast(`已创建合集「${cluster.name}」（${cluster.docs.length} 篇）`, 'success')
+  } catch (e: any) {
+    appStore.showToast(e?.message || '创建合集失败', 'error')
+  } finally {
+    savingCollection.value = false
+  }
+}
+
 const maxDay = computed(() => Math.max(1, ...(insights.value?.capturesByDay.map((d) => d.count) ?? [1])))
 
 const statCards = computed(() => {
@@ -146,6 +168,12 @@ onMounted(() => {
               <div class="flex items-center gap-2 mb-1">
                 <span class="text-[12px] font-medium text-brand">{{ cluster.name }}</span>
                 <span class="text-[10px] text-zinc-400">{{ cluster.docs.length }} 篇</span>
+                <button
+                  class="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-zinc-200 text-zinc-400 hover:text-brand hover:border-brand/30 transition-colors"
+                  :disabled="savingCollection"
+                  title="把这个主题保存为合集"
+                  @click="saveTopicAsCollection(cluster)"
+                >存为合集</button>
               </div>
               <div class="flex flex-wrap gap-1">
                 <button

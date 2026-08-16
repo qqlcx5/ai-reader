@@ -22,11 +22,19 @@ const cards = ref<FlashcardEntity[]>([])
 const query = ref('')
 const loading = ref(false)
 const onlySuspended = ref(false)
+const documentFilter = ref<string>('')
+
+const documentOptions = computed(() => {
+  const titles = new Map<string, string>()
+  for (const c of cards.value) titles.set(c.documentId, c.documentId)
+  return [...titles.keys()]
+})
 
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return cards.value.filter((c) => {
     if (onlySuspended.value && !c.suspended) return false
+    if (documentFilter.value && c.documentId !== documentFilter.value) return false
     if (!q) return true
     return c.front.toLowerCase().includes(q) || c.back.toLowerCase().includes(q)
   })
@@ -36,9 +44,21 @@ async function load() {
   loading.value = true
   try {
     cards.value = await FlashcardRepository.findAll()
+    // Resolve document titles for the filter dropdown.
+    const { DocumentRepository } = await import('@/db/repositories/document.repository')
+    const ids = [...new Set(cards.value.map((c) => c.documentId))]
+    for (const id of ids) {
+      const doc = await DocumentRepository.findById(id)
+      if (doc) titleById.set(id, doc.title || '(无标题)')
+    }
   } finally {
     loading.value = false
   }
+}
+
+const titleById = new Map<string, string>()
+function docTitle(id: string): string {
+  return titleById.get(id) || id.slice(0, 12)
 }
 
 // ── inline edit ──
@@ -94,8 +114,16 @@ onMounted(load)
         </button>
       </div>
 
-      <div v-if="!loading && filtered.length > 0" class="text-[11px] text-zinc-400 px-1">
-        {{ filtered.length }} 张
+      <div v-if="!loading && filtered.length > 0" class="text-[11px] text-zinc-400 px-1 flex items-center gap-2">
+        <span>{{ filtered.length }} 张</span>
+        <select
+          v-model="documentFilter"
+          class="bg-white border border-zinc-200 rounded-md text-[10px] text-zinc-500 px-1 py-0.5 outline-none max-w-40"
+          title="按来源文档过滤"
+        >
+          <option value="">全部文档</option>
+          <option v-for="id in documentOptions" :key="id" :value="id">{{ docTitle(id) }}</option>
+        </select>
       </div>
 
       <!-- Cards -->

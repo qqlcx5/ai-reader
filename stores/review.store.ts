@@ -50,7 +50,7 @@ export const useReviewStore = defineStore('review', () => {
     await MetaRepository.set('review-log', recordReview(log))
   }
 
-  async function loadQueue(): Promise<void> {
+  async function loadQueue(collectionId?: string): Promise<void> {
     loading.value = true
     try {
       const now = nowISO()
@@ -59,13 +59,21 @@ export const useReviewStore = defineStore('review', () => {
         FlashcardRepository.count(),
       ])
 
+      // Optional collection scope: only cards whose document is in the collection.
+      let due_ = due
+      if (collectionId) {
+        const { CollectionRepository } = await import('@/db/repositories/collection.repository')
+        const inCollection = new Set(await CollectionRepository.getDocumentIds(collectionId))
+        due_ = due.filter((c) => inCollection.has(c.documentId))
+      }
+
       // Daily new-card cap (0 = unlimited): review cards always come first,
       // then up to (limit − already-consumed-today) never-reviewed cards.
       let queue_ = due
       const limit = (await SettingsRepository.get())?.review?.newCardsPerDay ?? 0
       if (limit > 0) {
         const newLog = (await MetaRepository.get<ReviewLog>('new-cards-log')) ?? {}
-        queue_ = applyNewCardLimit(due, limit, newLog[dateKey()] ?? 0)
+        queue_ = applyNewCardLimit(due_, limit, newLog[dateKey()] ?? 0)
       }
 
       queue.value = queue_
@@ -75,6 +83,14 @@ export const useReviewStore = defineStore('review', () => {
       loading.value = false
     }
     loadStats().catch(() => {})
+  }
+
+  /** Currently selected collection scope (null = whole library). */
+  const collectionScope = ref<string | null>(null)
+
+  async function setCollectionScope(id: string | null): Promise<void> {
+    collectionScope.value = id
+    await loadQueue(id ?? undefined)
   }
 
   function flip(): void {
@@ -174,6 +190,8 @@ export const useReviewStore = defineStore('review', () => {
     reviewedToday,
     stats,
     log,
+    collectionScope,
+    setCollectionScope,
     currentCard,
     remainingCount,
     loadQueue,
