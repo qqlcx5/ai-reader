@@ -38,6 +38,14 @@ export interface InboxSettings {
   enabled: boolean
 }
 
+/** Local AnkiConnect endpoint (Anki desktop + AnkiConnect add-on). Device-local. */
+export interface AnkiConnectConfig {
+  /** AnkiConnect server URL, default http://127.0.0.1:8765 */
+  url: string
+  /** Target deck name. Created when missing. */
+  deck: string
+}
+
 export interface AppSettings {
   id: 'app-settings'
 

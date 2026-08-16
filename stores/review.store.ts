@@ -8,6 +8,15 @@ import { generateFlashcards } from '@/services/review/generate'
 import { schedule, isDue, type ReviewGrade } from '@/utils/sm2'
 import { nowISO } from '@/utils/date'
 
+/** Tell the background worker to refresh the action badge. Best-effort. */
+function notifyQueueChanged(): void {
+  try {
+    ;(globalThis as any).browser?.runtime?.sendMessage?.({ type: 'REVIEW_QUEUE_CHANGED' })?.catch?.(() => {})
+  } catch {
+    // background unavailable — badge updates on the next alarm
+  }
+}
+
 export const useReviewStore = defineStore('review', () => {
   /** Remaining cards in this review session (front = current card). */
   const queue = ref<FlashcardEntity[]>([])
@@ -54,6 +63,7 @@ export const useReviewStore = defineStore('review', () => {
     if (isDue(next)) queue.value = [...queue.value, { ...card, sm2: next }]
     flipped.value = false
     reviewedToday.value += 1
+    notifyQueueChanged()
   }
 
   /** Delete the current card and advance. */
@@ -64,6 +74,7 @@ export const useReviewStore = defineStore('review', () => {
     queue.value = queue.value.slice(1)
     totalCount.value = Math.max(0, totalCount.value - 1)
     flipped.value = false
+    notifyQueueChanged()
   }
 
   /**
@@ -85,6 +96,7 @@ export const useReviewStore = defineStore('review', () => {
         totalCount.value += cards.length
         await loadQueue()
       }
+      notifyQueueChanged()
       return cards.length
     } catch (err: any) {
       generateError.value = err?.message || '生成失败'

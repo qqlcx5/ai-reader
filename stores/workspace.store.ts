@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export type WorkspaceTab = 'capture' | 'preview'
-export type ContextTab = 'markdown' | 'highlights' | 'raw' | 'metadata'
+export type ContextTab = 'markdown' | 'highlights' | 'related' | 'raw' | 'metadata'
 export type CaptureStatus = 'idle' | 'extracting' | 'ready' | 'cached' | 'failed' | 'stale'
 
 export const useWorkspaceStore = defineStore('workspace', () => {

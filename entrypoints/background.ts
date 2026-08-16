@@ -2,6 +2,7 @@ import { setupFeedAlarm, onFeedAlarm } from '@/services/feed/bg-refresh'
 import { reclaimStaleJobs } from '@/services/ai-job/processor'
 import { bgDrain } from '@/services/ai-job/bg-drain'
 import { runSchedules } from '@/services/schedule/runner'
+import { updateReviewBadge } from '@/services/review/badge'
 
 export default defineBackground(() => {
   console.log('AuraMind background', { id: browser.runtime.id })
@@ -116,6 +117,22 @@ export default defineBackground(() => {
         })
       return true // keep channel open for async response
     }
+
+    if (message.type === 'EXTRACT_YOUTUBE') {
+      const { tabId } = message.payload
+      b.tabs
+        .sendMessage(tabId, { type: 'EXTRACT_YOUTUBE' })
+        .then((result: any) => {
+          sendResponse(result)
+        })
+        .catch((err: Error) => {
+          sendResponse({
+            type: 'EXTRACT_ERROR',
+            payload: { error: err.message || 'Failed to send message to tab' },
+          })
+        })
+      return true // keep channel open for async response
+    }
   })
 
   // RSS periodic refresh — runs entirely in background via offscreen document.
@@ -125,10 +142,11 @@ export default defineBackground(() => {
   function setupScheduleAlarm() {
     b.alarms?.create(SCHEDULE_ALARM, { periodInMinutes: 1 }).catch(() => {})
   }
-  b.runtime.onInstalled?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm() })
-  b.runtime.onStartup?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm() })
+  b.runtime.onInstalled?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm(); updateReviewBadge() })
+  b.runtime.onStartup?.addListener(() => { setupFeedAlarm(); setupScheduleAlarm(); updateReviewBadge() })
   setupFeedAlarm()
   setupScheduleAlarm()
+  updateReviewBadge().catch(() => {})
   b.alarms?.onAlarm?.addListener((alarm: any) => {
     if (alarm?.name === FEED_ALARM) {
       onFeedAlarm()
@@ -136,6 +154,8 @@ export default defineBackground(() => {
       import('@/services/inbox/inbox').then(({ pollInbox }) =>
         pollInbox().catch((e: any) => console.warn('[bg] inbox poll failed:', e)),
       )
+      // Keep the due-review badge fresh.
+      updateReviewBadge().catch(() => {})
       // After feed refresh may have enqueued new jobs, try a lightweight drain.
       bgDrain().catch((e: any) => console.warn('[bg] post-feed drain failed:', e))
     }
@@ -148,6 +168,13 @@ export default defineBackground(() => {
 
   // Panel can request an immediate refresh (e.g. on open if stale)
   b.runtime.onMessage.addListener((message: any, _sender: any, sendResponse: any) => {
+    if (message?.type === 'REVIEW_QUEUE_CHANGED') {
+      updateReviewBadge()
+        .then((count) => sendResponse({ ok: true, count }))
+        .catch(() => sendResponse({ ok: false }))
+      return true // async
+    }
+
     if (message?.type === 'TRIGGER_INBOX_POLL') {
       import('@/services/inbox/inbox')
         .then(({ pollInbox }) => pollInbox())

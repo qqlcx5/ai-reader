@@ -13,6 +13,7 @@ import StorageSettings from '@/components/settings/StorageSettings.vue'
 import WebDAVSettings from '@/components/settings/WebDAVSettings.vue'
 import S3Settings from '@/components/settings/S3Settings.vue'
 import InboxSettings from '@/components/settings/InboxSettings.vue'
+import AnkiSettings from '@/components/settings/AnkiSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -197,6 +198,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">Newsletter 收件箱</h2>
         <InboxSettings />
+      </section>
+
+      <!-- Anki 直推 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">Anki 直推</h2>
+        <AnkiSettings />
       </section>
 
       <!-- 本地存储 -->

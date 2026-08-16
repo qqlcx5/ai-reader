@@ -10,7 +10,7 @@ export default defineConfig({
     short_name: 'AuraMind',
     description: 'AI-powered web clipper that summarizes, highlights, and turns pages into a spaced-repetition review feed. Local-first, sync via WebDAV/S3.',
     permissions: ['sidePanel', 'activeTab', 'scripting', 'storage', 'tabs', 'windows', 'alarms', 'offscreen'],
-    host_permissions: ['<all_urls>'],
+    host_permissions: ['<all_urls>', 'http://127.0.0.1/*', 'http://localhost/*'],
   },
   dev: {
     server: {

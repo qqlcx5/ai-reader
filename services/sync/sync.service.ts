@@ -76,6 +76,7 @@ const TYPE_CONFIGS: TypeConfig[] = [
     filter: (e) => e.id === 'app-settings',
   },
   { type: 'feeds', table: () => db.feeds, version: (e) => e.updatedAt },
+  { type: 'flashcards', table: () => db.flashcards, version: (e) => e.updatedAt },
   { type: 'promptTemplates', table: () => db.promptTemplates, version: (e) => e.updatedAt },
   {
     type: 'webdavConfig',
@@ -96,11 +97,11 @@ const TYPE_CONFIGS: TypeConfig[] = [
 ]
 
 function emptyVersions(): SyncVersions {
-  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {}, feeds: {}, promptTemplates: {}, webdavConfig: {}, s3Config: {} }
+  return { documents: {}, conversations: {}, models: {}, collections: {}, collectionItems: {}, settings: {}, feeds: {}, flashcards: {}, promptTemplates: {}, webdavConfig: {}, s3Config: {} }
 }
 
 function emptyDataset(): SyncedDataset {
-  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], promptTemplates: [], webdavConfig: [], s3Config: [] }
+  return { documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], flashcards: [], promptTemplates: [], webdavConfig: [], s3Config: [] }
 }
 
 function stripRawFields(doc: any): any {
@@ -221,6 +222,7 @@ export async function forceUpload(transport: RemoteTransport): Promise<void> {
     collectionItems: await db.collectionItems.toArray(),
     settings: (await db.settings.toArray()).filter((s) => s.id === 'app-settings'),
     feeds: await db.feeds.toArray(),
+    flashcards: await db.flashcards.toArray(),
     promptTemplates: await db.promptTemplates.toArray(),
     webdavConfig: (await db.kvMeta.toArray()).filter((e) => e.id === 'webdav-config'),
     s3Config: (await db.kvMeta.toArray()).filter((e) => e.id === 's3-config'),
@@ -318,7 +320,7 @@ async function computeMerge(transport: RemoteTransport, resolution: ConflictReso
   const newBase = emptyVersions()
   const puts: Record<EntityKey, any[]> = { ...emptyDataset() }
   const deletes: Record<EntityKey, string[]> = {
-    documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], promptTemplates: [], webdavConfig: [], s3Config: [],
+    documents: [], conversations: [], models: [], collections: [], collectionItems: [], settings: [], feeds: [], flashcards: [], promptTemplates: [], webdavConfig: [], s3Config: [],
   }
   const localDeleteItems: SyncDeleteItem[] = []
   const remoteDeleteItems: SyncDeleteItem[] = []

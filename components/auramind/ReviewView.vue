@@ -4,7 +4,7 @@ export default { name: 'ReviewView' }
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown } from '@lucide/vue'
+import { Sparkles, Trash2, RefreshCw, CheckCircle2, FileDown, Send } from '@lucide/vue'
 import { useAppStore } from '@/stores/app.store'
 import { useReviewStore } from '@/stores/review.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -14,6 +14,8 @@ import { DocumentRepository } from '@/db/repositories/document.repository'
 import { FlashcardRepository } from '@/db/repositories/flashcard.repository'
 import { exportFlashcardsToAnkiTxt } from '@/utils/anki-export'
 import { downloadBlob } from '@/utils/export'
+import { pushToAnki } from '@/services/anki/anki-connect'
+import { useSettingsStore } from '@/stores/settings.store'
 import UButton from '@/components/ui/UButton.vue'
 import UEmptyState from '@/components/ui/UEmptyState.vue'
 import DocumentPickerDialog from '@/components/auramind/DocumentPickerDialog.vue'
@@ -22,6 +24,7 @@ const appStore = useAppStore()
 const reviewStore = useReviewStore()
 const documentStore = useDocumentStore()
 const modelStore = useModelStore()
+const settingsStore = useSettingsStore()
 
 const showPicker = ref(false)
 
@@ -90,6 +93,28 @@ async function generateFromCurrent() {
   )
 }
 
+const pushing = ref(false)
+
+async function pushToAnkiConnect() {
+  pushing.value = true
+  try {
+    const cards = await FlashcardRepository.findAll()
+    if (cards.length === 0) {
+      appStore.showToast('还没有闪卡可推送', 'warning')
+      return
+    }
+    const { added, skipped } = await pushToAnki(cards, settingsStore.anki)
+    appStore.showToast(
+      added > 0 ? `已推送 ${added} 张到牌组「${settingsStore.anki.deck}」${skipped > 0 ? `，${skipped} 张重复跳过` : ''}` : '没有新卡（全部已存在）',
+      added > 0 ? 'success' : 'info',
+    )
+  } catch (e: any) {
+    appStore.showToast(`推送失败：${e?.message || '请确认 Anki 与 AnkiConnect 已启动'}`, 'error')
+  } finally {
+    pushing.value = false
+  }
+}
+
 async function exportAnki() {
   const cards = await FlashcardRepository.findAll()
   if (cards.length === 0) {
@@ -143,6 +168,10 @@ async function onPickerConfirm(documentIds: string[]) {
           <UButton size="sm" variant="ghost" :disabled="reviewStore.totalCount === 0" title="导出为 Anki 可导入的 TSV" @click="exportAnki">
             <FileDown class="w-3.5 h-3.5" />
             Anki
+          </UButton>
+          <UButton size="sm" variant="ghost" :disabled="pushing || reviewStore.totalCount === 0" title="通过 AnkiConnect 直推到本地 Anki" @click="pushToAnkiConnect">
+            <Send class="w-3.5 h-3.5" />
+            {{ pushing ? '推送中…' : '推送' }}
           </UButton>
         </div>
       </div>

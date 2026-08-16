@@ -22,6 +22,6 @@ export const STORE_MAP = {
   // Condition-based rules that override default model/template selection
   // for auto-analysis. Local-only.
   analysisRules: 'id, enabled, createdAt',
-  // SM-2 flashcards generated from documents/highlights. Local-only for now.
+  // SM-2 flashcards generated from documents/highlights.
   flashcards: 'id, documentId, sm2.dueAt, source, createdAt, updatedAt',
 } as const

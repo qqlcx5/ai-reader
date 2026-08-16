@@ -15,6 +15,7 @@ import MarkdownPreview from '@/components/workspace/MarkdownPreview.vue'
 import RawPreview from '@/components/workspace/RawPreview.vue'
 import MetadataPanel from '@/components/workspace/MetadataPanel.vue'
 import HighlightsPanel from '@/components/workspace/HighlightsPanel.vue'
+import RelatedPanel from '@/components/workspace/RelatedPanel.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 
 const documentStore = useDocumentStore()
@@ -263,6 +264,12 @@ async function handleJumpToHighlight(hl: Highlight) {
             >{{ highlightCount }}</span>
           </TabsTrigger>
           <TabsTrigger
+            value="related"
+            class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
+          >
+            相关
+          </TabsTrigger>
+          <TabsTrigger
             value="raw"
             class="h-full flex items-center px-2.5 text-[11px] font-medium transition-colors border-b-2 border-transparent data-[state=active]:border-brand data-[state=active]:text-brand text-zinc-400 hover:text-zinc-700"
           >
@@ -318,6 +325,7 @@ async function handleJumpToHighlight(hl: Highlight) {
       v-show="contextTab === 'highlights'"
       @jump="handleJumpToHighlight"
     />
+    <RelatedPanel v-show="contextTab === 'related'" />
     <RawPreview v-show="contextTab === 'raw'" />
     <MetadataPanel v-show="contextTab === 'metadata'" />
 

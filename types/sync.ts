@@ -4,6 +4,7 @@ import type { ModelConfig } from './model'
 import type { AppSettings } from './settings'
 import type { CollectionEntity, CollectionItemEntity } from './collection'
 import type { FeedEntity } from './feed'
+import type { FlashcardEntity } from './flashcard'
 import type { PromptTemplate } from './prompt-template'
 
 /** Device-local WebDAV connection config. Never synced across devices. */
@@ -31,6 +32,7 @@ export type EntityKey =
   | 'collectionItems'
   | 'settings'
   | 'feeds'
+  | 'flashcards'
   | 'promptTemplates'
   | 'webdavConfig'
   | 's3Config'
@@ -51,6 +53,7 @@ export interface SyncedDataset {
   collectionItems: CollectionItemEntity[]
   settings: AppSettings[]
   feeds: FeedEntity[]
+  flashcards: FlashcardEntity[]
   promptTemplates: PromptTemplate[]
   webdavConfig: KvMetaRow[]
   s3Config: KvMetaRow[]

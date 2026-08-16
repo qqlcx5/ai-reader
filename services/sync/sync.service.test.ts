@@ -55,6 +55,7 @@ describe('runSync (integration)', () => {
   beforeEach(async () => {
     Object.keys(store).forEach((k) => delete store[k])
     await resetDB()
+    await db.flashcards.clear()
   })
 
   it('pushes local data on first sync and is a no-op on second', async () => {
@@ -78,6 +79,37 @@ describe('runSync (integration)', () => {
 
     const snap = JSON.parse(store['data.json'])
     expect(snap.data.documents.find((d: any) => d.id === 'd1')).toBeUndefined()
+  })
+
+  it('syncs flashcards both ways and merges graded states by updatedAt', async () => {
+    const now = '2026-01-01T00:00:00Z'
+    const card = {
+      id: 'f1',
+      documentId: 'd1',
+      front: 'Q',
+      back: 'A',
+      source: 'ai',
+      sm2: { ease: 2.5, intervalDays: 0, reps: 0, lapses: 0, dueAt: now },
+      createdAt: now,
+      updatedAt: now,
+    }
+    await db.flashcards.put(card as any)
+    await runSync(transport)
+
+    // Pushed to remote.
+    let snap = JSON.parse(store['data.json'])
+    expect(snap.data.flashcards.map((f: any) => f.id)).toEqual(['f1'])
+
+    // Another device grades the card remotely (updatedAt bumps).
+    const graded = { ...card, sm2: { ...card.sm2, reps: 1, intervalDays: 1 }, updatedAt: '2026-01-02T00:00:00Z' }
+    snap.data.flashcards = [graded]
+    store['data.json'] = JSON.stringify(snap)
+
+    const r = await runSync(transport)
+    expect(r.pulled).toBeGreaterThanOrEqual(1)
+    const local = await db.flashcards.get('f1')
+    expect(local?.sm2.reps).toBe(1)
+    expect(local?.sm2.intervalDays).toBe(1)
   })
 
   it('merges a remote-only new document into local on pull', async () => {

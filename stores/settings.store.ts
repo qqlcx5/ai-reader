@@ -4,6 +4,7 @@ import { ref, toRaw } from 'vue'
 import { SettingsRepository } from '../db/repositories/settings.repository'
 import { MetaRepository } from '../db/repositories/meta.repository'
 import type { AppSettings, ContextSettings, CaptureSettings, AutoAnalysisSettings, InboxSettings } from '../types/settings'
+import type { AnkiConnectConfig } from '../types/settings'
 import type { WebDAVConfig } from '../types/sync'
 import type { S3Config } from '../types/s3'
 
@@ -47,6 +48,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const isLoaded = ref(false)
   const webdav = ref<WebDAVConfig>({ url: '', username: '', password: '', basePath: '/auramind', enabled: false, maxBackups: 10 })
   const s3 = ref<S3Config>({ endpoint: '', bucket: '', region: 'us-east-1', accessKeyId: '', secretAccessKey: '', basePath: '/auramind', enabled: false, forcePathStyle: false, maxBackups: 10 })
+  const anki = ref<AnkiConnectConfig>({ url: 'http://127.0.0.1:8765', deck: 'AuraMind' })
 
   async function loadSettings() {
     const saved = await SettingsRepository.get()
@@ -62,6 +64,8 @@ export const useSettingsStore = defineStore('settings', () => {
     if (savedWebdav) webdav.value = { ...webdav.value, ...savedWebdav }
     const savedS3 = await MetaRepository.get<S3Config>('s3-config')
     if (savedS3) s3.value = { ...s3.value, ...savedS3 }
+    const savedAnki = await MetaRepository.get<AnkiConnectConfig>('anki-config')
+    if (savedAnki) anki.value = { ...anki.value, ...savedAnki }
     isLoaded.value = true
   }
 
@@ -73,6 +77,11 @@ export const useSettingsStore = defineStore('settings', () => {
   async function updateS3Config(partial: Partial<S3Config>) {
     s3.value = { ...s3.value, ...partial }
     await MetaRepository.set('s3-config', toRaw(s3.value))
+  }
+
+  async function updateAnkiConfig(partial: Partial<AnkiConnectConfig>) {
+    anki.value = { ...anki.value, ...partial }
+    await MetaRepository.set('anki-config', toRaw(anki.value))
   }
 
   async function updateGlobalSystemPrompt(prompt: string) {
@@ -114,9 +123,11 @@ export const useSettingsStore = defineStore('settings', () => {
     isLoaded,
     webdav,
     s3,
+    anki,
     loadSettings,
     updateWebDAVConfig,
     updateS3Config,
+    updateAnkiConfig,
     updateGlobalSystemPrompt,
     updateContextSettings,
     updateCaptureSettings,
