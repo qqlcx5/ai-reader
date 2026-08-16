@@ -19,6 +19,7 @@ import AppearanceSettings from '@/components/settings/AppearanceSettings.vue'
 import ReviewSettings from '@/components/settings/ReviewSettings.vue'
 import AboutCard from '@/components/settings/AboutCard.vue'
 import DigestSettings from '@/components/settings/DigestSettings.vue'
+import EmbeddingSettings from '@/components/settings/EmbeddingSettings.vue'
 import { useModelStore } from '@/stores/model.store'
 import { useSettingsStore } from '@/stores/settings.store'
 import { usePromptTemplateStore } from '@/stores/prompt-template.store'
@@ -211,6 +212,12 @@ async function handleToggleEnabled(id: string, enabled: boolean) {
       <section class="flex flex-col gap-2.5">
         <h2 class="text-[12px] font-medium text-zinc-400 pl-1">每日 AI 简报</h2>
         <DigestSettings />
+      </section>
+
+      <!-- 语义检索 -->
+      <section class="flex flex-col gap-2.5">
+        <h2 class="text-[12px] font-medium text-zinc-400 pl-1">语义检索</h2>
+        <EmbeddingSettings />
       </section>
 
       <!-- Anki 直推 -->

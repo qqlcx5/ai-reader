@@ -1,4 +1,4 @@
-export const DB_VERSION = 15
+export const DB_VERSION = 16
 
 export const STORE_MAP = {
   documents: 'id, url, canonicalUrl, title, siteName, capturedAt, updatedAt, lastOpenedAt, readProgress, contentHash',
@@ -26,4 +26,6 @@ export const STORE_MAP = {
   flashcards: 'id, documentId, sm2.dueAt, source, createdAt, updatedAt',
   // Page-change watches. Local-only (like feedItems).
   pageWatches: 'id, url, enabled, lastChangedAt, updatedAt',
+  // Semantic search vectors, one row per document. Local-only cache.
+  embeddings: 'docId, model, contentHash, updatedAt',
 } as const

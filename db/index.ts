@@ -31,6 +31,7 @@ export class AuraMindDB extends Dexie {
   analysisRules!: Table<AnalysisRuleEntity, string>
   flashcards!: Table<FlashcardEntity, string>
   pageWatches!: Table<PageWatchEntity, string>
+  embeddings!: Table<{ docId: string; model: string; contentHash: string; vector: number[]; updatedAt: string }, string>
 
   constructor() {
     super('AuraMindDB')

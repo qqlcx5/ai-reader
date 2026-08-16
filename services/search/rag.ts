@@ -11,6 +11,8 @@ import { DocumentRepository } from '../../db/repositories/document.repository'
 import { CollectionRepository } from '../../db/repositories/collection.repository'
 import { truncateContext } from '../prompt/truncate'
 import { bigrams } from './related'
+import { fuseRankings } from './embedding'
+import { loadEmbeddingConfig, isConfigured, semanticRank } from './embedding'
 import type { DocumentEntity } from '../../types/document'
 
 export interface RetrievedSource {
@@ -84,14 +86,31 @@ export async function retrieveKnowledge(
   const pool = opts.candidatePool ?? 10
   const candidateIds = hits.slice(0, pool)
 
+  // ── Hybrid retrieval: when an embedding endpoint is configured, fuse
+  // keyword candidates with semantic ranking (RRF). Semantic misses can
+  // surface docs MiniSearch's tokenizer never matched (esp. CJK).
+  let fusedIds: string[] | null = null
+  try {
+    const embConfig = await loadEmbeddingConfig()
+    if (isConfigured(embConfig)) {
+      const semanticIds = await semanticRank(q, embConfig, pool)
+      if (semanticIds.length > 0) {
+        fusedIds = fuseRankings([candidateIds.map((h) => h.id), semanticIds], pool)
+      }
+    }
+  } catch {
+    // semantic leg is best-effort — keyword-only on failure
+  }
+  const finalIds = fusedIds ?? candidateIds.map((h) => h.id)
+
   const candidates: DocumentEntity[] = []
-  for (const hit of candidateIds) {
-    const doc = await DocumentRepository.findById(hit.id)
+  for (const id of finalIds) {
+    const doc = await DocumentRepository.findById(id)
     if (doc?.markdown?.trim()) candidates.push(doc)
   }
   if (candidates.length === 0) return { context: '', sources: [] }
 
-  const docs = rerankByBigram(q, candidates, k)
+  const docs = fusedIds ? candidates.slice(0, k) : rerankByBigram(q, candidates, k)
 
   const perDoc = opts.perDocTokens ?? PER_DOC_TOKENS
   const blocks = docs.map((doc, i) => {
