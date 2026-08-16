@@ -3,6 +3,10 @@ import { computed, ref, watch, nextTick, onUnmounted } from 'vue'
 import { Sparkles, ChevronDown, ChevronRight, RefreshCw, Copy, Trash2, Pencil, Clipboard, GitBranch, Paperclip } from '@lucide/vue'
 import { renderMarkdown, enhanceCodeBlocks } from '@/utils/markdown'
 import { formatMessageForCopy, copyToClipboard } from '@/utils/conversation-export'
+import { useDocumentStore } from '@/stores/document.store'
+import { useChatStore } from '@/stores/chat.store'
+import { useWorkspaceStore } from '@/stores/workspace.store'
+import { DocumentRepository } from '@/db/repositories/document.repository'
 import type { ChatMessage } from '@/types/chat'
 
 const props = defineProps<{
@@ -31,6 +35,26 @@ const emit = defineEmits<{
 }>()
 
 const isUser = computed(() => props.message.role === 'user')
+
+// ── Knowledge-QA citation: open the cited document ──
+const documentStore = useDocumentStore()
+const chatStore = useChatStore()
+const workspaceStore = useWorkspaceStore()
+const highlightedSourceId = ref<string | null>(null)
+
+async function openSource(id: string) {
+  highlightedSourceId.value = id
+  const doc = await DocumentRepository.findById(id)
+  if (!doc) return
+  documentStore.setCurrentDocument(doc)
+  documentStore.markOpened(doc.id)
+  workspaceStore.setDocumentSource('library')
+  try {
+    await chatStore.loadConversations(doc.id)
+  } catch {
+    // non-critical
+  }
+}
 const isStreaming = computed(() => props.message.status === 'streaming')
 const isFailed = computed(() => props.message.status === 'failed')
 const isAborted = computed(() => props.message.status === 'aborted')
@@ -299,6 +323,22 @@ onUnmounted(() => {
           已停止生成
         </div>
       </template>
+    </div>
+    <!-- Knowledge-QA citation sources -->
+    <div v-if="message.sources?.length" class="flex flex-wrap items-center gap-1 mt-1">
+      <span class="text-[10px] text-zinc-400 shrink-0">引用：</span>
+      <button
+        v-for="(source, i) in message.sources"
+        :key="source.id"
+        class="max-w-44 truncate px-1.5 py-0.5 rounded text-[10px] border transition-colors"
+        :class="highlightedSourceId === source.id
+          ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
+          : 'bg-zinc-50 border-zinc-200 text-zinc-500 hover:text-brand hover:border-brand/30'"
+        :title="`${source.title}${source.siteName ? ' · ' + source.siteName : ''}（点击打开文档）`"
+        @click="openSource(source.id)"
+      >
+        [{{ i + 1 }}] {{ source.title }}
+      </button>
     </div>
     <div v-if="meta" class="text-[10px] text-zinc-400 px-1 select-none">{{ meta }}</div>
   </div>

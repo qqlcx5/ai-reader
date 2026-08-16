@@ -26,6 +26,8 @@ export interface BuildPromptInput {
   contextSettings?: ContextSettings
   /** The document to analyze. When omitted, no page context is attached. */
   page?: PageDoc
+  /** Knowledge-base retrieval context (RAG). Takes precedence over page. */
+  knowledgeContext?: string
   /** User highlights to append as supplementary context. */
   highlights?: Highlight[]
   /** Interactive-question path only: prior turns. Queue path omits this. */
@@ -50,9 +52,11 @@ export interface BuildPromptResult extends PromptOutput {
  * The queue path passes no history — each analysis is a fresh one-shot.
  */
 export function buildAnalysisPrompt(input: BuildPromptInput): BuildPromptResult {
-  // 1. Build page context (metadata + markdown), honoring settings.
+  // 1. Build context: knowledge retrieval (RAG) wins over the bound page.
   let context: string | undefined
-  if (input.page?.markdown) {
+  if (input.knowledgeContext?.trim()) {
+    context = input.knowledgeContext
+  } else if (input.page?.markdown) {
     const max = input.contextSettings?.maxContextTokens ?? 1_050_000
     let ctx = buildPageContext(input.page, input.contextSettings)
     if (input.highlights?.length) {

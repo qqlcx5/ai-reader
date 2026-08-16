@@ -52,6 +52,8 @@ export const useChatStore = defineStore('chat', () => {
    */
   const isStreaming = ref(false)
   const isSending = ref(false)
+  /** Knowledge-QA mode: retrieve from the whole library before answering. */
+  const knowledgeMode = ref(false)
 
   watch(
     [currentConversationId, () => streamStates.value.size],
@@ -800,6 +802,23 @@ export const useChatStore = defineStore('chat', () => {
       }
     }
 
+    // ── Knowledge-QA (RAG): retrieve top matches from the whole library.
+    // Takes precedence over the bound page; sources are attached to the
+    // assistant message for citation chips.
+    let knowledgeContext: string | undefined
+    if (knowledgeMode.value && userContent.trim()) {
+      try {
+        const { retrieveKnowledge } = await import('@/services/search/rag')
+        const retrieval = await retrieveKnowledge(userContent, 4)
+        if (retrieval.context) {
+          knowledgeContext = retrieval.context
+          assistantMsg.sources = retrieval.sources
+        }
+      } catch {
+        // retrieval is best-effort — fall back to normal context
+      }
+    }
+
     const history = buildHistory(
       capturedMessages.filter((m) => m.id !== assistantMsg.id && m.id !== currentUserMsgId),
     )
@@ -810,6 +829,7 @@ export const useChatStore = defineStore('chat', () => {
       contextSettings: settings.context,
       page,
       highlights,
+      knowledgeContext,
       history,
       userInput: userContent,
     })
@@ -1076,6 +1096,7 @@ export const useChatStore = defineStore('chat', () => {
     inputText,
     isStreaming,
     isSending,
+    knowledgeMode,
     lastError,
     includeContext,
     steeringQueue,

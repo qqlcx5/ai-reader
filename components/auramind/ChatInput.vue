@@ -1,6 +1,6 @@
 ﻿<script lang="ts" setup>
 import { computed, ref, watch } from 'vue'
-import { BookTemplate, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X, List, Play } from '@lucide/vue'
+import { BookTemplate, BookOpen, Cpu, Paperclip, Pencil, Plus, Send, Square, Trash2, X, List, Play, Mic, MicOff } from '@lucide/vue'
 import { useChatStore } from '@/stores/chat.store'
 import { useModelStore } from '@/stores/model.store'
 import { useDocumentStore } from '@/stores/document.store'
@@ -103,6 +103,49 @@ const contextLabel = computed(() => {
 function toggleIncludeContext() {
   chatStore.setIncludeContext(!chatStore.includeContext)
 }
+
+// ── Voice input (Web Speech API, zh-first) ──────────────
+const listening = ref(false)
+const speechSupported = typeof window !== 'undefined' && 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
+let recognizer: any = null
+
+function toggleVoice() {
+  const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+  if (!Ctor) return
+  if (listening.value) {
+    recognizer?.stop()
+    return
+  }
+  recognizer = new Ctor()
+  recognizer.lang = 'zh-CN'
+  recognizer.interimResults = true
+  recognizer.continuous = false
+  const base = chatStore.inputText || ''
+  recognizer.onresult = (event: any) => {
+    let final = ''
+    let interim = ''
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const r = event.results[i]
+      if (r.isFinal) final += r[0].transcript
+      else interim += r[0].transcript
+    }
+    if (final) {
+      chatStore.inputText = (base ? base + ' ' : '') + final
+    }
+    interimText.value = interim
+  }
+  recognizer.onend = () => {
+    listening.value = false
+    interimText.value = ''
+  }
+  recognizer.onerror = () => {
+    listening.value = false
+    interimText.value = ''
+  }
+  listening.value = true
+  recognizer.start()
+}
+const interimText = ref('')
 
 // ── Model selection (single / multi) ─────────────────────
 const multiModelIds = ref<string[]>([...modelStore.selectedModelIds])
@@ -417,6 +460,39 @@ function handleStop() {
           <Paperclip class="w-3 h-3" />
           <span>{{ contextLabel }}</span>
         </div>
+
+        <!-- Knowledge-QA (RAG) toggle: retrieve from the whole library -->
+        <div
+          class="flex items-center gap-1.5 text-[11px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer select-none"
+          :class="chatStore.knowledgeMode
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
+            : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600 hover:border-zinc-300'"
+          :title="chatStore.knowledgeMode
+            ? '知识库问答已开启：每次提问前检索全库相关文档作答（带引用）'
+            : '开启知识库问答：检索全库相关文档作答'"
+          role="button"
+          :aria-pressed="chatStore.knowledgeMode"
+          @click="chatStore.knowledgeMode = !chatStore.knowledgeMode"
+        >
+          <BookOpen class="w-3 h-3" />
+          <span>知识库</span>
+        </div>
+
+        <!-- Voice input -->
+        <div
+          v-if="speechSupported"
+          class="flex items-center gap-1.5 text-[11px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer select-none"
+          :class="listening
+            ? 'bg-red-50 border-red-300 text-red-500 animate-pulse'
+            : 'bg-zinc-50 border-zinc-200 text-zinc-400 hover:text-zinc-600 hover:border-zinc-300'"
+          :title="listening ? '停止语音输入' : '语音输入（中文）'"
+          role="button"
+          :aria-pressed="listening"
+          @click="toggleVoice"
+        >
+          <component :is="listening ? MicOff : Mic" class="w-3 h-3" />
+          <span>{{ listening ? '聆听中' : '语音' }}</span>
+        </div>
       </div>
 
       <div class="relative">
@@ -432,10 +508,13 @@ function handleStop() {
           :rows="1"
           auto-height
           class="w-full bg-transparent text-[13px] px-3 py-2.5 pr-11 placeholder:text-zinc-400 min-h-[42px] focus:border-transparent"
-          placeholder="基于当前网页继续提问..."
+          :placeholder="listening ? '聆听中…请说话' : '基于当前网页继续提问...'"
           @update:model-value="chatStore.setInputText($event)"
           @keydown="handleKeydown"
         />
+        <div v-if="listening && interimText" class="absolute left-3 -bottom-4 text-[11px] text-red-400 pointer-events-none">
+          {{ interimText }}…
+        </div>
         <!-- Send or enqueue button -->
         <UButton
           variant="primary"

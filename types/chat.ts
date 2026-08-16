@@ -27,6 +27,9 @@
 
   /** Wall-clock generation time (send → done), ms. Set on completion/failure. */
   durationMs?: number
+
+  /** Knowledge-base retrieval sources (knowledge-QA mode). Click-to-open. */
+  sources?: Array<{ id: string; title: string; siteName?: string }>
   /** Time to first token (send → first token), ms. */
   firstTokenMs?: number
   /** Token generation time (first token → done), ms. */
